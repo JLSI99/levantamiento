@@ -4,7 +4,7 @@ from sqlalchemy import select, or_
 
 from src.database import get_db
 from src import models, schemas
-from dependencies.hash_y_contrasenas import get_password_hash
+from src.dependencies.hash_y_contrasenas import get_password_hash
 
 router = APIRouter(
     prefix="/users",

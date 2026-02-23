@@ -1,61 +1,123 @@
-from pydantic import BaseModel, EmailStr, Field
-from uuid import UUID
-from typing import Optional, List
-from datetime import datetime
+import uuid
+from sqlalchemy import (Column,String,Boolean,DateTime,ForeignKey,Table,Integer,func)
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from src.database import Base
 
 
-class PermisoOut(BaseModel):
-    id_permiso: int
-    nombre: str
-    path_endpoint: str
-    metodo_http: str
+usuario_rol = Table(
+    "usuario_rol",
+    Base.metadata,
+    Column(
+        "id_usuario",
+        UUID(as_uuid=True),
+        ForeignKey("usuarios.id_usuario", ondelete="CASCADE"),
+        primary_key=True
+    ),
+    Column(
+        "id_rol",
+        Integer,
+        ForeignKey("roles.id_rol", ondelete="CASCADE"),
+        primary_key=True
+    )
+)
 
-    class Config:
-        from_attributes = True
-
-
-class RolOut(BaseModel):
-    id_rol: int
-    nombre_rol: str
-    descripcion: Optional[str]
-
-    class Config:
-        from_attributes = True
-
-
-class UserOut(BaseModel):
-    id_usuario: UUID
-    curp: str
-    username: str
-    email: EmailStr
-    is_active: bool
-    roles: List[RolOut] = []
-
-    class Config:
-        from_attributes = True
-
-
-class UserRegisterRequest(BaseModel):
-    """Registro de usuario (Persona vive en ms-personas)"""
-    curp: str = Field(..., min_length=18, max_length=18)
-    username: str
-    email: EmailStr
-    password: str = Field(..., min_length=8)
-    role_ids: List[int] = [2]
+rol_permiso = Table(
+    "rol_permiso",
+    Base.metadata,
+    Column(
+        "id_rol",
+        Integer,
+        ForeignKey("roles.id_rol", ondelete="CASCADE"),
+        primary_key=True
+    ),
+    Column(
+        "id_permiso",
+        Integer,
+        ForeignKey("permisos_endpoint.id_permiso", ondelete="CASCADE"),
+        primary_key=True
+    )
+)
 
 
-class UserLogin(BaseModel):
-    identifier: str
-    password: str
+class Usuario(Base):
+    __tablename__ = "usuarios"
+
+    id_usuario = Column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
+
+    curp = Column(
+        String(18),
+        nullable=False,
+        unique=True,
+        index=True
+    )
+
+    username = Column(
+        String(50),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    email = Column(
+        String(150),
+        unique=True,
+        nullable=False,
+        index=True
+    )
+
+    hashed_password = Column(String(255), nullable=False)
+    is_active = Column(Boolean, default=True)
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
+
+    roles = relationship(
+        "Rol",
+        secondary=usuario_rol,
+        back_populates="usuarios",
+        lazy="selectin"
+    )
 
 
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
+class Rol(Base):
+    __tablename__ = "roles"
+
+    id_rol = Column(Integer, primary_key=True)
+    nombre_rol = Column(String(100), nullable=False, unique=True)
+    descripcion = Column(String(255), nullable=True)
+
+    usuarios = relationship(
+        "Usuario",
+        secondary=usuario_rol,
+        back_populates="roles"
+    )
+
+    permisos = relationship(
+        "PermisoEndpoint",
+        secondary=rol_permiso,
+        back_populates="roles",
+        lazy="selectin"
+    )
 
 
-class TokenPayload(BaseModel):
-    sub: str
-    exp: datetime
-    roles: List[str]
+class PermisoEndpoint(Base):
+    __tablename__ = "permisos_endpoint"
+
+    id_permiso = Column(Integer, primary_key=True, autoincrement=True)
+    nombre = Column(String(150), nullable=False, unique=True)
+    path_endpoint = Column(String(255), nullable=False, index=True)
+    metodo_http = Column(String(10), nullable=False)
+    descripcion = Column(String(255), nullable=True)
+
+    roles = relationship(
+        "Rol",
+        secondary=rol_permiso,
+        back_populates="permisos"
+    )

@@ -5,8 +5,8 @@ from sqlalchemy.orm import selectinload
 
 from src.database import get_db
 from src import models, schemas
-from dependencies.hash_y_contrasenas import verify_password
-from dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
+from src.dependencies.hash_y_contrasenas import verify_password
+from src.dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
 
 router = APIRouter(
     prefix="/auth",
