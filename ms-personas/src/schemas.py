@@ -1,0 +1,26 @@
+from pydantic import BaseModel, Field, field_validator
+from uuid import UUID
+import re
+
+class PersonaBase(BaseModel):
+    nombres: str = Field(..., min_length=2, max_length=100)
+    apellidos: str = Field(..., min_length=2, max_length=100)
+    curp: str = Field(..., min_length=18, max_length=18, description="CURP de 18 caracteres alfanuméricos")
+
+    @field_validator('curp')
+    @classmethod
+    def validar_formato_curp(cls, v: str) -> str:
+        v = v.upper()
+        patron = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
+        if not re.match(patron, v):
+            raise ValueError('El formato del CURP no es válido')
+        return v
+
+class PersonaCreate(PersonaBase):
+    pass
+
+class PersonaOut(PersonaBase):
+    id_persona: UUID
+    
+    class Config:
+        from_attributes = True
