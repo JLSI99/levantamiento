@@ -69,7 +69,7 @@ async def create_user(
 @router.get(
     "",
     response_model=list[schemas.UserOut],
-    dependecies=[Depends(require_authz)]
+    dependencies=[Depends(require_authz)]
 )
 async def list_users(
     db: AsyncSession = Depends(get_db)
