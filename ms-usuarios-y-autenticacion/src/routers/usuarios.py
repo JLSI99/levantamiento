@@ -5,6 +5,7 @@ from sqlalchemy import select, or_
 from src.database import get_db
 from src import models, schemas
 from src.dependencies.hash_y_contrasenas import get_password_hash
+from src.dependencies.validar_rol_y_firma import require_authz
 
 router = APIRouter(
     prefix="/users",
@@ -15,7 +16,8 @@ router = APIRouter(
 @router.post(
     "",
     response_model=schemas.UserOut,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_authz)]
 )
 async def create_user(
     user_in: schemas.UserRegisterRequest,
@@ -66,7 +68,8 @@ async def create_user(
 
 @router.get(
     "",
-    response_model=list[schemas.UserOut]
+    response_model=list[schemas.UserOut],
+    dependecies=[Depends(require_authz)]
 )
 async def list_users(
     db: AsyncSession = Depends(get_db)
