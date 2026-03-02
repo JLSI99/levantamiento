@@ -44,45 +44,30 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id_usuario = Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
     )
 
     curp = Column(
-        String(18),
-        nullable=False,
-        unique=True,
-        index=True
+        String(18), nullable=False, unique=True, index=True
     )
 
     username = Column(
-        String(50),
-        unique=True,
-        nullable=False,
-        index=True
+        String(50), unique=True, nullable=False, index=True
     )
 
     email = Column(
-        String(150),
-        unique=True,
-        nullable=False,
-        index=True
+        String(150), unique=True, nullable=False, index=True
     )
 
     hashed_password = Column(String(255), nullable=False)
     is_active = Column(Boolean, default=True)
 
     created_at = Column(
-        DateTime(timezone=True),
-        server_default=func.now()
+        DateTime(timezone=True), server_default=func.now()
     )
 
     roles = relationship(
-        "Rol",
-        secondary=usuario_rol,
-        back_populates="usuarios",
-        lazy="selectin"
+        "Rol", secondary=usuario_rol, back_populates="usuarios", lazy="selectin"
     )
 
 

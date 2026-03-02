@@ -3,11 +3,23 @@ from uuid import UUID
 from typing import Optional, List
 from datetime import datetime
 
+class PermisoCreate(BaseModel):
+    nombre: str = Field(..., min_length=3, max_length=150)
+    path_endpoint: str = Field(..., min_length=1, max_length=255)
+    metodo_http: str = Field(
+        ..., 
+        regex="^(GET|POST|PUT|DELETE|PATCH)$",
+        description="Método HTTP permitido"
+    )
+    descripcion: Optional[str] = Field(None, max_length=255)
+
+
 class PermisoOut(BaseModel):
     id_permiso: int
     nombre: str
     path_endpoint: str
     metodo_http: str
+    descripcion: Optional[str]
 
     class Config:
         from_attributes = True
@@ -20,43 +32,42 @@ class RolOut(BaseModel):
     class Config:
         from_attributes = True
 
-class PersonaBase(BaseModel):
-    nombres: str
-    apellidos: str
-
-class PersonaOut(PersonaBase):
-    id_persona: UUID
-    class Config:
-        from_attributes = True
-
 class UserOut(BaseModel):
     id_usuario: UUID
+    curp: str
     username: str
     email: EmailStr
     is_active: bool
-    persona: PersonaOut 
-    roles: List[RolOut] = []
+    roles: List[RolOut] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
 
-class UserRegisterRequest(PersonaBase):
-    """Para crear un usuario nuevo desde el exterior"""
-    username: str
+class UserRegisterRequest(BaseModel):
+    curp: str = Field(
+        ..., 
+        min_length=18, 
+        max_length=18,
+        description="Foreign key lógica hacia ms-personas"
+    )
+    username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    role_ids: List[int] = [2]
+    role_ids: List[int] = Field(default_factory=lambda: [2])
+
 
 class UserLogin(BaseModel):
-    identifier: str
+    identifier: str = Field(..., description="username o email")
     password: str
+
 
 class Token(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
 
+
 class TokenPayload(BaseModel):
     sub: str
     exp: datetime
-    roles: List[str] = []
+    roles: List[str] = Field(default_factory=list)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -17,10 +17,9 @@ router = APIRouter(
 async def list_roles(
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(models.Rol)
-    result = await db.execute(stmt)
-    roles = result.scalars().all()
-    return roles
+    result = await db.execute(select(models.Rol))
+    return result.scalars().all()
+
 
 @router.get(
     "/{id_rol}/permisos",
@@ -42,10 +41,11 @@ async def get_permisos_by_rol(
     if not permisos:
         raise HTTPException(
             status_code=404,
-            detail="El rol no existe o no tiene permisos asignados."
+            detail="El rol no existe o no tiene permisos asignados"
         )
 
     return permisos
+
 
 @router.get(
     "/permisos",
@@ -54,7 +54,48 @@ async def get_permisos_by_rol(
 async def list_all_permisos(
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(models.PermisoEndpoint)
-    result = await db.execute(stmt)
-    permisos = result.scalars().all()
-    return permisos
+    result = await db.execute(select(models.PermisoEndpoint))
+    return result.scalars().all()
+
+@router.post(
+    "/permisos",
+    response_model=schemas.PermisoOut,
+    status_code=status.HTTP_201_CREATED
+)
+async def create_permiso(
+    permiso_data: schemas.PermisoCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    permiso = models.PermisoEndpoint(**permiso_data.dict())
+    db.add(permiso)
+    await db.commit()
+    await db.refresh(permiso)
+    return permiso
+
+
+@router.post(
+    "/{id_rol}/permisos/{id_permiso}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+async def assign_permiso_to_rol(
+    id_rol: int,
+    id_permiso: int,
+    db: AsyncSession = Depends(get_db)
+):
+    rol = await db.get(models.Rol, id_rol)
+    permiso = await db.get(models.PermisoEndpoint, id_permiso)
+
+    if not rol or not permiso:
+        raise HTTPException(
+            status_code=404,
+            detail="Rol o permiso no encontrado"
+        )
+
+    if permiso in rol.permisos:
+        raise HTTPException(
+            status_code=409,
+            detail="El permiso ya está asignado a este rol"
+        )
+
+    rol.permisos.append(permiso)
+    await db.commit()
