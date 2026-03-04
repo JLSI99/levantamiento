@@ -51,6 +51,8 @@ async def validate_role_permission(
         )
 
     path = request.url.path
+    #request.scope["route"].path
+
     method = request.method.upper()
 
     stmt = (
