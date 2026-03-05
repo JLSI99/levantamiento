@@ -9,15 +9,15 @@ from src.dependencies.validar_rol_y_firma import require_authz
 
 router = APIRouter(
     prefix="/users",
-    tags=["Usuarios"]
+    tags=["Usuarios"],
+    dependencies=[Depends(require_authz)]
 )
 
 
 @router.post(
     "",
     response_model=schemas.UserOut,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_authz)]
+    status_code=status.HTTP_201_CREATED
 )
 async def create_user(
     user_in: schemas.UserRegisterRequest,
@@ -68,8 +68,7 @@ async def create_user(
 
 @router.get(
     "",
-    response_model=list[schemas.UserOut],
-    dependencies=[Depends(require_authz)]
+    response_model=list[schemas.UserOut]
 )
 async def list_users(
     db: AsyncSession = Depends(get_db)

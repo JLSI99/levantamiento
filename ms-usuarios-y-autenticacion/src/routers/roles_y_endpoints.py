@@ -4,10 +4,12 @@ from sqlalchemy import select
 
 from src.database import get_db
 from src import models, schemas
+from src.dependencies.validar_rol_y_firma import require_authz
 
 router = APIRouter(
     prefix="/roles",
-    tags=["Roles y Permisos"]
+    tags=["Roles y Permisos"],
+    dependencies=[Depends(require_authz)]
 )
 
 @router.get(

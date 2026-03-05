@@ -50,8 +50,7 @@ async def validate_role_permission(
             detail="Usuario sin roles asignados"
         )
 
-    request.scope["route"].path
-
+    path=request.scope["route"].path
     method = request.method.upper()
 
     stmt = (
