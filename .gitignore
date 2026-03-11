@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# env
+.env
+.env_code
+
+# postgres volumes
+db-data-*/
+*/db-data-*/
+
+# pgadmin
+pgadmin-data-*/
+*/pgadmin-data-*/
+
+# logs
+*.log
+
+# editors
+.vscode/
+.idea/
