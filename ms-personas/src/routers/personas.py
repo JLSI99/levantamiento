@@ -7,13 +7,15 @@ from src.database import get_db
 from src import models, schemas
 from src.dependencies.validar_rol_y_firma import require_authz
 
-router = APIRouter(tags=["Personas"])
+router = APIRouter(
+    tags=["Personas"],
+    dependencies=[Depends(require_authz)]
+)
 
 @router.post(
     "/personas",
     response_model=schemas.PersonaOut,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Depends(require_authz)]
+    status_code=status.HTTP_201_CREATED    
 )
 async def create_persona(
     persona_in: schemas.PersonaCreate,
