@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from uuid import UUID
+from typing import Optional, List
 import re
 
 class PersonaBase(BaseModel):
@@ -24,3 +25,11 @@ class PersonaOut(PersonaBase):
     
     class Config:
         from_attributes = True
+
+class CheckAccessRequest(BaseModel):
+    roles: List[str]
+    path: str
+    metodo: str
+
+class CheckAccessResponse(BaseModel):
+    permitido: bool

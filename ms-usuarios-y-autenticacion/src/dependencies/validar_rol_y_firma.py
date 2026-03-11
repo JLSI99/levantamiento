@@ -1,6 +1,7 @@
 from typing import List
-
-from fastapi import Depends, Header, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+# 1. Importamos las herramientas de seguridad nativas
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -8,17 +9,13 @@ from src.database import get_db
 from src.models import Rol, PermisoEndpoint
 from src.dependencies.manejo_JWT import decode_token
 
+security_scheme = HTTPBearer()
+
 async def validate_jwt_token(
-    authorization: str = Header(..., alias="Authorization")
+    credentials: HTTPAuthorizationCredentials = Depends(security_scheme)
 ) -> dict:
-
-    if not authorization.startswith("Bearer "):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header mal formado"
-        )
-
-    token = authorization.split(" ")[1]
+    
+    token = credentials.credentials
 
     payload = decode_token(token)
 
@@ -41,7 +38,7 @@ async def validate_role_permission(
     payload: dict = Depends(validate_jwt_token),
     db: AsyncSession = Depends(get_db)
 ) -> bool:
-
+    
     user_roles: List[str] = payload.get("roles", [])
 
     if not user_roles:
@@ -50,7 +47,7 @@ async def validate_role_permission(
             detail="Usuario sin roles asignados"
         )
 
-    path=request.scope["route"].path
+    path = request.scope["route"].path
     method = request.method.upper()
 
     stmt = (
@@ -77,5 +74,4 @@ async def validate_role_permission(
 async def require_authz(
     _: bool = Depends(validate_role_permission)
 ) -> bool:
-
     return True

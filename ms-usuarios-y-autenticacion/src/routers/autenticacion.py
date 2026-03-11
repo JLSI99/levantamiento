@@ -86,3 +86,4 @@ async def logout(
         return {"detail": "Sesión cerrada"}
 
     return {"detail": "Sesión cerrada"}
+

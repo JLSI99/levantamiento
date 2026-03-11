@@ -82,3 +82,11 @@ class TokenPayload(BaseModel):
     sub: str
     exp: datetime
     roles: List[str] = Field(default_factory=list)
+
+class CheckAccessRequest(BaseModel):
+    roles: List[str]
+    path: str
+    metodo: str
+
+class CheckAccessResponse(BaseModel):
+    permitido: bool
