@@ -3,8 +3,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
+
 from src.database import get_db
 from src import models, schemas
+from src.schemas import CheckAccessRequest, CheckAccessResponse
+from src.models import Rol, PermisoEndpoint
 from src.dependencies.hash_y_contrasenas import verify_password
 from src.dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
 
@@ -87,3 +90,22 @@ async def logout(
 
     return {"detail": "Sesión cerrada"}
 
+@router.post("/verificar-acceso", response_model=CheckAccessResponse)
+async def verificar_acceso(
+    datos: CheckAccessRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(PermisoEndpoint)
+        .join(PermisoEndpoint.roles)
+        .where(
+            Rol.nombre_rol.in_(datos.roles),
+            PermisoEndpoint.path_endpoint == datos.path,
+            PermisoEndpoint.metodo_http == datos.metodo
+        )
+    )
+    
+    result = await db.execute(stmt)
+    permiso = result.scalars().first()
+    
+    return {"permitido": permiso is not None}

@@ -1,51 +1,66 @@
-from fastapi import Header, HTTPException, Request, status, Depends
 import httpx
-import os
+import logging
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from src.dependencies.manejo_JWT import decode_token 
 
-AUTH_SERVICE_URL = os.getenv(
-    "AUTH_SERVICE_URL",
-    "http://ms-usuarios-y-autenticacion:8000/internal/authorize"
-)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-async def require_authz(
-    request: Request,
-    authorization: str = Header(..., alias="Authorization")
-) -> bool:
+security_scheme = HTTPBearer()
 
-    if not authorization.startswith("Bearer "):
+AUTH_SERVICE_URL = "http://api-ms-usuarios:8000/auth/verificar-acceso"
+
+async def validate_jwt_token(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> dict:
+    """Valida la integridad técnica del token (Firma y Exp) localmente."""
+    payload = decode_token(credentials.credentials)
+    if not payload:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authorization header mal formado"
+            status_code=status.HTTP_401_UNAUTHORIZED, 
+            detail="Token inválido o expirado"
         )
+    return payload
 
-    headers = {
-        "Authorization": authorization,
-        "X-Request-Path": request.url.path,
-        "X-Request-Method": request.method.upper(),
-    }
+async def validate_role_permission(request: Request, payload: dict = Depends(validate_jwt_token)) -> bool:
+    """Valida los permisos del Rol llamando al Microservicio de Usuarios."""
+    user_roles = payload.get("roles", [])
+    
+    raw_path = request.scope["route"].path
+    path = raw_path.rstrip("/") if raw_path != "/" else "/"
+    method = request.method.upper()
 
-    async with httpx.AsyncClient(timeout=5.0) as client:
+    async with httpx.AsyncClient() as client:
         try:
             response = await client.post(
                 AUTH_SERVICE_URL,
-                headers=headers
+                json={
+                    "roles": user_roles,
+                    "path": path,
+                    "metodo": method
+                },
+                timeout=3.0
             )
-        except httpx.RequestError:
+            
+            if response.status_code != 200:
+                logger.error(f"Error en Auth Service: {response.status_code}")
+                raise HTTPException(status_code=403, detail="Error en validación de permisos")
+
+            data = response.json()
+            if not data.get("permitido"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"No tienes permiso para {method} en {path}"
+                )
+
+        except httpx.RequestError as exc:
+            logger.error(f"Error de conexión con ms-usuarios: {exc}")
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Servicio de autenticación no disponible"
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                detail="Servicio de autorización no disponible momentáneamente"
             )
 
-    if response.status_code == 200:
-        return True
+    return True
 
-    if response.status_code in (401, 403):
-        raise HTTPException(
-            status_code=response.status_code,
-            detail=response.json().get("detail", "Acceso denegado")
-        )
-
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail="Error inesperado al validar autorización"
-    )
+async def require_authz(_: bool = Depends(validate_role_permission)):
+    """Dependencia final para usar en los routers."""
+    return True
