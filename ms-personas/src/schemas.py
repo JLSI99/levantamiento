@@ -8,6 +8,14 @@ class PersonaBase(BaseModel):
     apellidos: str = Field(..., min_length=2, max_length=100)
     curp: str = Field(..., min_length=18, max_length=18, description="CURP de 18 caracteres alfanuméricos")
 
+    @field_validator('nombres','apellidos')
+    @classmethod
+    def limpiar_y_validar_nombres(cls,  v: str)->str:
+        v=v.strip
+        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
+            raise ValueError('Los nombre y apellidos solo pueden contener letras')
+        return v
+    
     @field_validator('curp')
     @classmethod
     def validar_formato_curp(cls, v: str) -> str:

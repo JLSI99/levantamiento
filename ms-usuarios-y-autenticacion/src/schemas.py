@@ -1,3 +1,5 @@
+import re
+
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from typing import Optional, List
@@ -57,17 +59,30 @@ class UserOut(BaseModel):
 
 class UserRegisterRequest(BaseModel):
     curp: str = Field(
-        ...,
-        min_length=18,
-        max_length=18,
-        description="Foreign key lógica hacia ms-personas"
+        ..., min_length=18, max_length=18, description="Foreign key lógica hacia ms-personas"
     )
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
     role_ids: List[int] = Field(default_factory=lambda: [2])
 
-
+    @field_validator("username")
+    @classmethod
+    def validar_username(cls, v: str)->str:
+        if not re.match(r"^\w+$",v):
+            raise ValueError("El username solo puede contener letras números y guioones bajos")
+        return v.lower()
+    
+    @field_validator("password")
+    @classmethod
+    def validar_password_fuerte(cls,v:str)->str:
+        if not any(c.isupper() for c in v):
+            raise ValueError("La contraseña debe tener al menos una mayúscula")
+        if not any(c.islower() for c in v):
+            raise ValueError("La contraseña debe tener al menos una minúscula")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("La contraseña debe tener al menos un número")
+        return v
 class UserLogin(BaseModel):
     identifier: str = Field(..., description="username o email")
     password: str
