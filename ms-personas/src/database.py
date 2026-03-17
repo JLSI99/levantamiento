@@ -5,6 +5,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+modo_debug= os.getenv("DEBUG")=="True"
+
 DATABASE_URL = (
     f"postgresql+asyncpg://{os.getenv('DB_USER')}:"
     f"{os.getenv('DB_PASSWORD')}@"
@@ -14,7 +16,7 @@ DATABASE_URL = (
 
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
+    echo=modo_debug,
     future=True
 )
 

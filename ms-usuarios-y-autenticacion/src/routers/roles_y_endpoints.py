@@ -68,7 +68,7 @@ async def create_permiso(
     permiso_data: schemas.PermisoCreate,
     db: AsyncSession = Depends(get_db)
 ):
-    permiso = models.PermisoEndpoint(**permiso_data.dict())
+    permiso = models.PermisoEndpoint(**permiso_data.model_dump())
     db.add(permiso)
     await db.commit()
     await db.refresh(permiso)

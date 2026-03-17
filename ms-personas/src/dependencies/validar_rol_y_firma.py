@@ -12,12 +12,13 @@ security_scheme = HTTPBearer()
 AUTH_SERVICE_URL = "http://api-ms-usuarios:8000/auth/verificar-acceso"
 
 async def validate_jwt_token(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> dict:
-    """Valida la integridad técnica del token (Firma y Exp) localmente."""
     payload = decode_token(credentials.credentials)
     if not payload:
+        # Si llega aquí, el token falló en Firma, Exp, Iss o Aud.
+        logger.warning("Intento de acceso con token inválido o de otra audiencia/emisor.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Token inválido o expirado"
+            detail="Token no válido para este ecosistema o ha expirado"
         )
     return payload
 
