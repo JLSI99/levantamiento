@@ -11,7 +11,7 @@ class PersonaBase(BaseModel):
     @field_validator('nombres','apellidos')
     @classmethod
     def limpiar_y_validar_nombres(cls,  v: str)->str:
-        v=v.strip
+        v=v.strip()
         if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
             raise ValueError('Los nombre y apellidos solo pueden contener letras')
         return v

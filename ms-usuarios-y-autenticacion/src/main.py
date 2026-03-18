@@ -1,6 +1,13 @@
 import uvicorn
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.dependencies.rate_limiter import limiter
+
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
@@ -11,10 +18,24 @@ from src.database import engine, Base
 from src import models
 from src.routers import usuarios, roles_y_endpoints, autenticacion
 
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error": "Too Many Request",
+            "mensaje":"has excedido el límite de peticiones permitido para este recurso.",
+            "detalle": str(exc.detail)
+        }
+    )
+
 app = FastAPI(
     title="Microservicio Usuarios y Autenticación",
     version="1.0.0"
 )
+
+app.state.limiter= limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

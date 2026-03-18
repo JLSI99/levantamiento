@@ -1,11 +1,31 @@
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+
+from src.dependencies.rate_limiter import limiter
+
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from src.database import engine, Base
 from src.routers import personas
 
+async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded)-> Response:
+    return JSONResponse(
+        status_code=429,
+        content={
+            "error":"rate Limit Exceed",
+            "mensaje": "Servicio de Personas: Límite de peticiones alcanzado.",
+            "detalle": str(exc.detail)
+        }
+    )
+
 app = FastAPI(title="Microservicio Personas")
+
+app.state.limiter=limiter
+app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

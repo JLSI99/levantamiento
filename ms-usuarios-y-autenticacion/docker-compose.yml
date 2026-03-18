@@ -50,6 +50,13 @@ services:
         - backend_net 
     restart: unless-stopped
 
+  redis:
+    image: redis:7-alpine
+    container_name: itsc_redis_shared
+    networks:
+      - backend_net
+    restart: unless-stopped  
+
 networks:
   backend_net:
     external: true

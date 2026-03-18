@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
@@ -10,6 +10,7 @@ from src.schemas import CheckAccessRequest, CheckAccessResponse
 from src.models import Rol, PermisoEndpoint
 from src.dependencies.hash_y_contrasenas import verify_password
 from src.dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
+from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/auth",
@@ -21,7 +22,9 @@ router = APIRouter(
     response_model=schemas.Token,
     status_code=status.HTTP_200_OK
 )
+@limiter.limit("5/minutes")
 async def login(
+    request: Request,
     data: schemas.UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
@@ -58,9 +61,7 @@ async def login(
         roles=roles
     )
 
-    refresh_token = create_refresh_token(
-        id_usuario=user.id_usuario
-    )
+    refresh_token = create_refresh_token(id_usuario=user.id_usuario)
 
     return {
         "access_token": access_token,

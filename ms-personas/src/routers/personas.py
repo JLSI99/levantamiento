@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -6,6 +6,7 @@ from sqlalchemy.exc import IntegrityError
 from src.database import get_db
 from src import models, schemas
 from src.dependencies.validar_rol_y_firma import require_authz
+from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
     tags=["Personas"],
@@ -17,7 +18,9 @@ router = APIRouter(
     response_model=schemas.PersonaOut,
     status_code=status.HTTP_201_CREATED    
 )
+@limiter.limit("30/minute")
 async def create_persona(
+    request:Request,
     persona_in: schemas.PersonaCreate,
     db: AsyncSession = Depends(get_db)
 ):
@@ -45,7 +48,9 @@ async def create_persona(
     "/personas",
     response_model=list[schemas.PersonaOut]
 )
+@limiter.limit("30/minute")
 async def list_personas(
+    request:Request,
     db: AsyncSession = Depends(get_db)
 ):
     stmt = select(models.Persona)
