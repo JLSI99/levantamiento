@@ -17,7 +17,11 @@ DATABASE_URL = (
 engine = create_async_engine(
     DATABASE_URL,
     echo=modo_debug,
-    future=True
+    future=True,
+    pool_size=5,
+    max_overflow=10,
+    pool_timeout=10.0,
+    pool_recycle=1800
 )
 
 AsyncSessionLocal = sessionmaker(

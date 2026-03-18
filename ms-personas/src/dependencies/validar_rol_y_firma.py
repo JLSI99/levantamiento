@@ -30,7 +30,9 @@ async def validate_role_permission(request: Request, payload: dict = Depends(val
     path = raw_path.rstrip("/") if raw_path != "/" else "/"
     method = request.method.upper()
 
-    async with httpx.AsyncClient() as client:
+    Timeou_config=httpx.Timeout(3.0)
+
+    async with httpx.AsyncClient(timeout=Timeou_config) as client:
         try:
             response = await client.post(
                 AUTH_SERVICE_URL,
@@ -39,7 +41,6 @@ async def validate_role_permission(request: Request, payload: dict = Depends(val
                     "path": path,
                     "metodo": method
                 },
-                timeout=3.0
             )
             
             if response.status_code != 200:
@@ -53,13 +54,18 @@ async def validate_role_permission(request: Request, payload: dict = Depends(val
                     detail=f"No tienes permiso para {method} en {path}"
                 )
 
+        except httpx.TimeoutException as exc:
+            logger.error(f"Timeout al conectar con ms-usuarios: {exc}")
+            raise HTTPException(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT, 
+                detail="Servicio de autorización tardó demasiado en responder"
+            )
         except httpx.RequestError as exc:
             logger.error(f"Error de conexión con ms-usuarios: {exc}")
             raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Servicio de autorización no disponible momentáneamente"
             )
-
     return True
 
 async def require_authz(_: bool = Depends(validate_role_permission)):
