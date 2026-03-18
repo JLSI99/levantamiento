@@ -1,3 +1,4 @@
+import os
 import uvicorn
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -27,9 +28,13 @@ app.state.limiter=limiter
 app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
+origins_str=os.getenv("ALLOW_ORIGINS")
+
+origenes_permitidos=[origen.strip() for origen in origins_str.split(",")] if origins_str else []
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origenes_permitidos,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
