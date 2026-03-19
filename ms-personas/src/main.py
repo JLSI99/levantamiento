@@ -10,6 +10,9 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.database import engine, Base
+
+import src.auditoria
+
 from src.routers import personas
 
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded)-> Response:

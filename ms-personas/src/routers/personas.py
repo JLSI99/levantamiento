@@ -5,7 +5,8 @@ from sqlalchemy.exc import IntegrityError
 
 from src.database import get_db
 from src import models, schemas
-from src.dependencies.validar_rol_y_firma import require_authz
+
+from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
 from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
@@ -22,8 +23,12 @@ router = APIRouter(
 async def create_persona(
     request:Request,
     persona_in: schemas.PersonaCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict=Depends(validate_jwt_token)
 ):
+    
+    db.info['usuario_email']=jwt_payload.get('email','desconocido')
+
     nueva_persona = models.Persona(
         nombres=persona_in.nombres,
         apellidos=persona_in.apellidos,
