@@ -4,7 +4,8 @@ from sqlalchemy import select
 
 from src.database import get_db
 from src import models, schemas
-from src.dependencies.validar_rol_y_firma import require_authz
+
+from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
 
 router = APIRouter(
     prefix="/roles",
@@ -66,8 +67,12 @@ async def list_all_permisos(
 )
 async def create_permiso(
     permiso_data: schemas.PermisoCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict=Depends(validate_jwt_token)
 ):
+    
+    db.info['usuarios_email']=jwt_payload.get('email','desconocido')
+
     permiso = models.PermisoEndpoint(**permiso_data.model_dump())
     db.add(permiso)
     await db.commit()
@@ -82,8 +87,12 @@ async def create_permiso(
 async def assign_permiso_to_rol(
     id_rol: int,
     id_permiso: int,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(validate_jwt_token)
 ):
+    
+    db.info['usuario_email']=jwt_payload.get('email','desconocido')
+
     rol = await db.get(models.Rol, id_rol)
     permiso = await db.get(models.PermisoEndpoint, id_permiso)
 

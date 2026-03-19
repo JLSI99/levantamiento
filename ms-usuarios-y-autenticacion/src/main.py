@@ -18,6 +18,8 @@ from src.database import engine, Base
 from src import models
 from src.routers import usuarios, roles_y_endpoints, autenticacion
 
+import src.auditoria
+
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     return JSONResponse(
         status_code=429,

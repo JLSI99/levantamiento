@@ -5,7 +5,7 @@ from sqlalchemy import select, or_
 from src.database import get_db
 from src import models, schemas
 from src.dependencies.hash_y_contrasenas import get_password_hash
-from src.dependencies.validar_rol_y_firma import require_authz
+from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
 
 router = APIRouter(
     prefix="/users",
@@ -21,10 +21,13 @@ router = APIRouter(
 )
 async def create_user(
     user_in: schemas.UserRegisterRequest,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict =Depends(validate_jwt_token)
 ):
-    async with db.begin():
+    
+    db.info['usuario_email']=jwt_payload.get('email','desconocido')
 
+    async with db.begin():
         stmt_user = select(models.Usuario).where(
             or_(
                 models.Usuario.email == user_in.email,
