@@ -1,11 +1,10 @@
 import httpx
-import logging
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from src.dependencies.manejo_JWT import decode_token 
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from src.dependencies.logger import setup_logger
+logger = setup_logger(__name__)
 
 security_scheme = HTTPBearer()
 
@@ -14,8 +13,13 @@ AUTH_SERVICE_URL = "http://api-ms-usuarios:8000/auth/verificar-acceso"
 async def validate_jwt_token(credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> dict:
     payload = decode_token(credentials.credentials)
     if not payload:
-        # Si llega aquí, el token falló en Firma, Exp, Iss o Aud.
-        logger.warning("Intento de acceso con token inválido o de otra audiencia/emisor.")
+        logger.warning(
+            "Acceso denegado: Token inválido",
+            extra={
+                "evento": "token_invalido",
+                "motivo": "firma_o_expiracion_fallida"
+            }
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Token no válido para este ecosistema o ha expirado"
@@ -29,6 +33,8 @@ async def validate_role_permission(request: Request, payload: dict = Depends(val
     raw_path = request.scope["route"].path
     path = raw_path.rstrip("/") if raw_path != "/" else "/"
     method = request.method.upper()
+    
+    client_ip = request.client.host if request.client else "unknown"
 
     Timeou_config=httpx.Timeout(3.0)
 
@@ -49,19 +55,45 @@ async def validate_role_permission(request: Request, payload: dict = Depends(val
 
             data = response.json()
             if not data.get("permitido"):
+                logger.warning(
+                    "Acceso denegado: Permisos insuficientes",
+                    extra={
+                        "evento": "acceso_denegado",
+                        "motivo": "rol_sin_permiso",
+                        "usuario": payload.get("email"),
+                        "roles_usuario": user_roles,
+                        "endpoint_intentado": path,
+                        "metodo_intentado": method,
+                        "ip_origen": client_ip
+                    }
+                )
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail=f"No tienes permiso para {method} en {path}"
                 )
 
         except httpx.TimeoutException as exc:
-            logger.error(f"Timeout al conectar con ms-usuarios: {exc}")
+            logger.error(
+                "Timeout al conectar con servicio de usuarios",
+                extra={
+                    "evento": "falla_dependencia", 
+                    "servicio": "ms-usuarios", 
+                    "error": str(exc)
+                }
+            )
             raise HTTPException(
                 status_code=status.HTTP_504_GATEWAY_TIMEOUT, 
                 detail="Servicio de autorización tardó demasiado en responder"
             )
         except httpx.RequestError as exc:
-            logger.error(f"Error de conexión con ms-usuarios: {exc}")
+            logger.critical(
+                "Falla catastrófica de conexión con servicio de usuarios",
+                extra={
+                    "evento": "falla_dependencia", 
+                    "servicio": "ms-usuarios", 
+                    "error": str(exc)
+                }
+            )
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Servicio de autorización no disponible momentáneamente"

@@ -12,6 +12,9 @@ from src.dependencies.hash_y_contrasenas import verify_password
 from src.dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
 from src.dependencies.rate_limiter import limiter
 
+from src.dependencies.logger import setup_logger
+logger=setup_logger(__name__)
+
 router = APIRouter(
     prefix="/auth",
     tags=["Autenticación"]
@@ -28,6 +31,9 @@ async def login(
     data: schemas.UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
+    
+    client_ip=request.client.host if request.client else "unknown"
+
     stmt = (
         select(models.Usuario)
         .options(selectinload(models.Usuario.roles))
@@ -41,12 +47,30 @@ async def login(
     user = result.scalars().first()
 
     if not user or not verify_password(data.password, user.hashed_password):
+        logger.warning(
+            "Intento de login fallido",
+            extra={
+                "evento":"login_fallido",
+                "motivo":"credenciales_invalidas",
+                "identificador_usado":data.identifier,
+                "ip_origen":client_ip
+            }
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Credenciales inválidas"
         )
 
     if not user.is_active:
+        logger.warning(
+            "login rechazado",
+            extra={
+                "evento":"login_rechazado",
+                "motivo":"usuario_inactivo",
+                "identificador_usado":data.identifier,
+                "ip_origen":client_ip
+            }
+        )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Usuario inactivo"
@@ -62,6 +86,15 @@ async def login(
     )
 
     refresh_token = create_refresh_token(id_usuario=user.id_usuario)
+
+    logger.info(
+        "login exitoso",
+        extra={
+            "evento":"login_exitoso",
+            "usuario": user.username,
+            "ip_origen": client_ip
+        }
+    )
 
     return {
         "access_token": access_token,
