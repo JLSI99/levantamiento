@@ -2,8 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_
 
+from sqlalchemy.orm import selectinload
+
 from src.database import get_db
 from src import models, schemas
+
 from src.dependencies.hash_y_contrasenas import get_password_hash
 from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
 
@@ -76,6 +79,6 @@ async def create_user(
 async def list_users(
     db: AsyncSession = Depends(get_db)
 ):
-    stmt = select(models.Usuario)
+    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles))
     result = await db.execute(stmt)
     return result.scalars().all()
