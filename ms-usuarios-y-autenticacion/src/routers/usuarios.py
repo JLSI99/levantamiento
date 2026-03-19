@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 
 from sqlalchemy.orm import selectinload
 
@@ -74,11 +74,23 @@ async def create_user(
 
 @router.get(
     "",
-    response_model=list[schemas.UserOut]
+    response_model=schemas.UsersPaginatedOut
 )
 async def list_users(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, ge=1, le=100, description="Máximo 100 usuarios por petición"),
+    offset: int = Query(0, ge=0, description="Registros a saltar (paginación)")
 ):
-    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles))
+    total_stmt = select(func.count(models.Usuario.id_usuario))
+    total = await db.scalar(total_stmt)
+
+    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).offset(offset).limit(limit)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    usuarios = result.scalars().all()
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": usuarios
+    }

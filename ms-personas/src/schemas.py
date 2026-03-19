@@ -41,3 +41,9 @@ class CheckAccessRequest(BaseModel):
 
 class CheckAccessResponse(BaseModel):
     permitido: bool
+
+class PersonaPaginatedOut(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[PersonaOut]

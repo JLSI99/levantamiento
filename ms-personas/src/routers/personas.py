@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 
 from src.database import get_db
@@ -51,14 +51,25 @@ async def create_persona(
 
 @router.get(
     "/personas",
-    response_model=list[schemas.PersonaOut]
+    response_model=schemas.PersonasPaginatedOut
 )
 @limiter.limit("30/minute")
 async def list_personas(
     request:Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(50, ge=1, le=100, description="Máximo 100 registros por petición"),
+    offset: int = Query(0, ge=0, description="Registros a saltar (paginación)")
 ):
-    stmt = select(models.Persona)
+    total_stmt = select(func.count(models.Persona.id_persona))
+    total = await db.scalar(total_stmt)
+
+    stmt = select(models.Persona).offset(offset).limit(limit)
     result = await db.execute(stmt)
     personas = result.scalars().all()
-    return personas
+
+    return {
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": personas
+    }
