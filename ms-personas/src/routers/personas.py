@@ -51,7 +51,7 @@ async def create_persona(
 
 @router.get(
     "/personas",
-    response_model=schemas.PersonasPaginatedOut
+    response_model=schemas.PersonaPaginatedOut
 )
 @limiter.limit("30/minute")
 async def list_personas(

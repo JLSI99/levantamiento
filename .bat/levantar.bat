@@ -3,6 +3,10 @@ set -e
 
 echo "--- Levantando sistema ---"
 
+cd ms-observabilidad
+docker-compose up -d
+cd ..
+
 cd ms-usuarios-y-autenticacion
 docker-compose up -d
 cd ..

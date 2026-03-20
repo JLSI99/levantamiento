@@ -20,7 +20,6 @@ class Auditoria(Base):
     valores_viejos = Column(JSONB, nullable=True)
     valores_nuevos = Column(JSONB, nullable=True)
 
-# Ahora guardaremos diccionarios para pasarle los objetos al evento after_flush
 auditoria_temp_store = []
 
 def get_estado_objeto(obj):
@@ -42,7 +41,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
     for obj in session.new:
         if isinstance(obj, Auditoria): continue
         
-        # Preparamos el registro pero NO calculamos el ID ni los datos nuevos todavía
         audit_obj = Auditoria(
             tabla_afectada=obj.__tablename__,
             accion='INSERT',
@@ -114,8 +112,6 @@ def auditar_despues_de_flush(session, flush_context):
             target_obj = item["target_obj"]
             accion = item["accion"]
             
-            # ¡AQUÍ ESTÁ LA MAGIA! 
-            # Si es un INSERT, extraemos el ID y los datos ahora que ya se generaron
             if accion == 'INSERT':
                 pk_name = target_obj.__mapper__.primary_key[0].name
                 audit_record.registro_id = str(getattr(target_obj, pk_name, 'N/A'))

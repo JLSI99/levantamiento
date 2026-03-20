@@ -74,7 +74,7 @@ async def create_user(
 
 @router.get(
     "",
-    response_model=schemas.UsersPaginatedOut
+    response_model=schemas.UserPaginatedOut
 )
 async def list_users(
     db: AsyncSession = Depends(get_db),

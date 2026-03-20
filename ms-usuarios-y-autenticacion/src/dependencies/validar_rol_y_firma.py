@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import Depends, HTTPException, Request, status
-# 1. Importamos las herramientas de seguridad nativas
+
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
