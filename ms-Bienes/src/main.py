@@ -1,7 +1,7 @@
 import os
 import uvicorn
 from fastapi import FastAPI, Request, Response
-from fastapi.response import JSONResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.dependencies.rate_limiter import limiter
