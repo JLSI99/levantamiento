@@ -11,13 +11,7 @@ if not SECRET_KEY:
     raise ValueError("SECRET_KEY no está configurada en la plantilla")
 
 def decode_token(token: str) -> Optional[dict]:
-    """
-    Decodifica y valida:
-    1. Firma criptográfica.
-    2. Fecha de expiración (exp).
-    3. Emisor (iss) -> Debe ser itsc-auth-service.
-    4. Audiencia (aud) -> Debe ser itsc-ecosistema-universitario.
-    """
+
     try:
         payload = jwt.decode(
             token, 

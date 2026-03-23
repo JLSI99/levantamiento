@@ -22,7 +22,7 @@ services:
     image: postgres:15-alpine
     container_name: db_bienes
     env_file: 
-      -.env
+      - .env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s

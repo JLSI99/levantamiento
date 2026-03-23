@@ -1,4 +1,5 @@
 import uuid
+import decimal
 import datetime
 from sqlalchemy import Column, String, DateTime
 from sqlalchemy.dialects.postgresql import UUID, JSONB
@@ -28,8 +29,11 @@ def get_estado_objeto(obj):
     for prop in obj.__mapper__.column_attrs:
         key = prop.key
         valor = getattr(obj, key)
+        
         if isinstance(valor, uuid.UUID):
             valor = str(valor)
+        elif isinstance(valor, decimal.Decimal):
+            valor= float(valor)
         estado[key] = valor
     return estado
 
@@ -41,7 +45,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
     for obj in session.new:
         if isinstance(obj, Auditoria): continue
         
-        # Preparamos el registro pero NO calculamos el ID ni los datos nuevos todavía
         audit_obj = Auditoria(
             tabla_afectada=obj.__tablename__,
             accion='INSERT',
