@@ -10,6 +10,8 @@ from src import models, schemas
 from src.dependencies.hash_y_contrasenas import get_password_hash
 from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
 
+from src.dependencies.rate_limiter import limiter
+
 router = APIRouter(
     prefix="/users",
     tags=["Usuarios"],
@@ -22,6 +24,7 @@ router = APIRouter(
     response_model=schemas.UserOut,
     status_code=status.HTTP_201_CREATED
 )
+@limiter.limit("30/minute")
 async def create_user(
     user_in: schemas.UserRegisterRequest,
     db: AsyncSession = Depends(get_db),
@@ -76,6 +79,7 @@ async def create_user(
     "",
     response_model=schemas.UserPaginatedOut
 )
+@limiter.limit("30/minute")
 async def list_users(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 usuarios por petición"),

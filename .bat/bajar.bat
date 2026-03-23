@@ -3,6 +3,10 @@ set -e
 
 echo "--- Deteniendo sistema ---"
 
+cd ms-observabilidad
+docker-compose up -d
+cd ..
+
 cd ms-usuarios-y-autenticacion
 docker-compose down
 cd ..

@@ -1,7 +1,7 @@
 services:
-  api-ms-personas:
+  api-ms-bienes:
     build: ./
-    container_name: ms_personas_api
+    container_name: ms_bienes_api
     env_file: 
       - .env_code
     environment:
@@ -15,14 +15,14 @@ services:
        db:
         condition: service_healthy
     networks:
-        - backend_net
+        - backend_net  
     restart: unless-stopped
 
   db:
     image: postgres:15-alpine
-    container_name: db_personas
+    container_name: db_bienes
     env_file: 
-      - .env
+      -.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -30,13 +30,13 @@ services:
       retries: 5
       start_period: 5s
     volumes:
-      - ./db-data-personas:/var/lib/postgresql/data
+      - ./db-data-bienes:/var/lib/postgresql/data
     networks:
         - backend_net
     restart: unless-stopped
-
+    
   pgadmin:
-    container_name: pgadmin_personas
+    container_name: pgadmin_activos
     image: dpage/pgadmin4
     ports:
       - ${PGADMIN_IP}:${PGADMIN_PORT}:80
@@ -44,12 +44,12 @@ services:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
     volumes:
-      - ./pgadmin-data-personas/:/var/lib/pgadmin
+      - ./pgadmin-data-bienes/:/var/lib/pgadmin
     depends_on:
       db:
-        condition: service_healthy 
+        condition: service_healthy
     networks:
-        - backend_net 
+        - backend_net
     restart: unless-stopped
 
 networks:
