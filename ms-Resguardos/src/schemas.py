@@ -16,7 +16,7 @@ class AsignacionOut(AsignacionCreate):
     
     model_config={"from_attributes": True}
 
-class ASignacionPaginatedOut(BaseModel):
+class AsignacionPaginatedOut(BaseModel):
     total: int
     limit: int
     offset: int

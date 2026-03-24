@@ -13,7 +13,7 @@ from src.database import engine, Base
 
 import src.auditoria
 
-from src.routers import asignaciones
+from src.routers import resguardos
 
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded)-> Response:
     return JSONResponse(
@@ -43,7 +43,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(asignaciones.router)
+app.include_router(resguardos.router)
 
 @app.on_event("startup")
 async def startup_event():
