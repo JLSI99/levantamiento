@@ -22,4 +22,15 @@ echo "--- Levantando ms bienes ---"
 cd ms-bienes
 docker-compose up -d
 cd ..
+
+echo "--- Levantando ms ubicaciones ---"
+cd ms-ubicaciones
+docker-compose up -d
+cd ..
+
+echo "--- Levantando ms resguardos ---"
+cd ms-resguardos
+docker-compose up -d
+cd ..
+
 echo "--- Sistema arriba ---"
