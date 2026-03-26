@@ -18,13 +18,13 @@ cd ms-personas
 docker-compose up -d
 cd ..
 
-echo "--- Levantando ms bienes ---"
-cd ms-bienes
+echo "--- Levantando ms ubicaciones ---"
+cd ms-ubicaciones
 docker-compose up -d
 cd ..
 
-echo "--- Levantando ms ubicaciones ---"
-cd ms-ubicaciones
+echo "--- Levantando ms bienes ---"
+cd ms-bienes
 docker-compose up -d
 cd ..
 

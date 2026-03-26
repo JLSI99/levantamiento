@@ -6,7 +6,6 @@ services:
       - .env_code
     environment:
       - PYTHONUNBUFFERED=1
-    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - ./:/app
     ports:
@@ -31,6 +30,7 @@ services:
       start_period: 5s
     volumes:
       - ./db-data-resguardo:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
         - backend_net
     restart: unless-stopped

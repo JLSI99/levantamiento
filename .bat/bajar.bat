@@ -13,13 +13,13 @@ cd ms-personas
 docker-compose down
 cd ..
 
-echo "--- Deteniendo ms bienes ---"
-cd ms-bienes
+echo "--- Deteniendo ms ubicaciones ---"
+cd ms-ubicaciones
 docker-compose down
 cd ..
 
-echo "--- Deteniendo ms ubicaciones ---"
-cd ms-ubicaciones
+echo "--- Deteniendo ms bienes ---"
+cd ms-bienes
 docker-compose down
 cd ..
 
@@ -30,7 +30,7 @@ cd ..
 
 echo "--- Deteniendo ms observabilidad ---"
 cd ms-observabilidad
-docker-compose up -d
+docker-compose down
 cd ..
 
 echo "--- Sistema detenido ---"

@@ -25,6 +25,16 @@ async def list_roles(
 
 
 @router.get(
+    "/permisos",
+    response_model=list[schemas.PermisoOut]
+)
+async def list_all_permisos(
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(select(models.PermisoEndpoint))
+    return result.scalars().all()
+
+@router.get(
     "/{id_rol}/permisos",
     response_model=list[schemas.PermisoOut]
 )
@@ -48,17 +58,6 @@ async def get_permisos_by_rol(
         )
 
     return permisos
-
-
-@router.get(
-    "/permisos",
-    response_model=list[schemas.PermisoOut]
-)
-async def list_all_permisos(
-    db: AsyncSession = Depends(get_db)
-):
-    result = await db.execute(select(models.PermisoEndpoint))
-    return result.scalars().all()
 
 @router.post(
     "/permisos",

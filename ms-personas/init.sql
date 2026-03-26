@@ -1,0 +1,8 @@
+
+CREATE USER ms_personas_user WITH PASSWORD 'personas_secreto_123';
+
+GRANT CONNECT ON DATABASE bd_personas TO ms_personas_user;
+GRANT USAGE, CREATE ON SCHEMA public TO ms_personas_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ms_personas_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ms_personas_user;

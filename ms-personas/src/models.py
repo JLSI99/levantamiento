@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String
+from sqlalchemy import Column, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from src.database import Base
 
@@ -21,6 +21,9 @@ class Persona(Base):
         unique=True, 
         index=True
     )
+    
+    # NUEVO: Para soportar el borrado lógico
+    is_active = Column(Boolean, default=True)
 
     @property
     def nombre_completo(self):

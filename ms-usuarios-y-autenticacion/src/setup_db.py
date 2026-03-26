@@ -24,10 +24,18 @@ PERMISOS_BASE = [
     (5, "Ver Permisos de Rol", "/roles/{id_rol}/permisos", "GET", "Ver qué endpoints tiene permitido un rol"),
     (6, "Crear Permiso", "/roles/permisos", "POST", "Registrar un nuevo endpoint en la matriz"),
     (7, "Asignar Permiso a Rol", "/roles/{id_rol}/permisos/{id_permiso}", "POST", "Vincular un permiso con un rol"),
+    (8, "Dar de baja Usuario", "/users/{id_usuario}", "DELETE", "Borrado lógico (inactivar) de un usuario"),
+    (9, "Listar Catálogo de Permisos", "/roles/permisos", "GET", "Consultar todos los permisos disponibles en el sistema"),
+    (10, "Crear Persona", "/personas", "POST", "Permite registrar una nueva persona en el sistema"),
+    (11, "Listar Personas", "/personas", "GET", "Visualización y paginación del catálogo de personas"),
+    (12, "Actualizar Persona", "/personas/{id_persona}", "PATCH", "Modificar datos de una persona existente"),
+    (13, "Dar de baja Persona", "/personas/{id_persona}", "DELETE", "Borrado lógico (inactivar) de una persona"),
 ]
 
 MATRIZ_ACCESO = {
-    1: [1, 2, 3, 4, 5, 6, 7] 
+    1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13], 
+    3: [10, 11, 12, 13], 
+    4: [11]
 }
 
 USUARIOS_SEMILLA = [

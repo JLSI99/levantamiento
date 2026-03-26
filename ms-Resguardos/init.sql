@@ -1,0 +1,8 @@
+
+CREATE USER ms_resguardo_user WITH PASSWORD 'resguardo_secreto_123';
+
+GRANT CONNECT ON DATABASE bd_resguardo TO ms_resguardo_user;
+GRANT USAGE, CREATE ON SCHEMA public TO ms_resguardo_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ms_resguardo_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ms_resguardo_user;
