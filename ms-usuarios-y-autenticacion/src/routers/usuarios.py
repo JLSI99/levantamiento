@@ -24,7 +24,7 @@ router = APIRouter(
 )
 @limiter.limit("30/minute")
 async def create_user(
-    reques:Request,
+    request:Request,
     user_in: schemas.UserRegisterRequest,
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(validate_jwt_token)
@@ -80,7 +80,7 @@ async def create_user(
 )
 @limiter.limit("30/minute")
 async def list_users(
-    reques:Request,
+    request:Request,
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 usuarios por petición"),
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
@@ -116,7 +116,7 @@ async def list_users(
 )
 @limiter.limit("30/minute")
 async def update_user(
-    reques:Request,
+    request:Request,
     id_usuario: UUID,
     user_in: schemas.UserUpdate,
     db: AsyncSession = Depends(get_db),
@@ -154,7 +154,7 @@ async def update_user(
 )
 @limiter.limit("10/minute")
 async def delete_user(
-    reques:Request,
+    request:Request,
     id_usuario: UUID,
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(validate_jwt_token)

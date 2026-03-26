@@ -26,7 +26,7 @@ router = APIRouter(
     response_model=schemas.Token,
     status_code=status.HTTP_200_OK
 )
-@limiter.limit("5/minutes")
+@limiter.limit("5/minute")
 async def login(
     request: Request,
     data: schemas.UserLogin,

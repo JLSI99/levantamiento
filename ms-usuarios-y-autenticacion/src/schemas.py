@@ -70,7 +70,7 @@ class UserRegisterRequest(BaseModel):
     @classmethod
     def validar_username(cls, v: str)->str:
         if not re.match(r"^\w+$",v):
-            raise ValueError("El username solo puede contener letras números y guioones bajos")
+            raise ValueError("El username solo puede contener letras números y guiones bajos")
         return v.lower()
     
     @field_validator("password")
@@ -83,6 +83,7 @@ class UserRegisterRequest(BaseModel):
         if not any(c.isdigit() for c in v):
             raise ValueError("La contraseña debe tener al menos un número")
         return v
+
 class UserLogin(BaseModel):
     identifier: str = Field(..., description="username o email")
     password: str
@@ -111,3 +112,31 @@ class UserPaginatedOut(BaseModel):
     limit: int
     offset: int
     data: List[UserOut]
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=8)
+    is_active: Optional[bool] = None
+
+    @field_validator("username")
+    @classmethod
+    def validar_username(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not re.match(r"^\w+$", v):
+            raise ValueError("El username solo puede contener letras números y guiones bajos")
+        return v.lower()
+    
+    @field_validator("password")
+    @classmethod
+    def validar_password_fuerte(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        if not any(c.isupper() for c in v):
+            raise ValueError("La contraseña debe tener al menos una mayúscula")
+        if not any(c.islower() for c in v):
+            raise ValueError("La contraseña debe tener al menos una minúscula")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("La contraseña debe tener al menos un número")
+        return v
