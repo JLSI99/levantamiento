@@ -1,0 +1,8 @@
+
+CREATE USER ms_usuarios_user WITH PASSWORD 'usuarios_secreto_123';
+
+GRANT CONNECT ON DATABASE bd_usuarios TO ms_usuarios_user;
+GRANT USAGE, CREATE ON SCHEMA public TO ms_usuarios_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ms_usuarios_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ms_usuarios_user;
