@@ -17,6 +17,9 @@ router = APIRouter(
     dependencies=[Depends(require_authz)]
 )
 
+# ==========================================
+# 1. CREAR USUARIO (C)
+# ==========================================
 @router.post(
     "",
     response_model=schemas.UserOut,
@@ -24,13 +27,12 @@ router = APIRouter(
 )
 @limiter.limit("30/minute")
 async def create_user(
-    request:Request,
+    request: Request,
     user_in: schemas.UserRegisterRequest,
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(validate_jwt_token)
 ):
-    
-    db.info['usuario_email'] = jwt_payload.get('email','desconocido')
+    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
     async with db.begin():
         stmt_user = select(models.Usuario).where(
@@ -73,24 +75,24 @@ async def create_user(
     await db.refresh(user)
     return user
 
-
+# ==========================================
+# 2. LISTAR USUARIOS (R - Paginado)
+# ==========================================
 @router.get(
     "",
     response_model=schemas.UserPaginatedOut
 )
 @limiter.limit("30/minute")
 async def list_users(
-    request:Request,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 usuarios por petición"),
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
-    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los usuarios, incluyendo los dados de baja")
+    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los usuarios")
 ):
-    # Base de las consultas
     total_stmt = select(func.count(models.Usuario.id_usuario))
     stmt = select(models.Usuario).options(selectinload(models.Usuario.roles))
 
-    # OPCIÓN B: Filtramos si incluir_inactivos es False
     if not incluir_inactivos:
         total_stmt = total_stmt.where(models.Usuario.is_active == True)
         stmt = stmt.where(models.Usuario.is_active == True)
@@ -108,7 +110,68 @@ async def list_users(
         "data": usuarios
     }
 
+# ==========================================
+# 3. VER MI PERFIL (R - Propio)
+# IMPORTANTE: Va antes de /{id_usuario}
+# ==========================================
+@router.get(
+    "/me/profile",
+    response_model=schemas.UserOut,
+    status_code=status.HTTP_200_OK
+)
+@limiter.limit("60/minute")
+async def get_my_profile(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(validate_jwt_token)
+):
+    email_usuario = jwt_payload.get('email')
+    db.info['usuario_email'] = email_usuario
 
+    stmt = select(models.Usuario).options(
+        selectinload(models.Usuario.roles)
+    ).where(models.Usuario.email == email_usuario)
+    
+    result = await db.execute(stmt)
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado o token inválido.")
+        
+    return user
+
+# ==========================================
+# 4. VER USUARIO ESPECÍFICO (R - Individual)
+# ==========================================
+@router.get(
+    "/{id_usuario}",
+    response_model=schemas.UserOut,
+    status_code=status.HTTP_200_OK
+)
+@limiter.limit("60/minute")
+async def get_user(
+    request: Request,
+    id_usuario: UUID,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(validate_jwt_token)
+):
+    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
+
+    stmt = select(models.Usuario).options(
+        selectinload(models.Usuario.roles)
+    ).where(models.Usuario.id_usuario == id_usuario)
+    
+    result = await db.execute(stmt)
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+
+    return user
+
+# ==========================================
+# 5. ACTUALIZAR DATOS DEL USUARIO (U)
+# ==========================================
 @router.patch(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -116,7 +179,7 @@ async def list_users(
 )
 @limiter.limit("30/minute")
 async def update_user(
-    request:Request,
+    request: Request,
     id_usuario: UUID,
     user_in: schemas.UserUpdate,
     db: AsyncSession = Depends(get_db),
@@ -147,14 +210,62 @@ async def update_user(
     
     return user
 
+# ==========================================
+# 6. ACTUALIZAR ROLES DEL USUARIO (U - Roles)
+# ==========================================
+@router.put(
+    "/{id_usuario}/roles",
+    response_model=schemas.UserOut,
+    status_code=status.HTTP_200_OK
+)
+@limiter.limit("20/minute")
+async def update_user_roles(
+    request: Request,
+    id_usuario: UUID,
+    roles_in: schemas.UserRoleUpdate,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(validate_jwt_token)
+):
+    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
+    stmt_user = select(models.Usuario).options(
+        selectinload(models.Usuario.roles)
+    ).where(models.Usuario.id_usuario == id_usuario)
+    
+    result_user = await db.execute(stmt_user)
+    user = result_user.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+    if not user.is_active:
+        raise HTTPException(status_code=400, detail="No puedes modificar roles de un usuario inactivo.")
+
+    stmt_roles = select(models.Rol).where(
+        models.Rol.id_rol.in_(roles_in.role_ids)
+    )
+    result_roles = await db.execute(stmt_roles)
+    nuevos_roles = result_roles.scalars().all()
+
+    if not nuevos_roles:
+        raise HTTPException(status_code=400, detail="Los roles proporcionados no existen o son inválidos.")
+
+    user.roles = nuevos_roles
+
+    await db.commit()
+    await db.refresh(user)
+    
+    return user
+
+# ==========================================
+# 7. ELIMINAR USUARIO (D - Soft Delete)
+# ==========================================
 @router.delete(
     "/{id_usuario}",
     status_code=status.HTTP_204_NO_CONTENT
 )
 @limiter.limit("10/minute")
 async def delete_user(
-    request:Request,
+    request: Request,
     id_usuario: UUID,
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(validate_jwt_token)

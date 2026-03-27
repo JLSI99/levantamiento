@@ -3,18 +3,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-
 from src.database import get_db
 from src import models, schemas
-from src.schemas import CheckAccessRequest, CheckAccessResponse
-from src.models import Rol, PermisoEndpoint
 
 from src.dependencies.hash_y_contrasenas import verify_password
-from src.dependencies.manejo_JWT import (create_access_token,create_refresh_token,decode_token)
+from src.dependencies.manejo_JWT import create_access_token, create_refresh_token, decode_token
 from src.dependencies.rate_limiter import limiter
-
 from src.dependencies.logger import setup_logger
-logger=setup_logger(__name__)
+
+logger = setup_logger(__name__)
 
 router = APIRouter(
     prefix="/auth",
@@ -32,8 +29,7 @@ async def login(
     data: schemas.UserLogin,
     db: AsyncSession = Depends(get_db)
 ):
-    
-    client_ip=request.client.host if request.client else "unknown"
+    client_ip = request.client.host if request.client else "unknown"
 
     stmt = (
         select(models.Usuario)
@@ -51,10 +47,10 @@ async def login(
         logger.warning(
             "Intento de login fallido",
             extra={
-                "evento":"login_fallido",
-                "motivo":"credenciales_invalidas",
-                "identificador_usado":data.identifier,
-                "ip_origen":client_ip
+                "evento": "login_fallido",
+                "motivo": "credenciales_invalidas",
+                "identificador_usado": data.identifier,
+                "ip_origen": client_ip
             }
         )
         raise HTTPException(
@@ -66,10 +62,10 @@ async def login(
         logger.warning(
             "login rechazado",
             extra={
-                "evento":"login_rechazado",
-                "motivo":"usuario_inactivo",
-                "identificador_usado":data.identifier,
-                "ip_origen":client_ip
+                "evento": "login_rechazado",
+                "motivo": "usuario_inactivo",
+                "identificador_usado": data.identifier,
+                "ip_origen": client_ip
             }
         )
         raise HTTPException(
@@ -91,7 +87,7 @@ async def login(
     logger.info(
         "login exitoso",
         extra={
-            "evento":"login_exitoso",
+            "evento": "login_exitoso",
             "usuario": user.username,
             "ip_origen": client_ip
         }
@@ -104,6 +100,50 @@ async def login(
     }
 
 @router.post(
+    "/refresh",
+    response_model=schemas.Token,
+    status_code=status.HTTP_200_OK
+)
+async def refresh_access_token(
+    data: schemas.TokenRefresh,
+    db: AsyncSession = Depends(get_db)
+):
+    payload = decode_token(data.refresh_token)
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token inválido o expirado"
+        )
+        
+    user_id = payload.get("sub")
+    
+    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == user_id)
+    result = await db.execute(stmt)
+    user = result.scalars().first()
+
+    if not user or not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Usuario no válido o inactivo"
+        )
+
+    roles = [rol.nombre_rol for rol in user.roles]
+
+    new_access_token = create_access_token(
+        id_usuario=user.id_usuario,
+        username=user.username,
+        email=user.email,
+        roles=roles
+    )
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": data.refresh_token,
+        "token_type": "bearer"
+    }
+
+@router.post(
     "/logout",
     status_code=status.HTTP_200_OK
 )
@@ -111,32 +151,31 @@ async def logout(
     authorization: str = Header(None)
 ):
 
-    if not authorization:
-        return {"detail": "Sesión cerrada"}
-
-    if not authorization.startswith("Bearer "):
+    if not authorization or not authorization.startswith("Bearer "):
         return {"detail": "Sesión cerrada"}
 
     token = authorization.split(" ")[1]
     payload = decode_token(token)
 
     if not payload:
-        return {"detail": "Sesión cerrada"}
-
+        return {"detail": "Sesión cerrada"}    
     return {"detail": "Sesión cerrada"}
 
-@router.post("/verificar-acceso", response_model=CheckAccessResponse)
+@router.post(
+    "/verificar-acceso", 
+    response_model=schemas.CheckAccessResponse
+)
 async def verificar_acceso(
-    datos: CheckAccessRequest,
+    datos: schemas.CheckAccessRequest,
     db: AsyncSession = Depends(get_db)
 ):
     stmt = (
-        select(PermisoEndpoint)
-        .join(PermisoEndpoint.roles)
+        select(models.PermisoEndpoint)
+        .join(models.PermisoEndpoint.roles)
         .where(
-            Rol.nombre_rol.in_(datos.roles),
-            PermisoEndpoint.path_endpoint == datos.path,
-            PermisoEndpoint.metodo_http == datos.metodo
+            models.Rol.nombre_rol.in_(datos.roles),
+            models.PermisoEndpoint.path_endpoint == datos.path,
+            models.PermisoEndpoint.metodo_http == datos.metodo
         )
     )
     

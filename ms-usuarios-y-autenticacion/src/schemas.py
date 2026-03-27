@@ -1,5 +1,4 @@
 import re
-
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from typing import Optional, List
@@ -23,6 +22,22 @@ class PermisoCreate(BaseModel):
             raise ValueError(f"Método HTTP inválido: {v}")
         return v
 
+class PermisoUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=3, max_length=150)
+    path_endpoint: Optional[str] = Field(None, min_length=1, max_length=255)
+    metodo_http: Optional[str] = None
+    descripcion: Optional[str] = Field(None, max_length=255)
+
+    @field_validator("metodo_http")
+    @classmethod
+    def validar_metodo_http(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        permitidos = {"GET", "POST", "PUT", "DELETE", "PATCH"}
+        v = v.upper()
+        if v not in permitidos:
+            raise ValueError(f"Método HTTP inválido: {v}")
+        return v
 
 class PermisoOut(BaseModel):
     id_permiso: int
@@ -34,6 +49,14 @@ class PermisoOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
+
+class RolCreate(BaseModel):
+    nombre_rol: str = Field(..., max_length=100)
+    descripcion: Optional[str] = Field(None, max_length=255)
+
+class RolUpdate(BaseModel):
+    nombre_rol: Optional[str] = Field(None, max_length=100)
+    descripcion: Optional[str] = Field(None, max_length=255)
 
 class RolOut(BaseModel):
     id_rol: int
@@ -55,7 +78,6 @@ class UserOut(BaseModel):
     model_config = {
         "from_attributes": True
     }
-
 
 class UserRegisterRequest(BaseModel):
     curp: str = Field(
@@ -93,6 +115,8 @@ class Token(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
 
+class TokenRefresh(BaseModel):
+    refresh_token: str = Field(..., description="El refresh token válido para obtener un nuevo access token")
 
 class TokenPayload(BaseModel):
     sub: str
@@ -140,3 +164,9 @@ class UserUpdate(BaseModel):
         if not any(c.isdigit() for c in v):
             raise ValueError("La contraseña debe tener al menos un número")
         return v
+
+class UserRoleUpdate(BaseModel):
+    role_ids: List[int] = Field(..., description="Lista de IDs de los nuevos roles a asignar")
+
+class RolPermisosUpdate(BaseModel):
+    permisos_ids: List[int] = Field(..., description="Lista de IDs de permisos a asignar al rol")
