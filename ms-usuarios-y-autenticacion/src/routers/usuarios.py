@@ -17,9 +17,6 @@ router = APIRouter(
     dependencies=[Depends(require_authz)]
 )
 
-# ==========================================
-# 1. CREAR USUARIO (C)
-# ==========================================
 @router.post(
     "",
     response_model=schemas.UserOut,
@@ -75,9 +72,6 @@ async def create_user(
     await db.refresh(user)
     return user
 
-# ==========================================
-# 2. LISTAR USUARIOS (R - Paginado)
-# ==========================================
 @router.get(
     "",
     response_model=schemas.UserPaginatedOut
@@ -110,10 +104,6 @@ async def list_users(
         "data": usuarios
     }
 
-# ==========================================
-# 3. VER MI PERFIL (R - Propio)
-# IMPORTANTE: Va antes de /{id_usuario}
-# ==========================================
 @router.get(
     "/me/profile",
     response_model=schemas.UserOut,
@@ -140,9 +130,6 @@ async def get_my_profile(
         
     return user
 
-# ==========================================
-# 4. VER USUARIO ESPECÍFICO (R - Individual)
-# ==========================================
 @router.get(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -169,9 +156,6 @@ async def get_user(
 
     return user
 
-# ==========================================
-# 5. ACTUALIZAR DATOS DEL USUARIO (U)
-# ==========================================
 @router.patch(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -210,9 +194,6 @@ async def update_user(
     
     return user
 
-# ==========================================
-# 6. ACTUALIZAR ROLES DEL USUARIO (U - Roles)
-# ==========================================
 @router.put(
     "/{id_usuario}/roles",
     response_model=schemas.UserOut,
@@ -256,9 +237,6 @@ async def update_user_roles(
     
     return user
 
-# ==========================================
-# 7. ELIMINAR USUARIO (D - Soft Delete)
-# ==========================================
 @router.delete(
     "/{id_usuario}",
     status_code=status.HTTP_204_NO_CONTENT

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
 from uuid import UUID
+from typing import Optional
 
 from src.database import get_db
 from src import models, schemas
@@ -60,7 +61,8 @@ async def list_personas(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 registros por petición"),
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
-    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja")
+    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
+    curp: Optional[str]=Query(None, description="Filtrar por curp exacto")
 ):
     total_stmt = select(func.count(models.Persona.id_persona))
     stmt = select(models.Persona)
@@ -68,6 +70,10 @@ async def list_personas(
     if not incluir_inactivos:
         total_stmt = total_stmt.where(models.Persona.is_active == True)
         stmt = stmt.where(models.Persona.is_active == True)
+
+    if curp: 
+        total_stmt=total_stmt.where(models.Persona.curp==curp)
+        stmt=stmt.where(models.Persona.curp==curp)
 
     total = await db.scalar(total_stmt)
 
