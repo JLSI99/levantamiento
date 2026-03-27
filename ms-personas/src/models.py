@@ -22,7 +22,6 @@ class Persona(Base):
         index=True
     )
     
-    # NUEVO: Para soportar el borrado lógico
     is_active = Column(Boolean, default=True)
 
     @property

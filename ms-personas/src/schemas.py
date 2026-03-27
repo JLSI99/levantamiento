@@ -30,19 +30,11 @@ class PersonaCreate(PersonaBase):
 
 class PersonaOut(PersonaBase):
     id_persona: UUID
-    is_active: bool  # NUEVO: Refleja si está activo o no
+    is_active: bool
     
     model_config = {
         "from_attributes": True
     }
-
-class CheckAccessRequest(BaseModel):
-    roles: List[str]
-    path: str
-    metodo: str
-
-class CheckAccessResponse(BaseModel):
-    permitido: bool
 
 class PersonaPaginatedOut(BaseModel):
     total: int
@@ -75,3 +67,11 @@ class PersonaUpdate(BaseModel):
         if not re.match(patron, v):
             raise ValueError('El formato del CURP no es válido')
         return v
+
+class CheckAccessRequest(BaseModel):
+    roles: List[str]
+    path: str
+    metodo: str
+
+class CheckAccessResponse(BaseModel):
+    permitido: bool

@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy import Column, String, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from src.database import Base
@@ -10,6 +10,7 @@ class Departamento(Base):
     id_departamento = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre = Column(String(150), unique=True, nullable=False)
     id_jefe_departamento = Column(UUID(as_uuid=True), nullable=True)
+    is_active = Column(Boolean, default=True)
 
 class Edificio(Base):
     __tablename__ = "edificios"
@@ -17,6 +18,7 @@ class Edificio(Base):
     id_edificio = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre = Column(String(100), unique=True, nullable=False)
     clave = Column(String(20), unique=True, nullable=True)
+    is_active = Column(Boolean, default=True)
 
     aulas = relationship(
         "Aula",
@@ -31,5 +33,6 @@ class Aula(Base):
     id_aula = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre = Column(String(100), nullable=False)
     id_edificio = Column(UUID(as_uuid=True), ForeignKey("edificios.id_edificio"))
+    is_active = Column(Boolean, default=True) 
 
     edificio = relationship("Edificio", back_populates="aulas")

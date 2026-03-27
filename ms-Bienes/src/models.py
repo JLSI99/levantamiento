@@ -26,7 +26,7 @@ class Bien(Base):
     costo = Column(Numeric(12, 2), nullable=False)
     fecha_adquisicion = Column(Date, nullable=True)
 
-    esta_activo = Column(Boolean, default=True)
+    esta_activo = Column(Boolean, default=True) 
 
     tipos = relationship(
         "TipoBien",
@@ -49,6 +49,8 @@ class TipoBien(Base):
     id_tipo = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre = Column(String(100), unique=True, nullable=False)
     tasa_depreciacion_anual = Column(Numeric(5, 2), default=0)
+    
+    esta_activo = Column(Boolean, default=True)
 
     bienes = relationship(
         "Bien",

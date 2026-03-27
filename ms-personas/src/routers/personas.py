@@ -82,6 +82,26 @@ async def list_personas(
         "data": personas
     }
 
+@router.get(
+    "/personas/{id_persona}",
+    response_model=schemas.PersonaOut,
+    status_code=status.HTTP_200_OK
+)
+@limiter.limit("30/minute")
+async def get_persona(
+    request: Request,
+    id_persona: UUID,
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = select(models.Persona).where(models.Persona.id_persona == id_persona)
+    result = await db.execute(stmt)
+    persona = result.scalars().first()
+
+    if not persona:
+        raise HTTPException(status_code=404, detail="Persona no encontrada.")
+
+    return persona
+
 @router.patch(
     "/personas/{id_persona}",
     response_model=schemas.PersonaOut,
