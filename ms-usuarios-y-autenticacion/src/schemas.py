@@ -4,51 +4,27 @@ from uuid import UUID
 from typing import Optional, List
 from datetime import datetime
 
-class PermisoCreate(BaseModel):
-    nombre: str = Field(..., min_length=3, max_length=150)
-    path_endpoint: str = Field(..., min_length=1, max_length=255)
-    metodo_http: str = Field(
-        ...,
-        description="Método HTTP permitido"
-    )
-    descripcion: Optional[str] = Field(None, max_length=255)
-
-    @field_validator("metodo_http")
-    @classmethod
-    def validar_metodo_http(cls, v: str) -> str:
-        permitidos = {"GET", "POST", "PUT", "DELETE", "PATCH"}
-        v = v.upper()
-        if v not in permitidos:
-            raise ValueError(f"Método HTTP inválido: {v}")
-        return v
-
-class PermisoUpdate(BaseModel):
-    nombre: Optional[str] = Field(None, min_length=3, max_length=150)
-    path_endpoint: Optional[str] = Field(None, min_length=1, max_length=255)
-    metodo_http: Optional[str] = None
-    descripcion: Optional[str] = Field(None, max_length=255)
-
-    @field_validator("metodo_http")
-    @classmethod
-    def validar_metodo_http(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        permitidos = {"GET", "POST", "PUT", "DELETE", "PATCH"}
-        v = v.upper()
-        if v not in permitidos:
-            raise ValueError(f"Método HTTP inválido: {v}")
-        return v
-
 class PermisoOut(BaseModel):
     id_permiso: int
     nombre: str
-    path_endpoint: str
-    metodo_http: str
     descripcion: Optional[str]
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
+
+class PermisoCreate(BaseModel):
+    nombre: str = Field(..., min_length=3, max_length=150, description="Ejemplo: 'bienes:crear'")
+    descripcion: Optional[str] = Field(None, max_length=255)
+
+class PermisoUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=3, max_length=150)
+    descripcion: Optional[str] = Field(None, max_length=255)
+
+class RolOut(BaseModel):
+    id_rol: int
+    nombre_rol: str
+    descripcion: Optional[str]
+
+    model_config = {"from_attributes": True}
 
 class RolCreate(BaseModel):
     nombre_rol: str = Field(..., max_length=100)
@@ -58,15 +34,6 @@ class RolUpdate(BaseModel):
     nombre_rol: Optional[str] = Field(None, max_length=100)
     descripcion: Optional[str] = Field(None, max_length=255)
 
-class RolOut(BaseModel):
-    id_rol: int
-    nombre_rol: str
-    descripcion: Optional[str]
-
-    model_config = {
-        "from_attributes": True
-    }
-
 class UserOut(BaseModel):
     id_usuario: UUID
     curp: str
@@ -75,67 +42,36 @@ class UserOut(BaseModel):
     is_active: bool
     roles: List[RolOut] = Field(default_factory=list)
 
-    model_config = {
-        "from_attributes": True
-    }
+    model_config = {"from_attributes": True}
 
 class UserRegisterRequest(BaseModel):
-    curp: str = Field(
-        ..., min_length=18, max_length=18, description="Foreign key lógica hacia ms-personas"
-    )
+    curp: str = Field(..., min_length=18, max_length=18, description="Lazo lógico con ms-personas")
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    role_ids: List[int] = Field(default_factory=lambda: [2])
+    role_ids: List[int] = Field(default_factory=lambda: [2])  # Rol 'Levantador' por defecto
 
     @field_validator("username")
     @classmethod
-    def validar_username(cls, v: str)->str:
-        if not re.match(r"^\w+$",v):
-            raise ValueError("El username solo puede contener letras números y guiones bajos")
+    def validar_username(cls, v: str) -> str:
+        if not re.match(r"^\w+$", v):
+            raise ValueError("El username solo puede contener letras, números y guiones bajos.")
         return v.lower()
     
     @field_validator("password")
     @classmethod
-    def validar_password_fuerte(cls,v:str)->str:
+    def validar_password_fuerte(cls, v: str) -> str:
         if not any(c.isupper() for c in v):
-            raise ValueError("La contraseña debe tener al menos una mayúscula")
+            raise ValueError("La contraseña debe contener al menos una letra mayúscula.")
         if not any(c.islower() for c in v):
-            raise ValueError("La contraseña debe tener al menos una minúscula")
+            raise ValueError("La contraseña debe contener al menos una letra minúscula.")
         if not any(c.isdigit() for c in v):
-            raise ValueError("La contraseña debe tener al menos un número")
+            raise ValueError("La contraseña debe contener al menos un dígito numérico.")
         return v
 
 class UserLogin(BaseModel):
-    identifier: str = Field(..., description="username o email")
+    identifier: str = Field(..., description="Acepta indistintamente username o email institucional")
     password: str
-
-class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str = "bearer"
-
-class TokenRefresh(BaseModel):
-    refresh_token: str = Field(..., description="El refresh token válido para obtener un nuevo access token")
-
-class TokenPayload(BaseModel):
-    sub: str
-    exp: datetime
-    roles: List[str] = Field(default_factory=list)
-
-class CheckAccessRequest(BaseModel):
-    roles: List[str]
-    path: str
-    metodo: str
-
-class CheckAccessResponse(BaseModel):
-    permitido: bool
-
-class UserPaginatedOut(BaseModel):
-    total: int
-    limit: int
-    offset: int
-    data: List[UserOut]
 
 class UserUpdate(BaseModel):
     username: Optional[str] = Field(None, min_length=3, max_length=50)
@@ -149,7 +85,7 @@ class UserUpdate(BaseModel):
         if v is None:
             return v
         if not re.match(r"^\w+$", v):
-            raise ValueError("El username solo puede contener letras números y guiones bajos")
+            raise ValueError("El username solo puede contener letras, números y guiones bajos.")
         return v.lower()
     
     @field_validator("password")
@@ -158,15 +94,43 @@ class UserUpdate(BaseModel):
         if v is None:
             return v
         if not any(c.isupper() for c in v):
-            raise ValueError("La contraseña debe tener al menos una mayúscula")
+            raise ValueError("La contraseña debe contener al menos una letra mayúscula.")
         if not any(c.islower() for c in v):
-            raise ValueError("La contraseña debe tener al menos una minúscula")
+            raise ValueError("La contraseña debe contener al menos una letra minúscula.")
         if not any(c.isdigit() for c in v):
-            raise ValueError("La contraseña debe tener al menos un número")
+            raise ValueError("La contraseña debe contener al menos un dígito numérico.")
         return v
 
 class UserRoleUpdate(BaseModel):
-    role_ids: List[int] = Field(..., description="Lista de IDs de los nuevos roles a asignar")
+    role_ids: List[int] = Field(..., description="Sobrescribe la matriz relacional de roles del usuario")
 
 class RolPermisosUpdate(BaseModel):
-    permisos_ids: List[int] = Field(..., description="Lista de IDs de permisos a asignar al rol")
+    permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
+
+class UserPaginatedOut(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[UserOut]
+
+class TokenPayload(BaseModel):
+    sub: str
+    exp: datetime
+    roles: List[str] = Field(default_factory=list)
+    caps: List[str] = Field(default_factory=list)
+
+class TokenRefresh(BaseModel):
+    refresh_token: str = Field(..., description="Refresh Token criptográfico emitido por el backend")
+
+class UserPayload(BaseModel):
+    id: str
+    username: str
+    email: str
+    role: str
+    capabilities: List[str]
+
+class TokenResponseFull(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    user: UserPayload
