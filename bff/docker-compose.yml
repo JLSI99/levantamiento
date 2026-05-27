@@ -1,0 +1,19 @@
+services:
+  api-bff:
+    build: ./
+    container_name: bff_orquestador
+    env_file: 
+      - .env
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./:/app
+    ports:
+      - "${SERVER_IP}:${SERVER_PORT}:8000"
+    networks:
+      - backend_net
+    restart: unless-stopped
+
+networks:
+  backend_net:
+    external: true

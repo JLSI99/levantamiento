@@ -134,7 +134,8 @@ async def refresh_access_token(
         id_usuario=user.id_usuario,
         username=user.username,
         email=user.email,
-        roles=roles
+        roles=roles,
+        curp=user.curp
     )
 
     return {

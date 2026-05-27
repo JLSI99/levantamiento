@@ -10,8 +10,8 @@ from src.dependencies.hash_y_contrasenas import get_password_hash
 
 ROLES_BASE = {
     1: ("Administrador", "Acceso total a la gestión de usuarios y auditoría."),
-    2: ("Levantador", "Responsable de la carga inicial de bienes y activos."),
-    3: ("Registrador", "Gestiona movimientos, altas y bajas de inventario."),
+    2: ("Levantador", "Gestiona movimientos bienes de resguardante a resguardante"),
+    3: ("Registrador", "Responsable de la alta, baja y modificiacion de bienes y activos."),
     4: ("Revisor", "Acceso de consulta y generación de reportes (Lectura)."),
     5: ("Resguardante", "Personal con activos asignados a su cargo."),
 }
