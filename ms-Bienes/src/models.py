@@ -9,24 +9,22 @@ from src.database import Base
 bien_tipo_bien = Table(
     "bien_tipo_bien",
     Base.metadata,
-    Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien"), primary_key=True),
-    Column("id_tipo", UUID(as_uuid=True), ForeignKey("tipos_bien.id_tipo"), primary_key=True),
+    Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), primary_key=True),
+    Column("id_tipo", UUID(as_uuid=True), ForeignKey("tipos_bien.id_tipo", ondelete="CASCADE"), primary_key=True),
 )
 
 class Bien(Base):
     __tablename__ = "bienes"
 
     id_bien = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-
-    serie = Column(String(50), unique=True, nullable=True) 
+    serie = Column(String(50), unique=True, nullable=True, index=True) 
     modelo = Column(String(100), nullable=True)
     marca = Column(String(100), nullable=True)
     descripcion = Column(String(255), nullable=False)
-
+    
     costo = Column(Numeric(12, 2), nullable=False)
     fecha_adquisicion = Column(Date, nullable=True)
-
-    esta_activo = Column(Boolean, default=True) 
+    esta_activo = Column(Boolean, default=True, nullable=False) 
 
     tipos = relationship(
         "TipoBien",
@@ -36,21 +34,21 @@ class Bien(Base):
     )
 
     @hybrid_property
-    def meses_uso(self):
+    def meses_uso(self) -> int:
         if not self.fecha_adquisicion:
             return 0
         hoy = datetime.date.today()
         dias = (hoy - self.fecha_adquisicion).days
         return max(0, dias // 30)
 
+
 class TipoBien(Base):
     __tablename__ = "tipos_bien"
 
     id_tipo = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    nombre = Column(String(100), unique=True, nullable=False)
-    tasa_depreciacion_anual = Column(Numeric(5, 2), default=0)
-    
-    esta_activo = Column(Boolean, default=True)
+    nombre = Column(String(100), unique=True, nullable=False, index=True)
+    tasa_depreciacion_anual = Column(Numeric(5, 2), default=0.00, nullable=False)
+    esta_activo = Column(Boolean, default=True, nullable=False)
 
     bienes = relationship(
         "Bien",

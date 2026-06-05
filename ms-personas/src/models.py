@@ -19,10 +19,10 @@ class Persona(Base):
         String(18), 
         nullable=False, 
         unique=True, 
-        index=True
+        index=True 
     )
     
-    is_active = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True, nullable=False)
 
     @property
     def nombre_completo(self):

@@ -7,25 +7,25 @@ class AulaBase(BaseModel):
 
     @field_validator('nombre')
     @classmethod
-    def limpiar_espacios(cls, v: str) -> str:
+    def limpiar_espacios_nombre(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError('El campo no puede estar vacío')
+            raise ValueError('El nombre del aula no puede consistir únicamente en espacios en blanco')
         return v
 
 class AulaCreate(AulaBase):
-    pass
+    id_edificio: UUID
 
 class AulaUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=100)
 
     @field_validator('nombre')
     @classmethod
-    def limpiar_espacios(cls, v: Optional[str]) -> Optional[str]:
+    def limpiar_espacios_update(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             v = v.strip()
             if not v:
-                raise ValueError('El campo no puede estar vacío')
+                raise ValueError('El nombre del aula no puede estar vacío si se proporciona')
         return v
 
 class AulaOut(AulaBase):
@@ -38,13 +38,21 @@ class EdificioBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100)
     clave: Optional[str] = Field(None, max_length=20)
 
-    @field_validator('nombre', 'clave')
+    @field_validator('nombre')
     @classmethod
-    def limpiar_espacios(cls, v: Optional[str]) -> Optional[str]:
+    def validar_nombre_edificio(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('El nombre del edificio es un campo obligatorio de negocio')
+        return v
+
+    @field_validator('clave')
+    @classmethod
+    def validar_clave_edificio(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
-            v = v.strip()
-            if not v and cls.model_fields[cls.__fields_set__].is_required():
-                raise ValueError('El campo no puede estar vacío')
+            v = v.strip().upper()
+            if not v:
+                return None
         return v
 
 class EdificioCreate(EdificioBase):
@@ -56,9 +64,9 @@ class EdificioUpdate(BaseModel):
 
     @field_validator('nombre', 'clave')
     @classmethod
-    def limpiar_espacios(cls, v: Optional[str]) -> Optional[str]:
+    def limpiar_espacios_modificacion(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
-            v = v.strip()
+            return v.strip()
         return v
 
 class EdificioOut(EdificioBase):
@@ -79,26 +87,26 @@ class DepartamentoBase(BaseModel):
 
     @field_validator('nombre')
     @classmethod
-    def limpiar_espacios(cls, v: str) -> str:
+    def limpiar_departamento(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError('El campo no puede estar vacío')
+            raise ValueError('El nombre del departamento es requerido y obligatorio')
         return v
 
 class DepartamentoCreate(DepartamentoBase):
     pass
 
-class DepartamentoUpdate(BaseModel): 
+class DepartamentoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=150)
     id_jefe_departamento: Optional[UUID] = None
 
     @field_validator('nombre')
     @classmethod
-    def limpiar_espacios(cls, v: Optional[str]) -> Optional[str]:
+    def limpiar_espacios_dept(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             v = v.strip()
             if not v:
-                raise ValueError('El campo no puede estar vacío')
+                raise ValueError('El nombre del departamento no puede ser una cadena vacía')
         return v
 
 class DepartamentoOut(DepartamentoBase):

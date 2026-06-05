@@ -8,20 +8,26 @@ from sqlalchemy.exc import IntegrityError
 
 from src.database import get_db
 from src import models, schemas
-from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
+from src.dependencies.validar_rol_y_firma import require_capability
 from src.dependencies.rate_limiter import limiter
 
-router = APIRouter(tags=["Departamentos"], dependencies=[Depends(require_authz)])
+router = APIRouter(
+    prefix="/departamentos",
+    tags=["Departamentos"]
+)
 
-@router.post("/departamentos", response_model=schemas.DepartamentoOut, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", 
+    response_model=schemas.DepartamentoOut, 
+    status_code=status.HTTP_201_CREATED
+)
 @limiter.limit("30/minute")
 async def crear_departamento(
     request: Request,
     depto: schemas.DepartamentoCreate,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(validate_jwt_token)
+    token_payload: dict = Depends(require_capability("departamentos:editar"))
 ):
-    db.info['usuario_email'] = token_payload.get("email", "sistema")
 
     nuevo = models.Departamento(
         nombre=depto.nombre, 
@@ -33,20 +39,26 @@ async def crear_departamento(
     try:
         await db.commit()
         await db.refresh(nuevo)
+        return nuevo
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=400, detail="Ya existe un departamento con ese nombre.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Ya existe un departamento registrado con ese nombre."
+        )
 
-    return nuevo
 
-@router.get("/departamentos", response_model=schemas.DepartamentoPaginatedOut)
+@router.get(
+    "", 
+    response_model=schemas.DepartamentoPaginatedOut
+)
 @limiter.limit("30/minute")
 async def listar_departamentos(
     request: Request,
     db: AsyncSession = Depends(get_db),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    incluir_inactivos: bool = Query(False, description="Incluir registros dados de baja") # NUEVO
+    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja")
 ):
     query_count = select(func.count(models.Departamento.id_departamento))
     query_data = select(models.Departamento)
@@ -59,10 +71,20 @@ async def listar_departamentos(
     
     query_data = query_data.offset(offset).limit(limit)
     result = await db.execute(query_data)
+    departamentos = result.scalars().all()
     
-    return {"total": total, "limit": limit, "offset": offset, "data": result.scalars().all()}
+    return {
+        "total": total, 
+        "limit": limit, 
+        "offset": offset, 
+        "data": departamentos
+    }
 
-@router.get("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOut)
+
+@router.get(
+    "/{id_departamento}", 
+    response_model=schemas.DepartamentoOut
+)
 @limiter.limit("30/minute")
 async def obtener_departamento(
     request: Request,
@@ -74,28 +96,30 @@ async def obtener_departamento(
     depto = result.scalars().first()
 
     if not depto:
-        raise HTTPException(status_code=404, detail="Departamento no encontrado.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Departamento no encontrado.")
     return depto
 
-@router.patch("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOut)
+
+@router.patch(
+    "/{id_departamento}", 
+    response_model=schemas.DepartamentoOut
+)
 @limiter.limit("30/minute")
 async def actualizar_departamento(
     request: Request,
     id_departamento: UUID,
     depto_in: schemas.DepartamentoUpdate,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(validate_jwt_token)
+    token_payload: dict = Depends(require_capability("departamentos:editar"))
 ):
-    db.info['usuario_email'] = token_payload.get("email", "sistema")
-
     stmt = select(models.Departamento).where(models.Departamento.id_departamento == id_departamento)
     result = await db.execute(stmt)
     depto = result.scalars().first()
 
     if not depto:
-        raise HTTPException(status_code=404, detail="Departamento no encontrado.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Departamento no encontrado.")
     if not depto.is_active:
-        raise HTTPException(status_code=400, detail="No puedes editar un departamento inactivo.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un departamento inactivo.")
 
     update_data = depto_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
@@ -107,26 +131,31 @@ async def actualizar_departamento(
         return depto
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=400, detail="Ya existe un departamento con ese nombre.")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, 
+            detail="Ya existe un departamento registrado con ese nombre."
+        )
 
-@router.delete("/departamentos/{id_departamento}", status_code=status.HTTP_204_NO_CONTENT)
+
+@router.delete(
+    "/{id_departamento}", 
+    status_code=status.HTTP_204_NO_CONTENT
+)
 @limiter.limit("10/minute")
 async def borrar_departamento(
     request: Request,
     id_departamento: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(validate_jwt_token)
+    token_payload: dict = Depends(require_capability("departamentos:editar"))
 ):
-    db.info['usuario_email'] = token_payload.get("email", "sistema")
-
     stmt = select(models.Departamento).where(models.Departamento.id_departamento == id_departamento)
     result = await db.execute(stmt)
     depto = result.scalars().first()
 
     if not depto:
-        raise HTTPException(status_code=404, detail="Departamento no encontrado.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Departamento no encontrado.")
     if not depto.is_active:
-        raise HTTPException(status_code=400, detail="El departamento ya está dado de baja.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El departamento ya está dado de baja.")
 
     depto.is_active = False
     await db.commit()

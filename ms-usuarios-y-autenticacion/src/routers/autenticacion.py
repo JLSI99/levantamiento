@@ -6,8 +6,8 @@ from sqlalchemy.orm import selectinload
 from src.database import get_db
 from src import models, schemas
 
-from src.dependencies.hash_y_contrasenas import verify_password
-from src.dependencies.manejo_JWT import create_access_token, create_refresh_token, decode_token
+from src.dependencies.hash_y_contrasenas import verify_password_async
+from src.dependencies.manejo_jwt import create_access_token, create_refresh_token, decode_token
 from src.dependencies.rate_limiter import limiter
 from src.dependencies.logger import setup_logger
 
@@ -33,7 +33,10 @@ async def login(
 
     stmt = (
         select(models.Usuario)
-        .options(selectinload(models.Usuario.roles))
+        .options(
+            selectinload(models.Usuario.roles)
+            .selectinload(models.Rol.permisos)
+        )
         .where(
             (models.Usuario.email == data.identifier) |
             (models.Usuario.username == data.identifier)
@@ -43,7 +46,7 @@ async def login(
     result = await db.execute(stmt)
     user = result.scalars().first()
 
-    if not user or not verify_password(data.password, user.hashed_password):
+    if not user or not await verify_password_async(data.password, user.hashed_password):
         logger.warning(
             "Intento de login fallido",
             extra={
@@ -60,7 +63,7 @@ async def login(
 
     if not user.is_active:
         logger.warning(
-            "login rechazado",
+            "Login rechazado",
             extra={
                 "evento": "login_rechazado",
                 "motivo": "usuario_inactivo",
@@ -73,19 +76,23 @@ async def login(
             detail="Usuario inactivo"
         )
 
+    # Construcción de claims para CBAC
     roles = [rol.nombre_rol for rol in user.roles]
+    caps_set = {permiso.nombre for rol in user.roles for permiso in rol.permisos}
 
     access_token = create_access_token(
         id_usuario=user.id_usuario,
         username=user.username,
         email=user.email,
-        roles=roles
+        roles=roles,
+        caps=list(caps_set),
+        curp=user.curp
     )
 
     refresh_token = create_refresh_token(id_usuario=user.id_usuario)
 
     logger.info(
-        "login exitoso",
+        "Login exitoso",
         extra={
             "evento": "login_exitoso",
             "usuario": user.username,
@@ -118,7 +125,14 @@ async def refresh_access_token(
         
     user_id = payload.get("sub")
     
-    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == user_id)
+    stmt = (
+        select(models.Usuario)
+        .options(
+            selectinload(models.Usuario.roles)
+            .selectinload(models.Rol.permisos)
+        )
+        .where(models.Usuario.id_usuario == user_id)
+    )
     result = await db.execute(stmt)
     user = result.scalars().first()
 
@@ -129,12 +143,14 @@ async def refresh_access_token(
         )
 
     roles = [rol.nombre_rol for rol in user.roles]
+    caps_set = {permiso.nombre for rol in user.roles for permiso in rol.permisos}
 
     new_access_token = create_access_token(
         id_usuario=user.id_usuario,
         username=user.username,
         email=user.email,
         roles=roles,
+        caps=list(caps_set),
         curp=user.curp
     )
 
@@ -151,7 +167,6 @@ async def refresh_access_token(
 async def logout(
     authorization: str = Header(None)
 ):
-
     if not authorization or not authorization.startswith("Bearer "):
         return {"detail": "Sesión cerrada"}
 

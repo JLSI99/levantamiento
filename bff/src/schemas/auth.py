@@ -1,19 +1,14 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field
 from typing import List
 
-class UserPayload(BaseModel):
-    id: str
-    username: str
-    email: str
-    role: str
-    capabilities: List[str] = Field(default_factory=list)
+class UserLoginBFF(BaseModel):
+    identifier: str = Field(..., description="Username o Email institucional enviado desde React")
+    password: str
 
-class UserLogin(BaseModel):
-    identifier: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6, max_length=128)
-
-class TokenResponse(BaseModel):
+class TokenBFF(BaseModel):
     access_token: str
     refresh_token: str
-    token_type: str
-    user: UserPayload
+    token_type: str = "bearer"
+
+class TokenRefreshBFF(BaseModel):
+    refresh_token: str

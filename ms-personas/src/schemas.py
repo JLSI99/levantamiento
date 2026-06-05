@@ -13,16 +13,16 @@ class PersonaBase(BaseModel):
     def limpiar_y_validar_nombres(cls, v: str) -> str:
         v = v.strip()
         if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
-            raise ValueError('Los nombres y apellidos solo pueden contener letras')
+            raise ValueError('Los nombres y apellidos solo pueden contener letras y caracteres acentuados')
         return v
     
     @field_validator('curp')
     @classmethod
     def validar_formato_curp(cls, v: str) -> str:
-        v = v.upper()
+        v = v.upper().strip()
         patron = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
         if not re.match(patron, v):
-            raise ValueError('El formato del CURP no es válido')
+            raise ValueError('El formato del CURP no se alinea con el estándar oficial de RENAPO')
         return v
 
 class PersonaCreate(PersonaBase):
@@ -50,8 +50,7 @@ class PersonaUpdate(BaseModel):
     @field_validator('nombres','apellidos')
     @classmethod
     def limpiar_y_validar_nombres(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
+        if v is None: return v
         v = v.strip()
         if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
             raise ValueError('Los nombres y apellidos solo pueden contener letras')
@@ -60,9 +59,8 @@ class PersonaUpdate(BaseModel):
     @field_validator('curp')
     @classmethod
     def validar_formato_curp(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.upper()
+        if v is None: return v
+        v = v.upper().strip()
         patron = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
         if not re.match(patron, v):
             raise ValueError('El formato del CURP no es válido')

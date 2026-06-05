@@ -5,28 +5,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-modo_debug=os.getenv("DEBUG")=="True"
+modo_debug = os.getenv("DEBUG") == "True"
 
 DATABASE_URL = (
     f"postgresql+asyncpg://{os.getenv('DB_USER')}:"
     f"{os.getenv('DB_PASSWORD')}@"
     f"{os.getenv('DB_HOST')}/"
-    f"{os.getenv('DB_NAME')}"   
+    f"{os.getenv('DB_NAME')}"
 )
 
 engine = create_async_engine(
     DATABASE_URL, 
-    echo=True,
+    echo=modo_debug,
     future=True,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=10.0,
-    pool_recycle=1800)
+    pool_size=15,          # Alineado estrictamente al Reference Blueprint corporativo
+    max_overflow=25,       # Capacidad elástica ante picos concurrentes de carga
+    pool_timeout=15.0,     # Límite de espera de checkout de sesión
+    pool_recycle=1800      # Reciclaje de conexiones para mitigar sockets caídos
+)
 
 AsyncSessionLocal = sessionmaker(
     bind=engine, 
     class_=AsyncSession,
-    expire_on_commit=False 
+    expire_on_commit=False, 
 )
 
 Base = declarative_base()
@@ -36,4 +37,5 @@ async def get_db():
         try:
             yield session
         finally:
+            session.info.clear()
             await session.close()

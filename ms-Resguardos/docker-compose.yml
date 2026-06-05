@@ -1,15 +1,17 @@
 services:
-  api-ms-resguardo:
-    build: ./
+  api-ms-resguardos:
+    build: 
+      context: ./
+      dockerfile: dockerfile
     container_name: ms_resguardo_api
     env_file: 
       - .env_code
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
-      - ./:/app
+      - ./src:/app/src
     ports:
-      - ${SERVER_IP}:${SERVER_PORT}:8000
+      - "${SERVER_IP}:${SERVER_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -23,34 +25,42 @@ services:
     env_file: 
       - .env
     healthcheck:
-      test: ["CMD-SHELL", "psql -U $${POSTGRES_USER} -d $${POSTGRES_DB} -c 'SELECT 1'"]
-      interval: 3s
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
       timeout: 5s
       retries: 5
-      start_period: 9s 
+      start_period: 10s
     volumes:
-      - ./db-data-resguardo:/var/lib/postgresql/data
+      - db_data_resguardos:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - backend_net
     restart: unless-stopped
-
+    
   pgadmin:
-    container_name: pgadmin_resguardo
     image: dpage/pgadmin4
+    container_name: pgadmin_resguardos
     ports:
-      - ${PGADMIN_IP}:${PGADMIN_PORT}:80
+      - "${PGADMIN_IP}:${PGADMIN_PORT}:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASS}
+    logging:
+      driver: "none"
     volumes:
-      - ./pgadmin-data-resguardo/:/var/lib/pgadmin
+      - pgadmin_data_resguardos:/var/lib/pgadmin
     depends_on:
       db:
         condition: service_healthy
     networks:
       - backend_net
     restart: unless-stopped
+
+volumes:
+  db_data_resguardos:
+    driver: local
+  pgadmin_data_resguardos:
+    driver: local
 
 networks:
   backend_net:

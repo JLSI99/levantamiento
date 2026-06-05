@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-modo_debug= os.getenv("DEBUG")=="True"
+modo_debug = os.getenv("DEBUG") == "True"
 
 DATABASE_URL = (
     f"postgresql+asyncpg://{os.getenv('DB_USER')}:"
@@ -18,10 +18,10 @@ engine = create_async_engine(
     DATABASE_URL,
     echo=modo_debug,
     future=True,
-    pool_size=5,
-    max_overflow=10,
-    pool_timeout=10.0,
-    pool_recycle=1800
+    pool_size=15,          # Mitigación de starvation bajo ráfagas concurrentes
+    max_overflow=25,       # Sockets de desborde dinámico permitidos
+    pool_timeout=15.0,     # Límite de espera de checkout de sesión
+    pool_recycle=1800      # Reciclaje a 30 min para limpiar conexiones muertas
 )
 
 AsyncSessionLocal = sessionmaker(
@@ -37,4 +37,5 @@ async def get_db():
         try:
             yield session
         finally:
+            session.info.clear()
             await session.close()

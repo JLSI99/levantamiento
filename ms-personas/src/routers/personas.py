@@ -8,16 +8,16 @@ from typing import Optional
 from src.database import get_db
 from src import models, schemas
 
-from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
+from src.dependencies.validar_rol_y_firma import require_capability, inject_audit_context
 from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
-    tags=["Personas"],
-    dependencies=[Depends(require_authz)]
+    prefix="/personas",
+    tags=["Personas"]
 )
 
 @router.post(
-    "/personas",
+    "",
     response_model=schemas.PersonaOut,
     status_code=status.HTTP_201_CREATED    
 )
@@ -26,10 +26,8 @@ async def create_persona(
     request: Request,
     persona_in: schemas.PersonaCreate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("personas:crear"))
 ):
-    db.info['usuario_email'] = jwt_payload.get('email','desconocido')
-
     nueva_persona = models.Persona(
         nombres=persona_in.nombres,
         apellidos=persona_in.apellidos,
@@ -51,8 +49,9 @@ async def create_persona(
             detail="Ya existe una persona registrada con este CURP."
         )
 
+
 @router.get(
-    "/personas",
+    "",
     response_model=schemas.PersonaPaginatedOut
 )
 @limiter.limit("30/minute")
@@ -62,7 +61,8 @@ async def list_personas(
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 registros por petición"),
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
     incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
-    curp: Optional[str]=Query(None, description="Filtrar por curp exacto")
+    curp: Optional[str] = Query(None, description="Filtrar por curp exacto"),
+    jwt_payload: dict = Depends(require_capability("personas:leer"))
 ):
     total_stmt = select(func.count(models.Persona.id_persona))
     stmt = select(models.Persona)
@@ -72,8 +72,8 @@ async def list_personas(
         stmt = stmt.where(models.Persona.is_active == True)
 
     if curp: 
-        total_stmt=total_stmt.where(models.Persona.curp==curp)
-        stmt=stmt.where(models.Persona.curp==curp)
+        total_stmt = total_stmt.where(models.Persona.curp == curp)
+        stmt = stmt.where(models.Persona.curp == curp)
 
     total = await db.scalar(total_stmt)
 
@@ -88,8 +88,9 @@ async def list_personas(
         "data": personas
     }
 
+
 @router.get(
-    "/personas/{id_persona}",
+    "/{id_persona}",
     response_model=schemas.PersonaOut,
     status_code=status.HTTP_200_OK
 )
@@ -97,19 +98,21 @@ async def list_personas(
 async def get_persona(
     request: Request,
     id_persona: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(require_capability("personas:leer"))
 ):
     stmt = select(models.Persona).where(models.Persona.id_persona == id_persona)
     result = await db.execute(stmt)
     persona = result.scalars().first()
 
     if not persona:
-        raise HTTPException(status_code=404, detail="Persona no encontrada.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Persona no encontrada.")
 
     return persona
 
+
 @router.patch(
-    "/personas/{id_persona}",
+    "/{id_persona}",
     response_model=schemas.PersonaOut,
     status_code=status.HTTP_200_OK
 )
@@ -119,18 +122,16 @@ async def update_persona(
     id_persona: UUID,
     persona_in: schemas.PersonaUpdate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("personas:editar"))
 ):
-    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
-
     stmt = select(models.Persona).where(models.Persona.id_persona == id_persona)
     result = await db.execute(stmt)
     persona = result.scalars().first()
 
     if not persona:
-        raise HTTPException(status_code=404, detail="Persona no encontrada.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Persona no encontrada.")
     if not persona.is_active:
-        raise HTTPException(status_code=400, detail="No puedes editar un registro inactivo.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un registro inactivo.")
 
     update_data = persona_in.model_dump(exclude_unset=True)
 
@@ -148,8 +149,9 @@ async def update_persona(
             detail="El CURP ingresado ya está asociado a otra persona."
         )
 
+
 @router.delete(
-    "/personas/{id_persona}",
+    "/{id_persona}",
     status_code=status.HTTP_204_NO_CONTENT
 )
 @limiter.limit("10/minute")
@@ -157,18 +159,16 @@ async def delete_persona(
     request: Request,
     id_persona: UUID,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("personas:borrar"))
 ):
-    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
-
     stmt = select(models.Persona).where(models.Persona.id_persona == id_persona)
     result = await db.execute(stmt)
     persona = result.scalars().first()
 
     if not persona:
-        raise HTTPException(status_code=404, detail="Persona no encontrada.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Persona no encontrada.")
     if not persona.is_active:
-        raise HTTPException(status_code=400, detail="Esta persona ya está dada de baja.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta persona ya está dada de baja.")
 
     persona.is_active = False
     

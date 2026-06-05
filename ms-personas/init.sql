@@ -1,5 +1,14 @@
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT FROM pg_catalog.pg_user WHERE usename = 'ms_personas_user') THEN
+        CREATE USER ms_personas_user WITH PASSWORD 'personas_secreto_123';
+    END IF;
+END
+$$;
 
-CREATE USER ms_personas_user WITH PASSWORD 'personas_secreto_123';
+\c bd_personas;
+
+REVOKE ALL ON SCHEMA public FROM PUBLIC;
 
 GRANT CONNECT ON DATABASE bd_personas TO ms_personas_user;
 GRANT USAGE, CREATE ON SCHEMA public TO ms_personas_user;

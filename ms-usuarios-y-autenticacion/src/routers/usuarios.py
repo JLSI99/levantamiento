@@ -8,13 +8,12 @@ from src.database import get_db
 from src import models, schemas
 
 from src.dependencies.hash_y_contrasenas import get_password_hash
-from src.dependencies.validar_rol_y_firma import require_authz, validate_jwt_token
+from src.dependencies.validar_rol_y_firma import require_capability, validate_jwt_token
 from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
     prefix="/users",
-    tags=["Usuarios"],
-    dependencies=[Depends(require_authz)]
+    tags=["Usuarios"]
 )
 
 @router.post(
@@ -27,7 +26,7 @@ async def create_user(
     request: Request,
     user_in: schemas.UserRegisterRequest,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("usuarios:crear"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
@@ -42,7 +41,7 @@ async def create_user(
         result_user = await db.execute(stmt_user)
         if result_user.scalars().first():
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="El email, username o CURP ya están registrados."
             )
 
@@ -54,7 +53,7 @@ async def create_user(
 
         if not roles:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Los roles proporcionados no son válidos."
             )
 
@@ -68,8 +67,9 @@ async def create_user(
         )
 
         db.add(user)
+        await db.flush()      
+        await db.refresh(user) 
 
-    await db.refresh(user)
     return user
 
 @router.get(
@@ -82,7 +82,8 @@ async def list_users(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(50, ge=1, le=100, description="Máximo 100 usuarios por petición"),
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
-    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los usuarios")
+    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los usuarios"),
+    jwt_payload: dict = Depends(require_capability("usuarios:leer"))
 ):
     total_stmt = select(func.count(models.Usuario.id_usuario))
     stmt = select(models.Usuario).options(selectinload(models.Usuario.roles))
@@ -126,7 +127,7 @@ async def get_my_profile(
     user = result.scalars().first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado o token inválido.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado o token inválido.")
         
     return user
 
@@ -140,7 +141,7 @@ async def get_user(
     request: Request,
     id_usuario: UUID,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("usuarios:leer"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
@@ -152,7 +153,7 @@ async def get_user(
     user = result.scalars().first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
     return user
 
@@ -167,30 +168,31 @@ async def update_user(
     id_usuario: UUID,
     user_in: schemas.UserUpdate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("usuarios:editar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
-    stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == id_usuario)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
+    async with db.begin():
+        stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == id_usuario)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="No puedes editar un usuario inactivo.")
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un usuario inactivo.")
 
-    update_data = user_in.model_dump(exclude_unset=True)
+        update_data = user_in.model_dump(exclude_unset=True)
 
-    if "password" in update_data:
-        raw_password = update_data.pop("password")
-        update_data["hashed_password"] = get_password_hash(raw_password)
+        if "password" in update_data:
+            raw_password = update_data.pop("password")
+            update_data["hashed_password"] = get_password_hash(raw_password)
 
-    for key, value in update_data.items():
-        setattr(user, key, value)
+        for key, value in update_data.items():
+            setattr(user, key, value)
 
-    await db.commit()
-    await db.refresh(user)
+        await db.flush()
+        await db.refresh(user)
     
     return user
 
@@ -205,35 +207,36 @@ async def update_user_roles(
     id_usuario: UUID,
     roles_in: schemas.UserRoleUpdate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("usuarios:editar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
-    stmt_user = select(models.Usuario).options(
-        selectinload(models.Usuario.roles)
-    ).where(models.Usuario.id_usuario == id_usuario)
-    
-    result_user = await db.execute(stmt_user)
-    user = result_user.scalars().first()
+    async with db.begin():
+        stmt_user = select(models.Usuario).options(
+            selectinload(models.Usuario.roles)
+        ).where(models.Usuario.id_usuario == id_usuario)
+        
+        result_user = await db.execute(stmt_user)
+        user = result_user.scalars().first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="No puedes modificar roles de un usuario inactivo.")
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes modificar roles de un usuario inactivo.")
 
-    stmt_roles = select(models.Rol).where(
-        models.Rol.id_rol.in_(roles_in.role_ids)
-    )
-    result_roles = await db.execute(stmt_roles)
-    nuevos_roles = result_roles.scalars().all()
+        stmt_roles = select(models.Rol).where(
+            models.Rol.id_rol.in_(roles_in.role_ids)
+        )
+        result_roles = await db.execute(stmt_roles)
+        nuevos_roles = result_roles.scalars().all()
 
-    if not nuevos_roles:
-        raise HTTPException(status_code=400, detail="Los roles proporcionados no existen o son inválidos.")
+        if not nuevos_roles:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Los roles proporcionados no existen o son inválidos.")
 
-    user.roles = nuevos_roles
+        user.roles = nuevos_roles
 
-    await db.commit()
-    await db.refresh(user)
+        await db.flush()
+        await db.refresh(user)
     
     return user
 
@@ -246,20 +249,21 @@ async def delete_user(
     request: Request,
     id_usuario: UUID,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(validate_jwt_token)
+    jwt_payload: dict = Depends(require_capability("usuarios:borrar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
-    stmt = select(models.Usuario).where(models.Usuario.id_usuario == id_usuario)
-    result = await db.execute(stmt)
-    user = result.scalars().first()
+    async with db.begin():
+        stmt = select(models.Usuario).where(models.Usuario.id_usuario == id_usuario)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
 
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado.")
-    if not user.is_active:
-        raise HTTPException(status_code=400, detail="Este usuario ya está dado de baja.")
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este usuario ya está dado de baja.")
 
-    user.is_active = False
-    
-    await db.commit()
+        user.is_active = False
+        await db.flush()
+        
     return

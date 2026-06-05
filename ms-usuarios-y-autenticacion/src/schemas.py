@@ -4,6 +4,10 @@ from uuid import UUID
 from typing import Optional, List
 from datetime import datetime
 
+# ------------------------------------------------------------------------------
+# 1. SUBSISTEMA DE CAPACIDADES Y PERMISOS (CBAC)
+# ------------------------------------------------------------------------------
+
 class PermisoOut(BaseModel):
     id_permiso: int
     nombre: str
@@ -19,6 +23,11 @@ class PermisoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=3, max_length=150)
     descripcion: Optional[str] = Field(None, max_length=255)
 
+
+# ------------------------------------------------------------------------------
+# 2. SUBSISTEMA DE ROLES
+# ------------------------------------------------------------------------------
+
 class RolOut(BaseModel):
     id_rol: int
     nombre_rol: str
@@ -33,6 +42,14 @@ class RolCreate(BaseModel):
 class RolUpdate(BaseModel):
     nombre_rol: Optional[str] = Field(None, max_length=100)
     descripcion: Optional[str] = Field(None, max_length=255)
+
+class RolPermisosUpdate(BaseModel):
+    permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
+
+
+# ------------------------------------------------------------------------------
+# 3. SUBSISTEMA DE USUARIOS e IDENTIDADES
+# ------------------------------------------------------------------------------
 
 class UserOut(BaseModel):
     id_usuario: UUID
@@ -104,23 +121,25 @@ class UserUpdate(BaseModel):
 class UserRoleUpdate(BaseModel):
     role_ids: List[int] = Field(..., description="Sobrescribe la matriz relacional de roles del usuario")
 
-class RolPermisosUpdate(BaseModel):
-    permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
-
 class UserPaginatedOut(BaseModel):
     total: int
     limit: int
     offset: int
     data: List[UserOut]
 
+class Token(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+class TokenRefresh(BaseModel):
+    refresh_token: str = Field(..., description="Refresh Token criptográfico emitido por el backend")
+
 class TokenPayload(BaseModel):
     sub: str
     exp: datetime
     roles: List[str] = Field(default_factory=list)
     caps: List[str] = Field(default_factory=list)
-
-class TokenRefresh(BaseModel):
-    refresh_token: str = Field(..., description="Refresh Token criptográfico emitido por el backend")
 
 class UserPayload(BaseModel):
     id: str
@@ -134,3 +153,11 @@ class TokenResponseFull(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     user: UserPayload
+
+class CheckAccessRequest(BaseModel):
+    roles: List[str] = Field(..., description="Lista de roles del usuario extraídos del JWT claims")
+    path: str = Field(..., description="Path relativo consultado de la API (ej: '/auth/login')")
+    metodo: str = Field(..., description="Método HTTP de la petición (GET, POST, etc.)")
+
+class CheckAccessResponse(BaseModel):
+    permitido: bool

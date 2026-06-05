@@ -24,7 +24,7 @@ PERMISOS_BASE = [
     (4, "usuarios:eliminar", "Inactivación o borrado lógico de cuentas de usuario"),
     (5, "roles:leer", "Consultar el catálogo global de roles institucionales"),
     (6, "roles:editar", "Modificar la matriz relacional de asignación de capacidades a roles"),
-    # Dominio Core de Personas: ms-personas (Lazo lógico con CURP)
+    # Dominio de Personas: ms-personas
     (7, "personas:crear", "Permite registrar formalmente a una persona en el padrón institucional"),
     (8, "personas:leer", "Consultar y listar el padrón general de personas registradas"),
     (9, "personas:editar", "Actualizar la metadata civil o laboral de una persona"),
@@ -39,7 +39,7 @@ PERMISOS_BASE = [
     (16, "resguardos:leer", "Consultar el histórico y las actas de resguardo vigentes"),
     (17, "resguardos:editar", "Modificar términos, observaciones o firmas de un acta de resguardo"),
     (18, "resguardos:eliminar", "Liberar a un resguardante de la custodia de un bien (retorno o transferencia)"),
-    # Dominio de Logística Terrestre: ms-ubicaciones
+    # Dominio de Ubicaciones: ms-ubicaciones
     (19, "ubicaciones:crear", "Dar de alta nuevos campus, edificios, almacenes o zonas físicas"),
     (20, "ubicaciones:leer", "Consultar el catálogo geográfico y estructural de inmuebles"),
     (21, "ubicaciones:editar", "Modificar delimitaciones o nomenclaturas de espacios físicos"),
@@ -49,25 +49,49 @@ PERMISOS_BASE = [
 ]
 
 MATRIZ_ACCESO = {
-    # El Administrador (Rol 1) recibe de forma automática TODAS las capacidades de todos los microservicios.
     1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24],
-    # El Levantador (Rol 2) opera flujos de movimiento logístico (bienes, resguardos y consulta de áreas)
     2: [8, 12, 15, 16, 17, 20, 23],
-    # El Registrador (Rol 3) gestiona activos y el padrón de personas vinculadas, pero no altera roles ni usuarios
     3: [7, 8, 9, 10, 11, 12, 13, 14, 20, 23],
-    # El Revisor (Rol 4) posee un perfil estrictamente de lectura analítica sobre todo el ecosistema institucional
     4: [2, 5, 8, 12, 16, 20, 23],
-    # El Resguardante (Rol 5) solo puede interactuar en modo lectura con su propio inventario asignado
     5: [12, 16, 20]
 }
 
+# Modificación estructural: Expansión de la topología de semillas para abarcar todos los nodos RBAC
 USUARIOS_SEMILLA = [
     {
         "id": "4ed3fc1c-ccf8-4b12-a6c8-e3cd77b8a052", 
         "curp": "GOME900101HDFRRN01", 
         "user": "adminjgomez", 
         "email": "adminjgomez@example.com", 
-        "rol": 1  # Administrador del Sistema
+        "rol": 1  # Administrador
+    },
+    {
+        "id": "18b95982-f3f2-4bd5-a129-dfec4087e8f1", 
+        "curp": "LEVA910202HDFRRN02", 
+        "user": "levantador_op", 
+        "email": "levantador@example.com", 
+        "rol": 2  # Levantador
+    },
+    {
+        "id": "893c524f-83a1-4354-9469-803dfa4bebb2", 
+        "curp": "REGI920303HDFRRN03", 
+        "user": "registrador_act", 
+        "email": "registrador@example.com", 
+        "rol": 3  # Registrador
+    },
+    {
+        "id": "e45cd0a2-21d7-4663-8a3d-4c7b8e5c329a", 
+        "curp": "REVI930404HDFRRN04", 
+        "user": "revisor_aud", 
+        "email": "revisor@example.com", 
+        "rol": 4  # Revisor
+    },
+    {
+        "id": "cf6c8d23-74b8-4e89-9e17-7e781190cd5b", 
+        "curp": "RESG940505HDFRRN05", 
+        "user": "resguardante_usr", 
+        "email": "resguardante@example.com", 
+        "rol": 5  # Resguardante
     }
 ]
 
@@ -112,6 +136,7 @@ async def setup():
             await session.flush()
 
             print("👤 Generando Credenciales Criptográficas de la Identidad Raíz...")
+            # Delegación de operaciones ligadas a CPU al ThreadPoolExecutor
             password_hash = await asyncio.to_thread(get_password_hash, "Password123")
             
             for u in USUARIOS_SEMILLA:
@@ -133,6 +158,7 @@ async def setup():
                     
                     session.add(nuevo_usuario)
 
+            # Transición de estado: Flush final de datos y liberación de candados (locks) relacionales
             await session.commit()
             print("🚀 El ecosistema distribuido ha sido aprovisionado con Capacidades exitosamente.")
 

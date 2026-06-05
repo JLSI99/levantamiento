@@ -1,64 +1,83 @@
 import os
-import httpx
-from fastapi import APIRouter, HTTPException, Depends, status, Header
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from bff.src.schemas import auth as schemas_auth
+from bff.src.dependencies.auth import obtener_token_valido
 
-from src.schemas.auth import UserLogin, TokenResponse
-from src.dependencies.http import get_http_client
+router = APIRouter(prefix="/api/v1/auth", tags=["BFF Autenticación"])
 
-router = APIRouter(
-    prefix="/auth",
-    tags=["Autenticación BFF"]
-)
+MS_AUTH_URL = os.getenv("MS_USUARIOS_Y_AUTENTICACION_URL", "http://ms-usuarios-y-autenticacion:8000")
 
-MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000")
+@router.post("/login", response_model=schemas_auth.TokenBFF)
+async def login_bff(request: Request, login_data: schemas_auth.UserLoginBFF):
 
-@router.post("/login", response_model=TokenResponse)
-async def login(
-    data: UserLogin, 
-    client: httpx.AsyncClient = Depends(get_http_client)
-):
-
+    client = request.app.state.http_client
     try:
         response = await client.post(
             f"{MS_AUTH_URL}/auth/login",
-            json=data.model_dump(),
-            timeout=5.0
+            json=login_data.model_dump()
         )
-    except httpx.RequestError as exc:
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=response.json().get("detail", "Error en autenticación interna.")
+            )
+        return response.json()
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"El servicio de identidad y usuarios no está disponible en la red interna: {exc}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error de conectividad con el servicio de autenticación: {str(e)}"
         )
 
-    if response.status_code != status.HTTP_200_OK:
-        try:
-            error_data = response.json()
-            error_msg = error_data.get("detail", "Credenciales incorrectas o error de validación")
-        except (ValueError, TypeError):
-            error_msg = f"Respuesta inesperada del servicio core (HTTP {response.status_code})"
-        
-        raise HTTPException(
-            status_code=response.status_code,
-            detail=error_msg
-        )
-        
-    return response.json()
+@router.post("/refresh", response_model=schemas_auth.TokenBFF)
+async def refresh_bff(request: Request, refresh_data: schemas_auth.TokenRefreshBFF):
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(
-    authorization: Optional[str] = Header(None),
-    client: httpx.AsyncClient = Depends(get_http_client)
-):
-
-    if not authorization:
-        return
-
+    client = request.app.state.http_client
     try:
-        await client.post(
-            f"{MS_AUTH_URL}/auth/logout",
-            headers={"Authorization": authorization},
-            timeout=3.0
+        response = await client.post(
+            f"{MS_AUTH_URL}/auth/refresh",
+            json=refresh_data.model_dump()
         )
-    except httpx.RequestError: 
-        pass
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=response.json().get("detail", "Error al procesar refresco.")
+            )
+        return response.json()
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error en comunicación interna para refresco: {str(e)}"
+        )
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+async def logout_bff(request: Request):
+
+    client = request.app.state.http_client
+    auth_header = request.headers.get("Authorization")
+    
+    headers = {}
+    if auth_header:
+        headers["Authorization"] = auth_header
+        
+    try:
+        response = await client.post(f"{MS_AUTH_URL}/auth/logout", headers=headers)
+        return response.json()
+    except Exception:
+        return {"detail": "Sesión cerrada de forma perimetral"}
+
+@router.get("/me")
+async def obtener_contexto_sesion(payload: dict = Depends(obtener_token_valido)):
+
+    return {
+        "usuario": {
+            "id_usuario": payload.get("sub"),
+            "username": payload.get("username"),
+            "email": payload.get("email"),
+        },
+        "roles": payload.get("roles", []),
+        "capabilities": payload.get("caps", [])
+    }

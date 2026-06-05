@@ -8,10 +8,9 @@ JWT_ISSUER = os.getenv("JWT_ISSUER", "itsc-auth-service")
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "itsc-ecosistema-universitario")
 
 if not SECRET_KEY:
-    raise ValueError("SECRET_KEY no está configurada en la plantilla")
+    raise ValueError("ERROR CRÍTICO: La variable de entorno SECRET_KEY no está configurada.")
 
-def decode_token(token: str) -> Optional[dict]:
-
+def decode_token(token: str, expected_type: str = "access") -> Optional[dict]:
     try:
         payload = jwt.decode(
             token, 
@@ -20,6 +19,10 @@ def decode_token(token: str) -> Optional[dict]:
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE
         )
+
+        if payload.get("type") != expected_type:
+            return None
+        
         return payload
     except JWTError:
         return None
