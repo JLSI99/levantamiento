@@ -58,7 +58,7 @@ async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resgu
     )
 
 async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas_resguardos.ResguardoAdminOutBFF:
-    """Función exclusiva del Levantador: Orquesta e incluye datos personales del resguardatario."""
+
     id_bien = resguardo["id_bien"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
@@ -80,7 +80,6 @@ async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas
     edificio_data = respuestas[2].json() if not isinstance(respuestas[2], Exception) and respuestas[2].status_code == 200 else {}
     depto_data = respuestas[3].json() if not isinstance(respuestas[3], Exception) and respuestas[3].status_code == 200 else {}
     
-    # Procesamiento del listado del microservicio de personas (?curp=X)
     persona_final = {"curp": curp_objetivo, "nombres": "Desconocido", "apellidos": "Desconocido"}
     if not isinstance(respuestas[4], Exception) and respuestas[4].status_code == 200:
         personas_list = respuestas[4].json().get("data", [])
@@ -162,12 +161,11 @@ async def crear_asignacion_resguardo(
 
     async with httpx.AsyncClient() as client:
         try:
-            # 1. Enviar creación a ms-resguardos
+        
             resp = await client.post(MS_RESGUARDOS_URL, json=datos_entrada.model_dump(), headers=headers)
             if resp.status_code != status.HTTP_201_CREATED:
                 raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al procesar asignación."))
             
-            # 2. Hidratar el objeto recién creado para retornar la estructura detallada al frontend
             resguardo_creado = resp.json()
             resguardo_hidratado = await hidratar_resguardo_completo(resguardo_creado, headers)
             return resguardo_hidratado
@@ -204,7 +202,6 @@ async def listar_todos_los_resguardos_institucionales(
     lista_puros = resguardos_data.get("data", [])
     total = resguardos_data.get("total", 0)
 
-    # Orquestación masiva y concurrente para rellenar nombres de personas, aulas y bienes
     tareas_hidratacion = [hidratar_resguardo_completo(r, headers) for r in lista_puros]
     resultados_finales = await asyncio.gather(*tareas_hidratacion)
 

@@ -13,9 +13,7 @@ router = APIRouter(
     tags=["BFF Control Central de Infraestructura y Ubicaciones"]
 )
 
-# URL Base apuntando a la raíz del contenedor/servicio ms-ubicaciones
 MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms-ubicaciones:8000")
-
 # ==============================================================================
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 # ==============================================================================
@@ -24,24 +22,12 @@ async def obtener_todos_los_catalogos_form(
     request: Request,
     token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer")) 
 ):
-    """
-    Orquestador Asíncrono: Consume concurrentemente los listados crudos del microservicio
-    para armar una respuesta unificada limpia, mapeada para los selectores del Frontend.
-    """
+
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.get("encoded_token")
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     try:
-        # Consultamos los endpoints internos en paralelo (sin filtros limitantes para dropdowns completos)
-        tareas = [
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios?limit=100", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios/aulas/todas?limit=500", headers=headers), # Nota: Ajustar si tu micro tiene un listado global, alternativamente mapeamos desde edificios
-            client.get(f"{MS_UBICACIONES_URL}/departamentos?limit=100", headers=headers)
-        ]
-        
-        # Como el endpoint original de listado de edificios ya trae pre-cargadas sus aulas mediante selectinload,
-        # consultamos los edificios y departamentos vigentes directamente para optimizar tráfico de red.
         tareas_reales = [
             client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios?limit=100&incluir_inactivos=false", headers=headers),
             client.get(f"{MS_UBICACIONES_URL}/departamentos?limit=100&incluir_inactivos=false", headers=headers)
@@ -58,7 +44,6 @@ async def obtener_todos_los_catalogos_form(
         edificios_raw = respuestas[0].json().get("data", [])
         deptos_raw = respuestas[1].json().get("data", [])
         
-        # Mapeo y aplanado dinámico de aulas desde la jerarquía de edificios cargada en memoria
         lista_edificios = []
         lista_aulas = []
         
@@ -84,7 +69,7 @@ async def obtener_todos_los_catalogos_form(
         return schemas.CatalogosUbicacionesOutBFF(
             edificios=lista_edificios,
             aulas=lista_aulas,
-            departamentos=lista_deptos
+            departments=lista_deptos
         )
         
     except httpx.RequestError as exc:
@@ -92,8 +77,6 @@ async def obtener_todos_los_catalogos_form(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
             detail=f"Servicio de catálogos no disponible: {str(exc)}"
         )
-
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: EDIFICIOS
 # ==============================================================================
@@ -179,8 +162,6 @@ async def borrar_edificio(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
     return
-
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: AULAS
 # ==============================================================================
@@ -253,8 +234,6 @@ async def borrar_aula(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
     return
-
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: DEPARTAMENTOS
 # ==============================================================================
@@ -279,7 +258,7 @@ async def listar_departamentos(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False),
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer")) # Flexibilidad de lectura compartida
+    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.get("encoded_token")
