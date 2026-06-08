@@ -33,4 +33,9 @@ cd ms-resguardos
 docker-compose up -d
 cd ..
 
+echo "--- Levantando BFF (Puerta de enlace) ---"
+cd bff
+docker-compose up -d
+cd ..
+
 echo "--- Sistema arriba ---"

@@ -16,11 +16,9 @@ MS_RESGUARDOS_URL = "http://ms-resguardos:8000/resguardos"
 MS_BIENES_URL = "http://ms-bienes:8000/bienes"
 MS_UBICACIONES_URL = "http://ms-ubicaciones:8000"
 MS_PERSONAS_URL = "http://ms-personas:8000/personas"
-
 # ==============================================================================
 # FUNCIONES AUXILIARES DE HIDRATACIÓN (ORQUESTACIÓN ASÍNCRONA)
 # ==============================================================================
-
 async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resguardos.MisResguardosOut:
     id_bien = resguardo["id_bien"]
     id_aula = resguardo["id_aula"]
@@ -58,7 +56,6 @@ async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resgu
             departamento=depto_data.get("nombre", "N/D")
         )
     )
-
 
 async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas_resguardos.ResguardoAdminOutBFF:
     """Función exclusiva del Levantador: Orquesta e incluye datos personales del resguardatario."""
@@ -112,11 +109,9 @@ async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas
             departamento=depto_data.get("nombre", "N/D")
         )
     )
-
 # ==============================================================================
 # ENDPOINTS: RUTA DEL RESGUARDANTE
 # ==============================================================================
-
 @router.get("/mis-resguardos", response_model=schemas_resguardos.MisResguardosPaginatedOut)
 async def listar_mis_resguardos(
     request: Request,
@@ -153,11 +148,9 @@ async def listar_mis_resguardos(
     return schemas_resguardos.MisResguardosPaginatedOut(
         total=total_registros, limit=limit, offset=offset, data=resultados_finales
     )
-
 # ==============================================================================
 # ENDPOINTS: CRUD DEL LEVANTADOR (OPERATIVO GENERAL INSTITUCIONAL)
 # ==============================================================================
-
 @router.post("", response_model=schemas_resguardos.ResguardoAdminOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_asignacion_resguardo(
     request: Request,
@@ -181,7 +174,6 @@ async def crear_asignacion_resguardo(
             
         except httpx.RequestError as exc:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Fallo de conexión con microservicios: {str(exc)}")
-
 
 @router.get("", response_model=schemas_resguardos.ResguardoAdminPaginatedOutBFF)
 async def listar_todos_los_resguardos_institucionales(
@@ -220,7 +212,6 @@ async def listar_todos_los_resguardos_institucionales(
         total=total, limit=limit, offset=offset, data=resultados_finales
     )
 
-
 @router.patch("/{id_asignacion}", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def modificar_asignacion_resguardo(
     id_asignacion: UUID,
@@ -245,7 +236,6 @@ async def modificar_asignacion_resguardo(
         except httpx.RequestError as e:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error en comunicación interna: {str(e)}")
 
-
 @router.post("/{id_asignacion}/cerrar", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def concluir_resguardo_ordinario(
     id_asignacion: UUID,
@@ -264,7 +254,6 @@ async def concluir_resguardo_ordinario(
             return await hidratar_resguardo_completo(resguardo_cerrado, headers)
         except httpx.RequestError as e:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red: {str(e)}")
-
 
 @router.delete("/{id_asignacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_baja_logica_resguardo(

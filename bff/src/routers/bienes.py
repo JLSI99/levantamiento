@@ -7,11 +7,9 @@ from bff.src.dependencies.auth import RequireCapabilityBFF
 router = APIRouter(prefix="/api/v1/bienes", tags=["BFF Catálogos y Bienes"])
 
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms-bienes:8000")
-
 # ==============================================================================
 # OPERACIONES: BIENES (ACTIVOS FÍSICOS)
 # ==============================================================================
-
 @router.get(
     "", 
     response_model=schemas_bienes.BienPaginatedOutBFF,

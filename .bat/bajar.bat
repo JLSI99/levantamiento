@@ -3,6 +3,11 @@ set -e
 
 echo "--- Deteniendo sistema ---"
 
+echo "--- Deteniendo BFF (Puerta de enlace) ---"
+cd bff
+docker-compose down
+cd ..
+
 echo "--- Deteniendo ms usuarios y autenticacion ---"
 cd ms-usuarios-y-autenticacion
 docker-compose down
