@@ -1,3 +1,4 @@
+import uvicorn
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
@@ -8,9 +9,9 @@ from src.dependencies.rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from src.routers import resguardos
 from src.database import engine
 import src.auditoria
-from src.routers import resguardos
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

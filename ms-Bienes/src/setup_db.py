@@ -8,6 +8,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import engine, Base
 from src import models
+from src.auditoria import Auditoria
 
 UUID_TIPO_COMPUTO = uuid.UUID("b3c3d3e3-f3a3-4b3c-9d3e-1f3a3b3c3d3e")
 UUID_TIPO_MOBILIARIO = uuid.UUID("c4d4e4f4-a4b4-4c4d-8e4f-2a4b4c4d4e4f")

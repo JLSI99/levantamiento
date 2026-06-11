@@ -1,3 +1,4 @@
+import uvicorn
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
@@ -8,15 +9,17 @@ from src.dependencies.rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from src.routers import personas
 from src.database import engine, Base
 import src.auditoria
-from src.routers import personas
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🧠 Inicializando Microservicio de Personas (Padrón Civil)...")
     yield
     print("🛑 Liberando descriptores y cerrando pools de conexión en ms-personas...")
+    # Invariante: Cierre explícito del pool asíncrono para mitigar sockets huérfanos
+    await engine.dispose()
 
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     return JSONResponse(

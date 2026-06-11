@@ -1,6 +1,7 @@
 import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
+from fastapi import Request
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,10 +19,10 @@ engine = create_async_engine(
     DATABASE_URL,
     echo=modo_debug,
     future=True,
-    pool_size=15,          # Alineado al Reference Blueprint
-    max_overflow=25,       # Sockets de desborde elástico bajo ráfagas concurrentes
+    pool_size=15,          # Mitigación de starvation bajo ráfagas concurrentes
+    max_overflow=25,       # Sockets de desborde dinámico permitidos
     pool_timeout=15.0,     # Límite de espera de checkout de sesión
-    pool_recycle=1800      # Reciclaje forzado a los 30 min para mitigar sockets muertos
+    pool_recycle=1800      # Reciclaje a 30 min para limpiar conexiones muertas
 )
 
 AsyncSessionLocal = sessionmaker(
@@ -32,8 +33,11 @@ AsyncSessionLocal = sessionmaker(
 
 Base = declarative_base()
 
-async def get_db():
+async def get_db(request: Request):
+
     async with AsyncSessionLocal() as session:
+        usuario_email = getattr(request.state, "usuario_email", "sistema")
+        session.info['usuario_email'] = usuario_email
         try:
             yield session
         finally:

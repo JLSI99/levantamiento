@@ -23,7 +23,7 @@ PERMISOS_BASE = [
     (1, "usuarios:crear", "Permite registrar nuevos usuarios en el sistema central de credenciales"),
     (2, "usuarios:leer", "Visualización y paginación del catálogo de usuarios del sistema"),
     (3, "usuarios:editar", "Modificar propiedades de configuración de un usuario existente"),
-    (4, "usuarios:eliminar", "Inactivación o borrado lógico de cuentas de usuario"),
+    (4, "usuarios:borrar", "Inactivación o borrado lógico de cuentas de usuario"),
     (5, "roles:leer", "Consultar el catálogo global de roles institucionales"),
     (6, "roles:editar", "Modificar la matriz relacional de asignación de capacidades a roles"),
     # Dominio de Personas: ms-personas

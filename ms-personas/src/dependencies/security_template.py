@@ -28,24 +28,30 @@ class ValidadorSeguridad:
             )
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 
-                detail="Token no válido para este ecosistema o ha expirado"
+                detail="Token no válido para este ecosistema o ha expirado",
+                headers={"WWW-Authenticate": "Bearer"}
             )
         return payload
 
-    async def inject_audit_context(self, request: Request) -> dict:
-        credentials = await security_scheme(request)
-        payload = await self.validate_jwt_token(credentials)
-        
-        if self.get_db:
-            async for db_session in self.get_db():
-                usuario_email = payload.get("email", "desconocido@itsc.edu.mx")
-                db_session.info['usuario_email'] = usuario_email
-                return payload
-        return payload
+    def inject_audit_context(self) -> Callable:
 
-    def require_capability(self, required_cap: str):
-        async def _verifier(request: Request) -> dict:
-            payload = await self.inject_audit_context(request)
+        async def _auditor(
+            request: Request,
+            payload: dict = Depends(self.validate_jwt_token)
+        ) -> dict:
+            usuario_email = payload.get("email", "desconocido@itsc.edu.mx")
+            request.state.usuario_email = usuario_email
+            return payload
+        return _auditor
+
+    def require_capability(self, required_cap: str) -> Callable:
+
+        auditor_dependency = self.inject_audit_context()
+
+        async def _verifier(
+            request: Request,
+            payload: dict = Depends(auditor_dependency)
+        ) -> dict:
             user_caps = payload.get("caps", [])
             
             if required_cap not in user_caps:

@@ -10,13 +10,16 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.routers import usuarios, roles_y_endpoints, autenticacion
+from src.database import engine, Base
 import src.auditoria
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    
     print("🔐 Inicializando Microservicio de Identidad bajo Arquitectura de Capacidades...")
     yield
     print("🛑 Liberando descriptores de archivos, buffers y pools de conexión de forma atómica...")
+    # Invariante: Cierre explícito del pool asíncrono para mitigar sockets huérfanos
+    await engine.dispose()
 
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     return JSONResponse(
@@ -38,7 +41,8 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-origins_str = os.getenv("ALLOWED_ORIGINS")
+# Homogeneización de la variable de entorno a ALLOW_ORIGINS
+origins_str = os.getenv("ALLOW_ORIGINS")
 origenes_permitidos = [origen.strip() for origen in origins_str.split(",")] if origins_str else []
 
 app.add_middleware(

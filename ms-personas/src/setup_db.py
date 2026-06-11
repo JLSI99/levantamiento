@@ -6,6 +6,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import engine, Base
 from src import models
+from src.auditoria import Auditoria
 
 PERSONAS_SEMILLA = [
     {

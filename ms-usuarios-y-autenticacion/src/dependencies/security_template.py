@@ -6,7 +6,6 @@ from src.dependencies.manejo_jwt import decode_token
 from src.dependencies.logger import setup_logger
 
 logger = setup_logger(__name__)
-
 security_scheme = HTTPBearer(auto_error=True)
 
 class ValidadorSeguridad:

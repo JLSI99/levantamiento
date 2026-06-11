@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import engine, Base
 from src import models
+from src.auditoria import Auditoria
 
 UUID_BIEN_LAPTOP = uuid.UUID("11111111-2222-3333-4444-555555555555")
 UUID_AULA_INGENIERIA = uuid.UUID("fa111111-b222-c333-d444-e55555555555")
