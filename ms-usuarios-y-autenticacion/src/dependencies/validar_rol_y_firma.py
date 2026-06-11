@@ -2,7 +2,7 @@ from src.dependencies.security_template import ValidadorSeguridad
 
 _seguridad = ValidadorSeguridad(
     nombre_servicio="ms-usuarios-y-autenticacion",
-    db_dependency=None,            # No inyecta cont
+    db_dependency=None,         
     tipo_token_estricto="access"
 )
 
