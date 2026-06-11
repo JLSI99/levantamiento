@@ -11,8 +11,8 @@ router = APIRouter(
     tags=["Administración Centralizada"]
 )
 
-MS_PERSONAS_URL = os.getenv("MS_PERSONAS_URL", "http://ms-personas:8000/personas")
-MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms-usuarios-y-autenticacion:8000")
+MS_PERSONAS_BASE_URL = os.getenv("MS_PERSONAS_URL", "http://ms_personas_api:8000")
+MS_AUTH_BASE_URL = os.getenv("MS_AUTH_URL", "http://ms_auth_api:8000")
 # ==============================================================================
 # GESTIÓN DE IDENTIDADES (ms-personas)
 # ==============================================================================
@@ -84,7 +84,6 @@ async def dar_baja_persona(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
     return
-
 # ==============================================================================
 # GESTIÓN DE CUENTAS DE ACCESO (ms-auth)
 # ==============================================================================

@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["BFF Control Central de Infraestructura y Ubicaciones"]
 )
 
-MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms-ubicaciones:8000")
+MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000")
 # ==============================================================================
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 # ==============================================================================

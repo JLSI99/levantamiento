@@ -3,11 +3,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime
-
 # ------------------------------------------------------------------------------
 # 1. SUBSISTEMA DE CAPACIDADES Y PERMISOS (CBAC)
 # ------------------------------------------------------------------------------
-
 class PermisoOut(BaseModel):
     id_permiso: int
     nombre: str
@@ -22,12 +20,9 @@ class PermisoCreate(BaseModel):
 class PermisoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=3, max_length=150)
     descripcion: Optional[str] = Field(None, max_length=255)
-
-
 # ------------------------------------------------------------------------------
 # 2. SUBSISTEMA DE ROLES
 # ------------------------------------------------------------------------------
-
 class RolOut(BaseModel):
     id_rol: int
     nombre_rol: str
@@ -45,12 +40,9 @@ class RolUpdate(BaseModel):
 
 class RolPermisosUpdate(BaseModel):
     permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
-
-
 # ------------------------------------------------------------------------------
 # 3. SUBSISTEMA DE USUARIOS e IDENTIDADES
 # ------------------------------------------------------------------------------
-
 class UserOut(BaseModel):
     id_usuario: UUID
     curp: str

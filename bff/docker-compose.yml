@@ -12,17 +12,6 @@ services:
       - "${SERVER_IP}:${SERVER_PORT}:8000"
     networks:
       - backend_net
-    depends_on:
-      ms_usuarios_api:
-        condition: service_started
-      ms_bienes_api:
-        condition: service_started
-      ms_resguardos_api:
-        condition: service_started
-      ms_personas_api:
-        condition: service_started
-      ms_ubicaciones_api:
-        condition: service_started
     restart: unless-stopped
 
 networks:

@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 urls = [
     os.getenv('MS_AUTH_URL', 'http://ms_usuarios_api:8000'),
     os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000'),
-    os.getenv('MS_RESGUARDOS_URL', 'http://ms_resguardos_api:8000'),
+    os.getenv('MS_RESGUARDOS_URL', 'http://ms_resguardo_api:8000'),
     os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000'),
     os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000')
 ]

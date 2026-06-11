@@ -51,7 +51,7 @@ app.include_router(auth.router)
 app.include_router(bienes.router)
 app.include_router(resguardos.router)
 app.include_router(admin.router)
-app.inculude_router(ubicaciones.router)
+app.include_router(ubicaciones.router)
 
 @app.get("/")
 async def root():

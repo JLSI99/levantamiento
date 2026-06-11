@@ -1,11 +1,11 @@
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from bff.src.schemas import auth as schemas_auth
-from bff.src.dependencies.auth import obtener_token_valido
+from src.schemas import auth as schemas_auth
+from src.dependencies.auth import obtener_token_valido
 
 router = APIRouter(prefix="/api/v1/auth", tags=["BFF Autenticación"])
 
-MS_AUTH_URL = os.getenv("MS_USUARIOS_Y_AUTENTICACION_URL", "http://ms-usuarios-y-autenticacion:8000")
+MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000")
 
 @router.post("/login", response_model=schemas_auth.TokenBFF)
 async def login_bff(request: Request, login_data: schemas_auth.UserLoginBFF):

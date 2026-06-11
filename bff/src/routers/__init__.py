@@ -1,8 +1,8 @@
-from .auth import router as auth
-from .bienes import router as bienes
-from .admin import router as admin
-from .resguardos import router as resguardos
-from .ubicaciones import router as ubicaciones
+from . import auth
+from . import bienes
+from . import admin
+from . import resguardos
+from . import ubicaciones
 
 
-__all__ = ["auth", "bienes"]
+__all__ = ["auth", "bienes","admin","resguardos","ubicaciones"]

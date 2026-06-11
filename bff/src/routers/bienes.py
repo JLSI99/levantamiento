@@ -1,12 +1,12 @@
 import os
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
-from bff.src.schemas import bienes as schemas_bienes
-from bff.src.dependencies.auth import RequireCapabilityBFF
+from src.schemas import bienes as schemas_bienes
+from src.dependencies.auth import RequireCapabilityBFF
 
 router = APIRouter(prefix="/api/v1/bienes", tags=["BFF Catálogos y Bienes"])
 
-MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms-bienes:8000")
+MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000")
 # ==============================================================================
 # OPERACIONES: BIENES (ACTIVOS FÍSICOS)
 # ==============================================================================
@@ -39,7 +39,6 @@ async def listar_bienes_revisor(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Fallo crítico de comunicación con ms-bienes: {str(e)}")
 
-
 @router.get(
     "/{id_bien}", 
     response_model=schemas_bienes.BienOutBFF,
@@ -59,7 +58,6 @@ async def obtener_bien_por_id(request: Request, id_bien: UUID):
         raise http_exc
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al conectar con ms-bienes: {str(e)}")
-
 
 @router.post(
     "", 
@@ -86,7 +84,6 @@ async def crear_nuevo_bien(request: Request, bien_in: schemas_bienes.BienCreateB
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error en comunicación al crear activo: {str(e)}")
 
-
 @router.patch(
     "/{id_bien}", 
     response_model=schemas_bienes.BienOutBFF,
@@ -111,14 +108,12 @@ async def modificar_bien(request: Request, id_bien: UUID, bien_in: schemas_biene
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error en comunicación al actualizar activo: {str(e)}")
 
-
 @router.delete(
     "/{id_bien}", 
     status_code=status.HTTP_204_NO_CONTENT
 )
 async def dar_de_baja_bien(request: Request, id_bien: UUID):
-    # Protegido explícitamente dentro del cuerpo o mediante dependencias
-    # Nota: Tu microservicio pide la capacidad "bienes:eliminar"
+
     dependency = RequireCapabilityBFF("bienes:eliminar")
     await dependency(request)
 
@@ -165,7 +160,6 @@ async def listar_tipos_bien_revisor(
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Fallo crítico de comunicación con el catálogo de ms-bienes: {str(e)}")
 
-
 @router.get(
     "/tipos-bien/{id_tipo}", 
     response_model=schemas_bienes.TipoBienOutBFF,
@@ -185,7 +179,6 @@ async def obtener_tipo_bien_por_id(request: Request, id_tipo: UUID):
         raise http_exc
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error al conectar con ms-bienes: {str(e)}")
-
 
 @router.post(
     "/tipos-bien", 
@@ -212,7 +205,6 @@ async def crear_tipo_bien(request: Request, tipo_in: schemas_bienes.TipoBienCrea
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de comunicación al crear tipo de bien: {str(e)}")
 
-
 @router.patch(
     "/tipos-bien/{id_tipo}", 
     response_model=schemas_bienes.TipoBienOutBFF,
@@ -236,7 +228,6 @@ async def modificar_tipo_bien(request: Request, id_tipo: UUID, tipo_in: schemas_
         raise http_exc
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Error de comunicación al actualizar tipo de bien: {str(e)}")
-
 
 @router.delete(
     "/tipos-bien/{id_tipo}", 

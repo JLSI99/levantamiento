@@ -1,3 +1,4 @@
+import os
 import asyncio
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -12,10 +13,10 @@ router = APIRouter(
     tags=["BFF Módulo de Resguardos y Asignaciones"]
 )
 
-MS_RESGUARDOS_URL = "http://ms-resguardos:8000/resguardos"
-MS_BIENES_URL = "http://ms-bienes:8000/bienes"
-MS_UBICACIONES_URL = "http://ms-ubicaciones:8000"
-MS_PERSONAS_URL = "http://ms-personas:8000/personas"
+MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000")
+MS_BIENES_BASE_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000")
+MS_UBICACIONES_BASE_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000")
+MS_PERSONAS_BASE_URL = os.getenv("MS_PERSONAS_URL", "http://ms_personas_api:8000")
 # ==============================================================================
 # FUNCIONES AUXILIARES DE HIDRATACIÓN (ORQUESTACIÓN ASÍNCRONA)
 # ==============================================================================

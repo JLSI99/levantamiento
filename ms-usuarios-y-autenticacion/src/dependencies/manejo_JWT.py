@@ -10,7 +10,7 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 JWT_ISSUER = os.getenv("JWT_ISSUER", "itsc-auth-service")
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "itsc-ecosistema-universitario")
 
-def create_access_token(id_usuario: Any, username: str, email: str, roles: List[str], caps: List[str]) -> str:
+def create_access_token(id_usuario: Any, username: str, email: str, roles: List[str], caps: List[str], curp:str) -> str:
 
     ahora = datetime.now(timezone.utc)
     expire = ahora + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
@@ -24,6 +24,7 @@ def create_access_token(id_usuario: Any, username: str, email: str, roles: List[
         "email": email,
         "roles": roles,
         "caps": caps,
+        "curp":curp,
         "type": "access"
     }
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)

@@ -41,7 +41,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
         session.info['auditoria_temp_store'] = []
 
     usuario_actual = session.info.get('usuario_email', 'sistema')
-
     # --------------------------------------------------------------------------
     # DETECCIÓN DE INSERCIONES (INSERT)
     # --------------------------------------------------------------------------
@@ -59,7 +58,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "target_obj": obj,
             "accion": 'INSERT'
         })
-
     # --------------------------------------------------------------------------
     # DETECCIÓN DE MODIFICACIONES (UPDATE)
     # --------------------------------------------------------------------------
@@ -104,7 +102,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
                 "target_obj": obj,
                 "accion": 'UPDATE'
             })
-
     # --------------------------------------------------------------------------
     # DETECCIÓN DE ELIMINACIONES (DELETE)
     # --------------------------------------------------------------------------
@@ -159,8 +156,6 @@ def auditar_despues_de_flush(session, flush_context):
     if registros_a_guardar:
         for record in registros_a_guardar:
             session.add(record)
-
-
 # ------------------------------------------------------------------------------
 # AUDITORÍA DE RELACIONES MANY-TO-MANY (Tablas Intermedias / Asociaciones)
 # ------------------------------------------------------------------------------

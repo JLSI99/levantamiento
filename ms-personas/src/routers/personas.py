@@ -8,7 +8,7 @@ from typing import Optional
 from src.database import get_db
 from src import models, schemas
 
-from src.dependencies.validar_rol_y_firma import require_capability, inject_audit_context
+from src.dependencies.validar_rol_y_firma import require_capability
 from src.dependencies.rate_limiter import limiter
 
 router = APIRouter(
