@@ -1,10 +1,9 @@
-#mariangeles
+
 import asyncio
 import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
-
 from src.database import engine, Base
 from src import models
 from src.auditoria import Auditoria
