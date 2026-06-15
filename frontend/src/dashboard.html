@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ITSC - Panel de Control Patrimonial</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="app-navbar">
+        <div class="navbar-brand">
+            <h1>Ecosistema de Control Interno ITSC</h1>
+        </div>
+        <div class="user-meta">
+            <span id="session-user-label">Cargando...</span>
+            <button id="btn-logout" class="btn-secondary">Cerrar Sesión</button>
+        </div>
+    </header>
+
+    <main class="dashboard-content">
+        <section class="action-grid">
+            
+            <div class="card card-action" data-cap="personas:leer">
+                <h3>Visualizar Identidades</h3>
+                <p>Módulo para el rastreo y listado de personal universitario.</p>
+                <button class="btn-action-trigger" onclick="alert('Invocando GET /api/v1/personas')">Consultar Personal</button>
+            </div>
+
+            <div class="card card-action card-restricted" data-cap="personas:crear">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Alta de Nueva Identidad</h3>
+                <p>Registrar una nueva persona en el padrón institucional base.</p>
+                <button class="btn-action-trigger primary" onclick="alert('Invocando POST /api/v1/personas')">Registrar Persona</button>
+            </div>
+
+            <div class="card card-action card-restricted" data-cap="usuarios:crear">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Crear Cuenta de Acceso</h3>
+                <p>Generación de credenciales criptográficas y asignación de roles iniciales.</p>
+                <button class="btn-action-trigger danger" onclick="alert('Invocando POST /api/v1/auth/usuarios')">Crear Usuario</button>
+            </div>
+
+            <div class="card card-action card-restricted" data-cap="roles:editar">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Modificar Matriz de Capacidades</h3>
+                <p>Reasignación en caliente de permisos endpoints a roles globales del sistema.</p>
+                <button class="btn-action-trigger secure" onclick="alert('Invocando PUT /api/v1/auth/roles/permisos')">Administrar Matriz</button>
+            </div>
+
+            <div class="card card-action" data-cap="bienes:leer">
+                <h3>Inventario de Bienes</h3>
+                <p>Consulta general de fichas técnicas y estados de activos patrimoniales.</p>
+                <button class="btn-action-trigger" onclick="alert('Invocando GET /api/v1/bienes')">Ver Fichas Activos</button>
+            </div>
+
+            <div class="card card-action card-restricted" data-cap="bienes:crear">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Alta de Activo Fijo</h3>
+                <p>Inclusión física y contable de nuevos bienes muebles en el inventario institucional.</p>
+                <button class="btn-action-trigger primary" onclick="alert('Invocando POST /api/v1/bienes')">Dar de Alta Bien</button>
+            </div>
+
+            <div class="card card-action" data-cap="resguardos:leer">
+                <h3>Historial de Resguardos</h3>
+                <p>Visualización jurídica de actas vigentes y asignaciones de custodia.</p>
+                <button class="btn-action-trigger" onclick="alert('Invocando GET /api/v1/resguardos')">Consultar Actas</button>
+            </div>
+
+            <div class="card card-action card-restricted" data-cap="resguardos:crear">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Asignar Custodia Física</h3>
+                <p>Transferencia formal y legal de un activo público a la responsabilidad de un resguardante.</p>
+                <button class="btn-action-trigger secure" onclick="alert('Invocando POST /api/v1/resguardos')">Emitir Resguardo</button>
+            </div>
+
+            <div class="card card-action" data-cap="ubicaciones:crear">
+                <div class="security-badge">CapBAC Protected</div>
+                <h3>Estructura Espacial</h3>
+                <p>Dar de alta nuevos campus, almacenes o zonas físicas estructurales.</p>
+                <button class="btn-action-trigger danger" onclick="alert('Invocando POST /api/v1/ubicaciones')">Crear Zona</button>
+            </div>
+
+        </section>
+    </main>
+
+    <script src="mock-server.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        // Poda reactiva previa al renderizado para eludir parpadeos visuales en el cliente (Flickering)
+        window.AuthService.procesarRenderizadoCapBAC();
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Re-verificación exhaustiva ante la inyección tardía de nodos en el DOM
+            window.AuthService.procesarRenderizadoCapBAC();
+
+            const userDataRaw = localStorage.getItem("itsc_user");
+            if (userDataRaw) {
+                try {
+                    const user = JSON.parse(userDataRaw);
+                    document.getElementById("session-user-label").textContent = `${user.username} (${user.email}) - Area: ${user.area || 'N/A'}`;
+                } catch (e) {
+                    console.error("Corrupción o asimetría crítica detectada en el almacenamiento local.");
+                    window.AuthService.logout();
+                }
+            }
+
+            document.getElementById("btn-logout").addEventListener("click", () => {
+                window.AuthService.logout();
+            });
+        });
+    </script>
+</body>
+</html>

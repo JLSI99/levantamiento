@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: dockerfile
+    container_name: ecosistema-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/usr/share/nginx/html
+    networks:
+      - ecosistema-network
+    restart: always
+
+networks:
+  ecosistema-network:
+    external: true

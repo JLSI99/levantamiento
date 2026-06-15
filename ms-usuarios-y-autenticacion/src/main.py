@@ -11,12 +11,26 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from src.routers import usuarios, roles_y_endpoints, autenticacion
 from src.database import engine, Base
-import src.auditoria
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🔐 Inicializando Microservicio de Identidad bajo Arquitectura de Capacidades...")
+    
+    # --------------------------------------------------------------------------
+    # INVARIANTE SEGURO: Inicialización y Verificación Automática de Tablas
+    # --------------------------------------------------------------------------
+    try:
+        async with engine.begin() as conn:
+            # Al importar los routers arriba, estos cargan models.py, garantizando 
+            # que Base.metadata posea el mapa completo de tablas (incluyendo auditoria).
+            await conn.run_sync(Base.metadata.create_all)
+        print("📊 Esquema relacional y tablas de auditoría sincronizadas con éxito en PostgreSQL.")
+    except Exception as e:
+        print(f"🚨 Falla crítica durante la creación automática de tablas en el arranque: {e}")
+        raise e
+
     yield
+    
     print("🛑 Liberando descriptores de archivos, buffers y pools de conexión de forma atómica...")
     # Invariante: Cierre explícito del pool asíncrono para mitigar sockets huérfanos
     await engine.dispose()
@@ -41,7 +55,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, custom_rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 
-# Homogeneización de la variable de entorno a ALLOW_ORIGINS
 origins_str = os.getenv("ALLOW_ORIGINS")
 origenes_permitidos = [origen.strip() for origen in origins_str.split(",")] if origins_str else []
 

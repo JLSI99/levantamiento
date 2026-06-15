@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 
 from src.database import get_db
 from src import models, schemas
@@ -11,6 +12,22 @@ router = APIRouter(
     prefix="/roles",
     tags=["Roles y Permisos"]
 )
+
+# ==============================================================================
+# 1. BLOQUE DE RUTAS ESTÁTICAS (Raíces y Colecciones Globales)
+# ==============================================================================
+
+@router.get(
+    "",
+    response_model=list[schemas.RolOut]
+)
+async def list_roles(
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(require_capability("roles:leer"))
+):
+    result = await db.execute(select(models.Rol))
+    return result.scalars().all()
+
 
 @router.post(
     "",
@@ -24,82 +41,35 @@ async def create_rol(
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
-    async with db.begin():
-        nuevo_rol = models.Rol(**rol_data.model_dump())
-        db.add(nuevo_rol)
-        await db.flush()
-        await db.refresh(nuevo_rol)
-    return nuevo_rol
+    try:
+        async with db.begin():
+            nuevo_rol = models.Rol(**rol_data.model_dump())
+            db.add(nuevo_rol)
+            await db.flush()
+            await db.refresh(nuevo_rol)
+        return nuevo_rol
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Conflicto de Integridad",
+                "mensaje": "El rol especificado ya existe o colisiona con restricciones únicas del esquema.",
+                "detalle": str(e.orig)
+            }
+        )
+
 
 @router.get(
-    "",
-    response_model=list[schemas.RolOut]
+    "/permisos",
+    response_model=list[schemas.PermisoOut]
 )
-async def list_roles(
+async def list_all_permisos(
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(require_capability("roles:leer"))
 ):
-    result = await db.execute(select(models.Rol))
+    result = await db.execute(select(models.PermisoEndpoint))
     return result.scalars().all()
 
-@router.get(
-    "/{id_rol}",
-    response_model=schemas.RolOut
-)
-async def get_rol(
-    id_rol: int,
-    db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:leer"))
-):
-    rol = await db.get(models.Rol, id_rol)
-    if not rol:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
-    return rol
-
-@router.patch(
-    "/{id_rol}",
-    response_model=schemas.RolOut
-)
-async def update_rol(
-    id_rol: int,
-    rol_data: schemas.RolUpdate,
-    db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
-):
-    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
-    
-    async with db.begin():
-        rol = await db.get(models.Rol, id_rol)
-        if not rol:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
-
-        update_data = rol_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(rol, key, value)
-
-        await db.flush()
-        await db.refresh(rol)
-    return rol
-
-@router.delete(
-    "/{id_rol}",
-    status_code=status.HTTP_204_NO_CONTENT
-)
-async def delete_rol(
-    id_rol: int,
-    db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
-):
-    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
-    
-    async with db.begin():
-        rol = await db.get(models.Rol, id_rol)
-        if not rol:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
-            
-        await db.delete(rol)
-        await db.flush()
-    return
 
 @router.post(
     "/permisos",
@@ -113,23 +83,27 @@ async def create_permiso(
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
-    async with db.begin():
-        permiso = models.PermisoEndpoint(**permiso_data.model_dump())
-        db.add(permiso)
-        await db.flush()
-        await db.refresh(permiso)
-    return permiso
+    try:
+        async with db.begin():
+            permiso = models.PermisoEndpoint(**permiso_data.model_dump())
+            db.add(permiso)
+            await db.flush()
+            await db.refresh(permiso)
+        return permiso
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Conflicto de Integridad",
+                "mensaje": "El permiso especificado ya existe o colisiona con restricciones únicas del esquema.",
+                "detalle": str(e.orig)
+            }
+        )
 
-@router.get(
-    "/permisos",
-    response_model=list[schemas.PermisoOut]
-)
-async def list_all_permisos(
-    db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:leer"))
-):
-    result = await db.execute(select(models.PermisoEndpoint))
-    return result.scalars().all()
+
+# ==============================================================================
+# 2. BLOQUE DE RUTAS DINÁMICAS DE PERMISOS (Evita colisiones con operaciones de Rol)
+# ==============================================================================
 
 @router.get(
     "/permisos/{id_permiso}",
@@ -145,6 +119,7 @@ async def get_permiso(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permiso no encontrado")
     return permiso
 
+
 @router.patch(
     "/permisos/{id_permiso}",
     response_model=schemas.PermisoOut
@@ -157,18 +132,29 @@ async def update_permiso(
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
-    async with db.begin():
-        permiso = await db.get(models.PermisoEndpoint, id_permiso)
-        if not permiso:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permiso no encontrado")
+    try:
+        async with db.begin():
+            permiso = await db.get(models.PermisoEndpoint, id_permiso)
+            if not permiso:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Permiso no encontrado")
 
-        update_data = permiso_data.model_dump(exclude_unset=True)
-        for key, value in update_data.items():
-            setattr(permiso, key, value)
+            update_data = permiso_data.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(permiso, key, value)
 
-        await db.flush()
-        await db.refresh(permiso)
-    return permiso
+            await db.flush()
+            await db.refresh(permiso)
+        return permiso
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Conflicto de Integridad",
+                "mensaje": "La actualización viola restricciones únicas del esquema relacional.",
+                "detalle": str(e.orig)
+            }
+        )
+
 
 @router.delete(
     "/permisos/{id_permiso}",
@@ -190,6 +176,87 @@ async def delete_permiso(
         await db.flush()
     return
 
+
+# ==============================================================================
+# 3. BLOQUE DE RUTAS DINÁMICAS DE ROLES (id_rol como identificador base)
+# ==============================================================================
+
+@router.get(
+    "/{id_rol}",
+    response_model=schemas.RolOut
+)
+async def get_rol(
+    id_rol: int,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(require_capability("roles:leer"))
+):
+    rol = await db.get(models.Rol, id_rol)
+    if not rol:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
+    return rol
+
+
+@router.patch(
+    "/{id_rol}",
+    response_model=schemas.RolOut
+)
+async def update_rol(
+    id_rol: int,
+    rol_data: schemas.RolUpdate,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(require_capability("roles:editar"))
+):
+    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
+    
+    try:
+        async with db.begin():
+            rol = await db.get(models.Rol, id_rol)
+            if not rol:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
+
+            update_data = rol_data.model_dump(exclude_unset=True)
+            for key, value in update_data.items():
+                setattr(rol, key, value)
+
+            await db.flush()
+            await db.refresh(rol)
+        return rol
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Conflicto de Integridad",
+                "mensaje": "La modificación del nombre de rol colisiona con restricciones preexistentes.",
+                "detalle": str(e.orig)
+            }
+        )
+
+
+@router.delete(
+    "/{id_rol}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_rol(
+    id_rol: int,
+    db: AsyncSession = Depends(get_db),
+    jwt_payload: dict = Depends(require_capability("roles:editar"))
+):
+    db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
+    
+    async with db.begin():
+        rol = await db.get(models.Rol, id_rol)
+        if not rol:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
+            
+        await db.delete(rol)
+        await db.flush()
+    return
+
+
+# ==============================================================================
+# 4. SUBSISTEMA RELACIONAL (Matriz de Asociación Relativa Muchos a Muchos)
+# ==============================================================================
+
 @router.get(
     "/{id_rol}/permisos",
     response_model=list[schemas.PermisoOut]
@@ -199,18 +266,19 @@ async def get_permisos_by_rol(
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(require_capability("roles:leer"))
 ):
+    # Verificamos primero la existencia atómica del recurso raíz (Rol)
+    rol_existe = await db.get(models.Rol, id_rol)
+    if not rol_existe:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
+
     stmt = (
         select(models.PermisoEndpoint)
         .join(models.rol_permiso)
         .where(models.rol_permiso.c.id_rol == id_rol)
     )
     result = await db.execute(stmt)
-    permisos = result.scalars().all()
+    return result.scalars().all()
 
-    if not permisos:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El rol no existe o no tiene permisos asignados")
-
-    return permisos
 
 @router.post(
     "/{id_rol}/permisos/{id_permiso}",
@@ -241,6 +309,7 @@ async def assign_permiso_to_rol(
         await db.flush()
     return
 
+
 @router.delete(
     "/{id_rol}/permisos/{id_permiso}",
     status_code=status.HTTP_204_NO_CONTENT
@@ -270,6 +339,7 @@ async def revoke_permiso_from_rol(
         await db.flush()
     return
 
+
 @router.put(
     "/{id_rol}/permisos",
     response_model=list[schemas.PermisoOut]
@@ -295,6 +365,13 @@ async def bulk_update_permisos_for_rol(
         )
         result_permisos = await db.execute(stmt_permisos)
         nuevos_permisos = result_permisos.scalars().all()
+
+        # Validación atómica de cardinalidad de entrada vs encontrados en el motor físico
+        if len(nuevos_permisos) != len(set(permisos_in.permisos_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Uno o más IDs de los permisos proporcionados no existen en la base de datos"
+            )
 
         rol.permisos = nuevos_permisos
 

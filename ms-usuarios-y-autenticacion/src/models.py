@@ -90,7 +90,8 @@ class Rol(Base):
 
     id_rol = Column(
         Integer, 
-        primary_key=True
+        primary_key=True,
+        autoincrement=True
     )
     nombre_rol = Column(
         String(100), 
@@ -141,3 +142,6 @@ class Permiso(Base):
         secondary=rol_permiso, 
         back_populates="permisos"
     )
+
+PermisoEndpoint = Permiso
+from src.auditoria import Auditoria

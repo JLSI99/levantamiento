@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, func
 from sqlalchemy.orm import selectinload
+from sqlalchemy.exc import IntegrityError
 from uuid import UUID
 
 from src.database import get_db
@@ -15,6 +16,10 @@ router = APIRouter(
     prefix="/users",
     tags=["Usuarios"]
 )
+
+# ==============================================================================
+# 1. OPERACIONES DE CREACIÓN Y ESCRITURA CORE
+# ==============================================================================
 
 @router.post(
     "",
@@ -30,47 +35,65 @@ async def create_user(
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
-    async with db.begin():
-        stmt_user = select(models.Usuario).where(
-            or_(
-                models.Usuario.email == user_in.email,
-                models.Usuario.username == user_in.username,
-                models.Usuario.curp == user_in.curp
+    try:
+        async with db.begin():
+            # Validación preventiva ante condiciones de carrera (Anti-Pattern: Check-Then-Act)
+            stmt_user = select(models.Usuario).where(
+                or_(
+                    models.Usuario.email == user_in.email,
+                    models.Usuario.username == user_in.username,
+                    models.Usuario.curp == user_in.curp
+                )
             )
-        )
-        result_user = await db.execute(stmt_user)
-        if result_user.scalars().first():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="El email, username o CURP ya están registrados."
+            result_user = await db.execute(stmt_user)
+            if result_user.scalars().first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El email, username o CURP ya están registrados de forma activa en el sistema."
+                )
+
+            # Resolución atómica de la matriz relacional de roles solicitados
+            stmt_roles = select(models.Rol).where(
+                models.Rol.id_rol.in_(user_in.role_ids)
+            )
+            result_roles = await db.execute(stmt_roles)
+            roles = result_roles.scalars().all()
+
+            # Garantía de cardinalidad estricta para asignaciones íntegras
+            if len(roles) != len(set(user_in.role_ids)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Uno o más roles proporcionados no existen en el sistema físico."
+                )
+
+            user = models.Usuario(
+                curp=user_in.curp,
+                username=user_in.username,
+                email=user_in.email,
+                hashed_password=get_password_hash(user_in.password),
+                is_active=True,
+                roles=roles
             )
 
-        stmt_roles = select(models.Rol).where(
-            models.Rol.id_rol.in_(user_in.role_ids)
-        )
-        result_roles = await db.execute(stmt_roles)
-        roles = result_roles.scalars().all()
+            db.add(user)
+            await db.flush() 
+            await db.refresh(user) 
+            
+        return user
 
-        if not roles:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Los roles proporcionados no son válidos."
-            )
-
-        user = models.Usuario(
-            curp=user_in.curp,
-            username=user_in.username,
-            email=user_in.email,
-            hashed_password=get_password_hash(user_in.password),
-            is_active=True,
-            roles=roles
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Conflicto de Integridad Referencial",
+                "mensaje": "No se pudo registrar el usuario. El valor de CURP, Email o Username colisiona en el motor.",
+                "detalle": str(e.orig)
+            }
         )
 
-        db.add(user)
-        await db.flush()      
-        await db.refresh(user) 
-
-    return user
+# ==============================================================================
+# 2. SISTEMA DE LECTURA, CONSULTA Y PAGINACIÓN
+# ==============================================================================
 
 @router.get(
     "",
@@ -105,6 +128,7 @@ async def list_users(
         "data": usuarios
     }
 
+
 @router.get(
     "/me/profile",
     response_model=schemas.UserOut,
@@ -127,9 +151,13 @@ async def get_my_profile(
     user = result.scalars().first()
 
     if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado o token inválido.")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Perfil de usuario inexistente o el token de identidad ha sido revocado."
+        )
         
     return user
+
 
 @router.get(
     "/{id_usuario}",
@@ -157,6 +185,10 @@ async def get_user(
 
     return user
 
+# ==============================================================================
+# 3. MUTACIONES DE ESTADO Y ASOCIACIONES COMPUESTAS
+# ==============================================================================
+
 @router.patch(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -172,29 +204,41 @@ async def update_user(
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 
-    async with db.begin():
-        stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == id_usuario)
-        result = await db.execute(stmt)
-        user = result.scalars().first()
+    try:
+        async with db.begin():
+            stmt = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.id_usuario == id_usuario)
+            result = await db.execute(stmt)
+            user = result.scalars().first()
 
-        if not user:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
-        if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un usuario inactivo.")
+            if not user:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
+            if not user.is_active:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un usuario inactivo.")
 
-        update_data = user_in.model_dump(exclude_unset=True)
+            update_data = user_in.model_dump(exclude_unset=True)
 
-        if "password" in update_data:
-            raw_password = update_data.pop("password")
-            update_data["hashed_password"] = get_password_hash(raw_password)
+            if "password" in update_data:
+                raw_password = update_data.pop("password")
+                update_data["hashed_password"] = get_password_hash(raw_password)
 
-        for key, value in update_data.items():
-            setattr(user, key, value)
+            for key, value in update_data.items():
+                setattr(user, key, value)
 
-        await db.flush()
-        await db.refresh(user)
-    
-    return user
+            await db.flush()
+            await db.refresh(user)
+        
+        return user
+
+    except IntegrityError as e:
+        raise HTTPException(
+            status_code=status.HTTP_499_CONFLICT if "unique" in str(e.orig).lower() else status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Colisión de Datos Únicos",
+                "mensaje": "La actualización viola las restricciones de unicidad para Email, Username o CURP.",
+                "detalle": str(e.orig)
+            }
+        )
+
 
 @router.put(
     "/{id_usuario}/roles",
@@ -224,14 +268,19 @@ async def update_user_roles(
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes modificar roles de un usuario inactivo.")
 
+        # Obtención de roles mapeados por id_rol
         stmt_roles = select(models.Rol).where(
             models.Rol.id_rol.in_(roles_in.role_ids)
         )
         result_roles = await db.execute(stmt_roles)
         nuevos_roles = result_roles.scalars().all()
 
-        if not nuevos_roles:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Los roles proporcionados no existen o son inválidos.")
+        # Validación estricta de cardinalidad simétrica
+        if len(nuevos_roles) != len(set(roles_in.role_ids)):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, 
+                detail="Uno o más de los roles especificados no existen dentro del catálogo relacional."
+            )
 
         user.roles = nuevos_roles
 
@@ -239,6 +288,7 @@ async def update_user_roles(
         await db.refresh(user)
     
     return user
+
 
 @router.delete(
     "/{id_usuario}",
@@ -261,8 +311,9 @@ async def delete_user(
         if not user:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
         if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este usuario ya está dado de baja.")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este usuario ya está dado de baja (Soft-Delete).")
 
+        # Implementación nativa de Soft-Delete para preservar histórico de auditoría
         user.is_active = False
         await db.flush()
         

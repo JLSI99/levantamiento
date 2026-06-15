@@ -8,6 +8,7 @@ from src.routers import auth, bienes, resguardos, admin, ubicaciones
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+
     limits = httpx.Limits(
         max_keepalive_connections=100,
         max_connections=200 
@@ -33,17 +34,22 @@ app = FastAPI(
 )
 
 origins_env = os.getenv("ALLOWED_ORIGINS", "")
-origenes_permitidos = [origin.strip() for origin in origins_env.split(",")] if origins_env else [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost"
-]
+
+if origins_env:
+    origenes_permitidos = [origin.strip() for origin in origins_env.split(",")]
+else:
+    origenes_permitidos = [
+        "http://localhost:8080",   
+        "http://127.0.0.1:8080",  
+        "http://localhost:5173",    
+        "http://localhost"
+    ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origenes_permitidos,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"]
 )
 
@@ -53,10 +59,13 @@ app.include_router(resguardos.router)
 app.include_router(admin.router)
 app.include_router(ubicaciones.router)
 
+
 @app.get("/")
 async def root():
+
     return {
         "status": "healthy",
         "component": "BFF / API Gateway unificado",
-        "instancia": "ITSC-Ecosistema-Universitario-2026"
+        "instancia": "ITSC-Ecosistema-Universitario-2026",
+        "cors_active_origins": origenes_permitidos
     }
