@@ -16,11 +16,9 @@ router = APIRouter(
     prefix="/users",
     tags=["Usuarios"]
 )
-
 # ==============================================================================
 # 1. OPERACIONES DE CREACIÓN Y ESCRITURA CORE
 # ==============================================================================
-
 @router.post(
     "",
     response_model=schemas.UserOut,
@@ -90,11 +88,9 @@ async def create_user(
                 "detalle": str(e.orig)
             }
         )
-
 # ==============================================================================
 # 2. SISTEMA DE LECTURA, CONSULTA Y PAGINACIÓN
 # ==============================================================================
-
 @router.get(
     "",
     response_model=schemas.UserPaginatedOut
@@ -128,7 +124,6 @@ async def list_users(
         "data": usuarios
     }
 
-
 @router.get(
     "/me/profile",
     response_model=schemas.UserOut,
@@ -158,7 +153,6 @@ async def get_my_profile(
         
     return user
 
-
 @router.get(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -184,11 +178,9 @@ async def get_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
     return user
-
 # ==============================================================================
 # 3. MUTACIONES DE ESTADO Y ASOCIACIONES COMPUESTAS
 # ==============================================================================
-
 @router.patch(
     "/{id_usuario}",
     response_model=schemas.UserOut,
@@ -238,8 +230,7 @@ async def update_user(
                 "detalle": str(e.orig)
             }
         )
-
-
+    
 @router.put(
     "/{id_usuario}/roles",
     response_model=schemas.UserOut,
@@ -288,7 +279,6 @@ async def update_user_roles(
         await db.refresh(user)
     
     return user
-
 
 @router.delete(
     "/{id_usuario}",

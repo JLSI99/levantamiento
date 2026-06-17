@@ -4,9 +4,9 @@ from typing import Optional, List
 
 # --- Esquemas de Personas ---
 class PersonaCreateBFF(BaseModel):
-    nombres: str = Field(..., min_length=1)
-    apellidos: str = Field(..., min_length=1)
-    curp: str = Field(..., min_length=18, max_length=18)
+    nombres: str = Field(..., min_length=1, description="Nombres de la persona")
+    apellidos: str = Field(..., min_length=1, description="Apellidos de la persona")
+    curp: str = Field(..., min_length=18, max_length=18, pattern=r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z0-String\d]\d$")
 
 class PersonaUpdateBFF(BaseModel):
     nombres: Optional[str] = None
@@ -47,6 +47,15 @@ class UserRegisterRequestBFF(BaseModel):
     password: str = Field(..., min_length=8)
     role_ids: List[int] = Field(default_factory=lambda: [2])
 
+# --- NUEVO: Esquema Compuesto Atómico ---
+class AltaPersonalCompuestaRequestBFF(BaseModel):
+    persona: PersonaCreateBFF
+    usuario: UserRegisterRequestBFF
+
+class AltaPersonalCompuestaOutBFF(BaseModel):
+    persona: PersonaOutBFF
+    usuario: UserOutBFF
+
 class UserUpdateBFF(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
@@ -62,7 +71,6 @@ class UserPaginatedOutBFF(BaseModel):
     offset: int
     data: List[UserOutBFF]
 
-# --- Esquemas de Roles y Permisos ---
 class RolCreateBFF(BaseModel):
     nombre_rol: str
     descripcion: Optional[str] = None
