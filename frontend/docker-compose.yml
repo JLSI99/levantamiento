@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -9,11 +7,11 @@ services:
     ports:
       - "8080:80"
     volumes:
-      - ./src:/usr/share/nginx/html
+      - ./src:/usr/share/nginx/html/src
     networks:
-      - ecosistema-network
+      - backend_net
     restart: always
 
 networks:
-  ecosistema-network:
+  backend_net:
     external: true

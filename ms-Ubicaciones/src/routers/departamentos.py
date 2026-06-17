@@ -26,7 +26,7 @@ async def crear_departamento(
     request: Request,
     depto: schemas.DepartamentoCreate,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("departamentos:editar"))
+    token_payload: dict = Depends(require_capability("departamentos:crear"))
 ):
 
     nuevo = models.Departamento(
@@ -58,7 +58,8 @@ async def listar_departamentos(
     db: AsyncSession = Depends(get_db),
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja")
+    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
+    token_payload: dict = Depends(require_capability("departamentos:leer"))
 ):
     query_count = select(func.count(models.Departamento.id_departamento))
     query_data = select(models.Departamento)
@@ -89,7 +90,8 @@ async def listar_departamentos(
 async def obtener_departamento(
     request: Request,
     id_departamento: UUID,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    token_payload: dict = Depends(require_capability("departamentos:leer"))
 ):
     stmt = select(models.Departamento).where(models.Departamento.id_departamento == id_departamento)
     result = await db.execute(stmt)
@@ -146,7 +148,7 @@ async def borrar_departamento(
     request: Request,
     id_departamento: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("departamentos:editar"))
+    token_payload: dict = Depends(require_capability("departamentos:borrar"))
 ):
     stmt = select(models.Departamento).where(models.Departamento.id_departamento == id_departamento)
     result = await db.execute(stmt)

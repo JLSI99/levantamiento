@@ -37,7 +37,7 @@ async def list_roles(
 async def create_rol(
     rol_data: schemas.RolCreate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
+    jwt_payload: dict = Depends(require_capability("roles:crear"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
@@ -79,7 +79,7 @@ async def list_all_permisos(
 async def create_permiso(
     permiso_data: schemas.PermisoCreate,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
+    jwt_payload: dict = Depends(require_capability("roles:crear"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
@@ -163,7 +163,7 @@ async def update_permiso(
 async def delete_permiso(
     id_permiso: int,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
+    jwt_payload: dict = Depends(require_capability("roles:borrar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
@@ -239,7 +239,7 @@ async def update_rol(
 async def delete_rol(
     id_rol: int,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
+    jwt_payload: dict = Depends(require_capability("roles:borrar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
     
@@ -318,7 +318,7 @@ async def revoke_permiso_from_rol(
     id_rol: int,
     id_permiso: int,
     db: AsyncSession = Depends(get_db),
-    jwt_payload: dict = Depends(require_capability("roles:editar"))
+    jwt_payload: dict = Depends(require_capability("roles:borrar"))
 ):
     db.info['usuario_email'] = jwt_payload.get('email', 'desconocido')
 

@@ -16,11 +16,9 @@ router = APIRouter(
     prefix="/resguardos",
     tags=["Resguardos (Asignaciones de Activos)"]
 )
-
 # ==============================================================================
 # SUBSISTEMA: OPERACIONES DE RESGUARDOS (PERSISTENCIA HISTÓRICA)
 # ==============================================================================
-
 @router.post(
     "", 
     response_model=schemas.AsignacionOut, 
@@ -235,7 +233,7 @@ async def borrar_resguardo(
     request: Request,
     id_asignacion: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("resguardos:eliminar"))
+    token_payload: dict = Depends(require_capability("resguardos:borrar"))
 ):
     db.info['usuario_email'] = token_payload.get("email", "sistema")
 

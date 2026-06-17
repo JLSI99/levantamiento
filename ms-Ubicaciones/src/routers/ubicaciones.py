@@ -144,7 +144,7 @@ async def borrar_edificio(
     request: Request,
     id_edificio: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("ubicaciones:eliminar"))
+    token_payload: dict = Depends(require_capability("ubicaciones:borrar"))
 ):
     stmt = select(models.Edificio).where(models.Edificio.id_edificio == id_edificio)
     result = await db.execute(stmt)
@@ -253,7 +253,7 @@ async def borrar_aula(
     request: Request,
     id_aula: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("ubicaciones:eliminar"))
+    token_payload: dict = Depends(require_capability("ubicaciones:borrar"))
 ):
     stmt = select(models.Aula).where(models.Aula.id_aula == id_aula)
     result = await db.execute(stmt)

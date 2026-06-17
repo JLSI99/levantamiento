@@ -159,7 +159,7 @@ async def borrar_tipo_bien(
     request: Request,
     id_tipo: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:editar"))
+    token_payload: dict = Depends(require_capability("bienes:borrar"))
 ):
 
     stmt = select(models.TipoBien).where(models.TipoBien.id_tipo == id_tipo)
@@ -358,7 +358,7 @@ async def borrar_bien(
     request: Request,
     id_bien: UUID,
     db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:eliminar"))
+    token_payload: dict = Depends(require_capability("bienes:borrar"))
 ):
 
     stmt = select(models.Bien).where(models.Bien.id_bien == id_bien)

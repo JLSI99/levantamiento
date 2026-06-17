@@ -1,4 +1,3 @@
-// src/store/authStore.js
 import bffClient from '../api/client.js';
 
 // Estado privado inicial
@@ -22,14 +21,12 @@ const authStore = {
         return () => listeners.delete(listener);
     },
 
-    // Notificar a la UI
     _notify() {
         for (const listener of listeners) {
             listener({ ...state });
         }
     },
 
-    // Sincronizar estado con el endpoint de contexto /auth/me
     async checkSessionContext() {
         const token = localStorage.getItem('bff_token');
         if (!token) {
@@ -43,13 +40,12 @@ const authStore = {
         }
 
         try {
-            // Invoca directamente el router auth.py -> /me
             const response = await bffClient.get('/auth/me');
             const data = response.data;
 
             state.usuario = data.usuario;
             state.roles = data.roles;
-            state.capabilities = data.capabilities; // Almacenamos las capacidades CapBAC
+            state.capabilities = data.capabilities;
             state.isAuthenticated = true;
             state.isLoaded = true;
             this._notify();
@@ -65,11 +61,10 @@ const authStore = {
         }
     },
 
-    // Login orquestado a través del BFF
     async login(username, password) {
         try {
             const response = await bffClient.post('/auth/login', { username, password });
-            const tokenData = response.data; // Espera esquema schemas_auth.TokenBFF
+            const tokenData = response.data;
             
             localStorage.setItem('bff_token', tokenData.access_token);
             if (tokenData.refresh_token) {
@@ -100,7 +95,6 @@ const authStore = {
         }
     },
 
-    // Método utilitario síncrono para verificar una capacidad en la UI
     hasCapability(capability) {
         return state.capabilities.includes(capability);
     }
