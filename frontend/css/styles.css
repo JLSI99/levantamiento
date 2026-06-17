@@ -1,0 +1,212 @@
+/* ==========================================================================
+   1. VARIABLES DE ENTORNO Y CONFIGURACIÓN BASE
+   ========================================================================== */
+:root {
+    --bg-main: #f4f6f9;
+    --bg-card: #ffffff;
+    --text-primary: #2c3e50;
+    --text-muted: #7f8c8d;
+    --primary: #007bff;
+    --primary-hover: #0056b3;
+    --success: #28a745;
+    --danger: #dc3545;
+    --warning: #ffc107;
+    --border: #dee2e6;
+    --radius: 6px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    line-height: 1.5;
+}
+
+/* ==========================================================================
+   2. CAPA DE COMPONENTES: AUTENTICACIÓN (Login)
+   ========================================================================== */
+.login-frame {
+    max-width: 400px;
+    margin: 100px auto padding;
+    margin-top: 120px;
+    padding: 35px;
+    background: var(--bg-card);
+    border-radius: var(--radius);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border);
+}
+
+.login-frame h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    font-size: 22px;
+    text-align: center;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   3. CAPA DE COMPONENTES: MAQUETACIÓN DEL DASHBOARD (Layout)
+   ========================================================================== */
+.main-header {
+    background-color: var(--bg-card);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.main-header h1 {
+    margin: 0;
+    font-size: 20px;
+    color: var(--text-primary);
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 25px;
+    padding: 30px;
+}
+
+.widget-box {
+    background: var(--bg-card);
+    padding: 25px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.widget-box h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    font-size: 16px;
+    border-bottom: 2px solid var(--bg-main);
+    padding-bottom: 10px;
+    color: var(--text-primary);
+}
+
+/* ==========================================================================
+   4. CAPA DE ELEMENTOS: FORMULARIOS Y CONTROLES
+   ========================================================================== */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+select,
+.form-select-custom {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 18px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: #fff;
+    color: var(--text-primary);
+    font-size: 14px;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease;
+}
+
+input:focus, select:focus, .form-select-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.15);
+}
+
+button {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    width: 100%;
+}
+
+button:hover {
+    background-color: var(--primary-hover);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+#btn-cerrar-sesion {
+    background-color: transparent;
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    width: auto;
+    padding: 8px 15px;
+}
+
+#btn-cerrar-sesion:hover {
+    background-color: var(--danger);
+    color: #ffffff;
+}
+
+/* ==========================================================================
+   5. COMPONENTES AVANZADOS: ASISTENTE MULTIFÁSICO (WIZARD)
+   ========================================================================== */
+.wizard-container {
+    width: 100%;
+}
+
+.steps-indicator {
+    display: flex;
+    justify-content: space-between;
+    background-color: var(--bg-main);
+    padding: 12px;
+    border-radius: var(--radius);
+    margin-bottom: 25px;
+    font-size: 12px;
+    gap: 10px;
+}
+
+.step-active {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.step-inactive {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+.step-done {
+    color: var(--success);
+    font-weight: 600;
+    text-decoration: line-through;
+}
+
+.wizard-container h3 {
+    font-size: 15px;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.wizard-container p {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 15px;
+}
+
+/* ==========================================================================
+   6. CAPA DE FEEDBACK Y ALERTAS MÍNIMAS
+   ========================================================================== */
+.text-error {
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.text-success {
+    color: var(--success);
+    font-size: 13px;
+    font-weight: 500;
+}
