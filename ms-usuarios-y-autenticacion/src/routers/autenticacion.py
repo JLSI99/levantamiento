@@ -76,7 +76,6 @@ async def login(
             detail="Usuario inactivo"
         )
 
-    # Construcción de claims para CBAC
     roles = [rol.nombre_rol for rol in user.roles]
     caps_set = {permiso.nombre for rol in user.roles for permiso in rol.permisos}
 
@@ -115,12 +114,12 @@ async def refresh_access_token(
     data: schemas.TokenRefresh,
     db: AsyncSession = Depends(get_db)
 ):
-    payload = decode_token(data.refresh_token)
+    payload = decode_token(data.refresh_token, expected_type="refresh")
     
     if not payload:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token inválido o expirado"
+            detail="Refresh token inválido, alterado o expirado."
         )
         
     user_id = payload.get("sub")
@@ -139,7 +138,7 @@ async def refresh_access_token(
     if not user or not user.is_active:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Usuario no válido o inactivo"
+            detail="El usuario asignado a este token se encuentra inactivo o fue eliminado."
         )
 
     roles = [rol.nombre_rol for rol in user.roles]
@@ -153,10 +152,12 @@ async def refresh_access_token(
         caps=list(caps_set),
         curp=user.curp
     )
+    
+    new_refresh_token = create_refresh_token(id_usuario=user.id_usuario)
 
     return {
         "access_token": new_access_token,
-        "refresh_token": data.refresh_token,
+        "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
 
@@ -171,7 +172,7 @@ async def logout(
         return {"detail": "Sesión cerrada"}
 
     token = authorization.split(" ")[1]
-    payload = decode_token(token)
+    payload = decode_token(token, expected_type="access")
 
     if not payload:
         return {"detail": "Sesión cerrada"}    

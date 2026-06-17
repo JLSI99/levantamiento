@@ -1,22 +1,26 @@
 import os
-from datetime import datetime, timedelta, timezone
+import time
 from typing import Any, List, Optional
 from jose import jwt, JWTError
 
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 360))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 1))
-SECRET_KEY = os.getenv("SECRET_KEY", "tu_clave_secreta_super_segura_institucional_2026")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 JWT_ISSUER = os.getenv("JWT_ISSUER", "itsc-auth-service")
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "itsc-ecosistema-universitario")
 
-def create_access_token(id_usuario: Any, username: str, email: str, roles: List[str], caps: List[str], curp:str) -> str:
+if not SECRET_KEY:
+    raise ValueError("CRÍTICO: SECRET_KEY no configurada en las variables de entorno.")
 
-    ahora = datetime.now(timezone.utc)
-    expire = ahora + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+def create_access_token(id_usuario: Any, username: str, email: str, roles: List[str], caps: List[str], curp: str) -> str:
+    ahora = int(time.time())
+    expire = ahora + (ACCESS_TOKEN_EXPIRE_MINUTES * 60)
+    
     to_encode = {
         "exp": expire,
         "iat": ahora,
+        "nbf": ahora,
         "sub": str(id_usuario),
         "iss": JWT_ISSUER,
         "aud": JWT_AUDIENCE,
@@ -24,18 +28,19 @@ def create_access_token(id_usuario: Any, username: str, email: str, roles: List[
         "email": email,
         "roles": roles,
         "caps": caps,
-        "curp":curp,
+        "curp": curp,
         "type": "access"
     }
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def create_refresh_token(id_usuario: Any) -> str:
-
-    ahora = datetime.now(timezone.utc)
-    expire = ahora + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    ahora = int(time.time())
+    expire = ahora + (REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
+    
     to_encode = {
         "exp": expire,
         "iat": ahora,
+        "nbf": ahora,
         "sub": str(id_usuario),
         "iss": JWT_ISSUER,
         "aud": JWT_AUDIENCE,
@@ -44,18 +49,17 @@ def create_refresh_token(id_usuario: Any) -> str:
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_token(token: str, expected_type: str = "access") -> Optional[dict]:
-
     try:
         payload = jwt.decode(
             token, 
             SECRET_KEY, 
             algorithms=[ALGORITHM], 
             issuer=JWT_ISSUER, 
-            audience=JWT_AUDIENCE
+            audience=JWT_AUDIENCE,
+            options={"require_exp": True, "require_iat": True}
         )
         if payload.get("type") != expected_type:
             return None
-            
         return payload
     except JWTError:
         return None

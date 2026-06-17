@@ -19,7 +19,6 @@ def decode_token(token: str, expected_type: str = "access") -> Optional[dict]:
             issuer=JWT_ISSUER,
             audience=JWT_AUDIENCE
         )
-
         if payload.get("type") != expected_type:
             return None
         

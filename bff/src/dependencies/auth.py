@@ -10,9 +10,7 @@ JWT_ISSUER = os.getenv("JWT_ISSUER", "itsc-auth-service")
 JWT_AUDIENCE = os.getenv("JWT_AUDIENCE", "itsc-ecosistema-universitario")
 
 if not SECRET_KEY:
-    if os.getenv("ENV") == "production":
-        raise ValueError("CRÍTICO: SECRET_KEY no definida en entorno de producción.")
-    SECRET_KEY = "tu_clave_secreta_super_segura_institucional_2026"
+    raise ValueError("CRÍTICO: SECRET_KEY no configurada en las variables de entorno del BFF.")
 
 bearer_scheme = HTTPBearer()
 
@@ -24,17 +22,16 @@ async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depen
             SECRET_KEY,
             algorithms=[ALGORITHM],
             issuer=JWT_ISSUER,
-            audience=JWT_AUDIENCE
+            audience=JWT_AUDIENCE,
+            options={"require_exp": True}
         )
         if payload.get("type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Tipo de token no válido para esta operación."
+                detail="Acceso denegado. El token provisto no es de tipo 'access'."
             )
-
         payload["encoded_token"] = token
         return payload
-        
     except JWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,6 +47,6 @@ class RequireCapabilityBFF:
         if self.capacidad_requerida not in usuario_caps:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Permisos insuficientes. Requiere la capacidad: {self.capacidad_requerida}"
+                detail=f"Operación denegada. Su cuenta no cuenta con la capacidad: '{self.capacidad_requerida}'."
             )
         return payload
