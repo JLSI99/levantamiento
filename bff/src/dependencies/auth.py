@@ -2,7 +2,8 @@ import os
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError, ExpiredSignatureError, JWTClaimsError
+from jose import jwt, JWTError, ExpiredSignatureError 
+from jose.exceptions import JWTClaimsError
 from pydantic import BaseModel, Field
 
 # --------------------------------------------------------------------------
