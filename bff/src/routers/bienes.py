@@ -152,7 +152,7 @@ async def obtener_tipo_bien_por_id(
 async def crear_tipo_bien(
     request: Request, 
     tipo_in: schemas_bienes.TipoBienCreateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("bienes:editar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("bienes:crear"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     headers = {"Authorization": f"Bearer {token_payload.get('encoded_token')}"}
