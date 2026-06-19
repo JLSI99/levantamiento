@@ -237,7 +237,7 @@ async def modificar_asignacion_resguardo(
 @router.post("/{id_asignacion}/cerrar", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def concluir_resguardo_ordinario(
     id_asignacion: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:editar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:crear"))
 ):
     jwt_crudo = token_payload.get("encoded_token")
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
@@ -256,7 +256,7 @@ async def concluir_resguardo_ordinario(
 @router.delete("/{id_asignacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_baja_logica_resguardo(
     id_asignacion: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:eliminar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:borrar"))
 ):
     jwt_crudo = token_payload.get("encoded_token")
     headers = {"Authorization": f"Bearer {jwt_crudo}"}

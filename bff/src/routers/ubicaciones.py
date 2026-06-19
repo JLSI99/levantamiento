@@ -167,7 +167,7 @@ async def actualizar_edificio(
 async def borrar_edificio(
     request: Request,
     id_edificio: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:eliminar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.get("encoded_token")
@@ -240,7 +240,7 @@ async def actualizar_aula(
 async def borrar_aula(
     request: Request,
     id_aula: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:eliminar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.get("encoded_token")
@@ -326,7 +326,7 @@ async def actualizar_departamento(
 async def borrar_departamento(
     request: Request,
     id_departamento: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:eliminar"))
+    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.get("encoded_token")
