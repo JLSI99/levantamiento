@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError
 
 from src.database import get_db
 from src import models, schemas
-from src.dependencies.validar_rol_y_firma import require_capability, validate_jwt_token
+from src.dependencies.validar_rol_y_firma import require_capability
 
 router = APIRouter(
     prefix="/roles",
@@ -45,8 +45,10 @@ async def create_rol(
         async with db.begin():
             nuevo_rol = models.Rol(**rol_data.model_dump())
             db.add(nuevo_rol)
-            await db.flush()
-            await db.refresh(nuevo_rol)
+            await db.flush()  # Evalúa restricciones de integridad antes del commit
+            
+        # El refresh se ejecuta POST-COMMIT (fuera del bloque contextual)
+        await db.refresh(nuevo_rol)
         return nuevo_rol
     except IntegrityError as e:
         raise HTTPException(
@@ -88,7 +90,8 @@ async def create_permiso(
             permiso = models.PermisoEndpoint(**permiso_data.model_dump())
             db.add(permiso)
             await db.flush()
-            await db.refresh(permiso)
+            
+        await db.refresh(permiso)
         return permiso
     except IntegrityError as e:
         raise HTTPException(
@@ -143,7 +146,8 @@ async def update_permiso(
                 setattr(permiso, key, value)
 
             await db.flush()
-            await db.refresh(permiso)
+            
+        await db.refresh(permiso)
         return permiso
     except IntegrityError as e:
         raise HTTPException(
@@ -219,7 +223,8 @@ async def update_rol(
                 setattr(rol, key, value)
 
             await db.flush()
-            await db.refresh(rol)
+            
+        await db.refresh(rol)
         return rol
     except IntegrityError as e:
         raise HTTPException(
@@ -266,7 +271,6 @@ async def get_permisos_by_rol(
     db: AsyncSession = Depends(get_db),
     jwt_payload: dict = Depends(require_capability("roles:leer"))
 ):
-    # Verificamos primero la existencia atómica del recurso raíz (Rol)
     rol_existe = await db.get(models.Rol, id_rol)
     if not rol_existe:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rol no encontrado")
@@ -366,7 +370,6 @@ async def bulk_update_permisos_for_rol(
         result_permisos = await db.execute(stmt_permisos)
         nuevos_permisos = result_permisos.scalars().all()
 
-        # Validación atómica de cardinalidad de entrada vs encontrados en el motor físico
         if len(nuevos_permisos) != len(set(permisos_in.permisos_ids)):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
@@ -374,8 +377,7 @@ async def bulk_update_permisos_for_rol(
             )
 
         rol.permisos = nuevos_permisos
-
         await db.flush()
-        await db.refresh(rol)
         
+    await db.refresh(rol)
     return rol.permisos

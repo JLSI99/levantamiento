@@ -3,6 +3,8 @@ from uuid import UUID
 from typing import Optional, List
 import re
 
+PATRON_CURP_RENAPO = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
+
 class PersonaBase(BaseModel):
     nombres: str = Field(..., min_length=2, max_length=100)
     apellidos: str = Field(..., min_length=2, max_length=100)
@@ -20,8 +22,7 @@ class PersonaBase(BaseModel):
     @classmethod
     def validar_formato_curp(cls, v: str) -> str:
         v = v.upper().strip()
-        patron = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
-        if not re.match(patron, v):
+        if not re.match(PATRON_CURP_RENAPO, v):
             raise ValueError('El formato del CURP no se alinea con el estándar oficial de RENAPO')
         return v
 
@@ -61,8 +62,7 @@ class PersonaUpdate(BaseModel):
     def validar_formato_curp(cls, v: Optional[str]) -> Optional[str]:
         if v is None: return v
         v = v.upper().strip()
-        patron = r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$'
-        if not re.match(patron, v):
+        if not re.match(PATRON_CURP_RENAPO, v):
             raise ValueError('El formato del CURP no es válido')
         return v
 

@@ -28,6 +28,8 @@ async def crear_departamento(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("departamentos:crear"))
 ):
+    # Invariante de Auditoría
+    db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     nuevo = models.Departamento(
         nombre=depto.nombre, 
@@ -123,6 +125,9 @@ async def actualizar_departamento(
     if not depto.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un departamento inactivo.")
 
+    # Invariante de Auditoría
+    db.info['usuario_email'] = token_payload.get('email', 'desconocido')
+
     update_data = depto_in.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(depto, key, value)
@@ -158,6 +163,9 @@ async def borrar_departamento(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Departamento no encontrado.")
     if not depto.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El departamento ya está dado de baja.")
+
+    # Invariante de Auditoría
+    db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     depto.is_active = False
     await db.commit()

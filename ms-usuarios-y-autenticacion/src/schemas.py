@@ -3,6 +3,9 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from typing import Optional, List
 from datetime import datetime
+
+PATRON_CURP_OFICIAL = r"(?i)^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
+
 # ------------------------------------------------------------------------------
 # 1. SUBSISTEMA DE CAPACIDADES Y PERMISOS (CBAC)
 # ------------------------------------------------------------------------------
@@ -20,6 +23,7 @@ class PermisoCreate(BaseModel):
 class PermisoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=3, max_length=150)
     descripcion: Optional[str] = Field(None, max_length=255)
+
 # ------------------------------------------------------------------------------
 # 2. SUBSISTEMA DE ROLES
 # ------------------------------------------------------------------------------
@@ -40,8 +44,9 @@ class RolUpdate(BaseModel):
 
 class RolPermisosUpdate(BaseModel):
     permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
+
 # ------------------------------------------------------------------------------
-# 3. SUBSISTEMA DE USUARIOS e IDENTIDADES
+# 3. SUBSISTEMA DE USUARIOS E IDENTIDADES
 # ------------------------------------------------------------------------------
 class UserOut(BaseModel):
     id_usuario: UUID
@@ -54,11 +59,16 @@ class UserOut(BaseModel):
     model_config = {"from_attributes": True}
 
 class UserRegisterRequest(BaseModel):
-    curp: str = Field(..., min_length=18, max_length=18, description="Lazo lógico con ms-personas")
+    curp: str = Field(..., min_length=18, max_length=18, pattern=PATRON_CURP_OFICIAL, description="Lazo lógico con ms-personas")
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
-    role_ids: List[int] = Field(default_factory=lambda: [2])  # Rol 'Levantador' por defecto
+    role_ids: List[int] = Field(default_factory=lambda: [2])
+
+    @field_validator("curp")
+    @classmethod
+    def normalizar_curp(cls, v: str) -> str:
+        return v.strip().upper()
 
     @field_validator("username")
     @classmethod

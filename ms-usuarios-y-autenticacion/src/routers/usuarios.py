@@ -16,6 +16,7 @@ router = APIRouter(
     prefix="/users",
     tags=["Usuarios"]
 )
+
 # ==============================================================================
 # 1. OPERACIONES DE CREACIÓN Y ESCRITURA CORE
 # ==============================================================================
@@ -88,6 +89,7 @@ async def create_user(
                 "detalle": str(e.orig)
             }
         )
+
 # ==============================================================================
 # 2. SISTEMA DE LECTURA, CONSULTA Y PAGINACIÓN
 # ==============================================================================
@@ -178,6 +180,7 @@ async def get_user(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Usuario no encontrado.")
 
     return user
+
 # ==============================================================================
 # 3. MUTACIONES DE ESTADO Y ASOCIACIONES COMPUESTAS
 # ==============================================================================
@@ -259,14 +262,12 @@ async def update_user_roles(
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes modificar roles de un usuario inactivo.")
 
-        # Obtención de roles mapeados por id_rol
         stmt_roles = select(models.Rol).where(
             models.Rol.id_rol.in_(roles_in.role_ids)
         )
         result_roles = await db.execute(stmt_roles)
         nuevos_roles = result_roles.scalars().all()
 
-        # Validación estricta de cardinalidad simétrica
         if len(nuevos_roles) != len(set(roles_in.role_ids)):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST, 
@@ -274,7 +275,6 @@ async def update_user_roles(
             )
 
         user.roles = nuevos_roles
-
         await db.flush()
         await db.refresh(user)
     
@@ -303,7 +303,6 @@ async def delete_user(
         if not user.is_active:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Este usuario ya está dado de baja (Soft-Delete).")
 
-        # Implementación nativa de Soft-Delete para preservar histórico de auditoría
         user.is_active = False
         await db.flush()
         

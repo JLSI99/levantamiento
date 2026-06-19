@@ -28,10 +28,10 @@ async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resgu
 
     async with httpx.AsyncClient() as client:
         tareas = [
-            client.get(f"{MS_BIENES_URL}/{id_bien}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/departamentos/{id_departamento}", headers=headers)
+            client.get(f"{MS_BIENES_BASE_URL}/{id_bien}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/departamentos/{id_departamento}", headers=headers)
         ]
         respuestas = await asyncio.gather(*tareas, return_exceptions=True)
         
@@ -68,11 +68,11 @@ async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas
 
     async with httpx.AsyncClient() as client:
         tareas = [
-            client.get(f"{MS_BIENES_URL}/{id_bien}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
-            client.get(f"{MS_UBICACIONES_URL}/departamentos/{id_departamento}", headers=headers),
-            client.get(f"{MS_PERSONAS_URL}", params={"curp": curp_objetivo}, headers=headers)
+            client.get(f"{MS_BIENES_BASE_URL}/{id_bien}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
+            client.get(f"{MS_UBICACIONES_BASE_URL}/departamentos/{id_departamento}", headers=headers),
+            client.get(f"{MS_PERSONAS_BASE_URL}", params={"curp": curp_objetivo}, headers=headers)
         ]
         respuestas = await asyncio.gather(*tareas, return_exceptions=True)
 
@@ -132,7 +132,7 @@ async def listar_mis_resguardos(
     async with httpx.AsyncClient() as client:
         params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False, "curp": curp}
         try:
-            resguardos_resp = await client.get(MS_RESGUARDOS_URL, params=params, headers=headers)
+            resguardos_resp = await client.get(MS_RESGUARDOS_BASE_URL, params=params, headers=headers)
             if resguardos_resp.status_code != 200:
                 raise HTTPException(status_code=resguardos_resp.status_code, detail="Error al recuperar asignaciones personales.")
         except httpx.RequestError as exc:
@@ -163,7 +163,7 @@ async def crear_asignacion_resguardo(
     async with httpx.AsyncClient() as client:
         try:
         
-            resp = await client.post(MS_RESGUARDOS_URL, json=datos_entrada.model_dump(), headers=headers)
+            resp = await client.post(MS_RESGUARDOS_BASE_URL, json=datos_entrada.model_dump(), headers=headers)
             if resp.status_code != status.HTTP_201_CREATED:
                 raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al procesar asignación."))
             
@@ -193,7 +193,7 @@ async def listar_todos_los_resguardos_institucionales(
 
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.get(MS_RESGUARDOS_URL, params=params, headers=headers)
+            resp = await client.get(MS_RESGUARDOS_BASE_URL, params=params, headers=headers)
             if resp.status_code != 200:
                 raise HTTPException(status_code=resp.status_code, detail="Error devuelto por el microservicio de resguardos.")
         except httpx.RequestError as exc:
@@ -222,7 +222,7 @@ async def modificar_asignacion_resguardo(
     async with httpx.AsyncClient() as client:
         try:
             resp = await client.patch(
-                f"{MS_RESGUARDOS_URL}/{id_asignacion}", 
+                f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}", 
                 json=datos_cambio.model_dump(exclude_unset=True), 
                 headers=headers
             )
@@ -244,7 +244,7 @@ async def concluir_resguardo_ordinario(
 
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.post(f"{MS_RESGUARDOS_URL}/{id_asignacion}/cerrar", headers=headers)
+            resp = await client.post(f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}/cerrar", headers=headers)
             if resp.status_code != 200:
                 raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al asentar fecha de fin."))
             
@@ -263,7 +263,7 @@ async def eliminar_baja_logica_resguardo(
 
     async with httpx.AsyncClient() as client:
         try:
-            resp = await client.delete(f"{MS_RESGUARDOS_URL}/{id_asignacion}", headers=headers)
+            resp = await client.delete(f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}", headers=headers)
             if resp.status_code != status.HTTP_204_NO_CONTENT:
                 raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al aplicar baja lógica."))
             return

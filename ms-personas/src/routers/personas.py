@@ -72,8 +72,8 @@ async def list_personas(
         stmt = stmt.where(models.Persona.is_active == True)
 
     if curp: 
-        total_stmt = total_stmt.where(models.Persona.curp == curp)
-        stmt = stmt.where(models.Persona.curp == curp)
+        total_stmt = total_stmt.where(models.Persona.curp == curp.upper().strip())
+        stmt = stmt.where(models.Persona.curp == curp.upper().strip())
 
     total = await db.scalar(total_stmt)
 
@@ -171,6 +171,5 @@ async def delete_persona(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Esta persona ya está dada de baja.")
 
     persona.is_active = False
-    
     await db.commit()
     return
