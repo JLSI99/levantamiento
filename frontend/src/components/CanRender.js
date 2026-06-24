@@ -1,27 +1,27 @@
-// src/components/CanRender.js
-import authStore from '../store/authStore.js';
+import authStore from '../store/auhtStore.js';
 
-/**
- * Controla el renderizado de un elemento basado en las capacidades CapBAC del usuario.
- * @param {string} capability - La capacidad requerida (ej. 'bienes:editar')
- * @param {HTMLElement} element - El elemento HTML que se desea proteger
- * @returns {HTMLElement|Comment} El elemento original o un comentario vacío si no está autorizado
- */
 export function guardElement(capability, element) {
-    const placeholder = document.createComment(`Hidden: Requires ${capability}`);
-    
-    // Suscribirse de manera reactiva al almacén de autenticación
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'contents';
+    wrapper.setAttribute('data-capability-guard', capability);
+
+    const placeholder = document.createComment(`Hidden: Requires capability [${capability}]`);
+
     authStore.subscribe((state) => {
-        if (state.isAuthenticated && state.capabilities.includes(capability)) {
-            if (placeholder.parentNode && !element.parentNode) {
-                placeholder.parentNode.replaceChild(element, placeholder);
+        const tienePermiso = state.isAuthenticated && state.capabilities.includes(capability);
+
+        if (tienePermiso) {
+            if (!wrapper.contains(element)) {
+                wrapper.innerHTML = '';
+                wrapper.appendChild(element);
             }
         } else {
-            if (element.parentNode) {
-                element.parentNode.replaceChild(placeholder, element);
+            if (!wrapper.contains(placeholder)) {
+                wrapper.innerHTML = '';
+                wrapper.appendChild(placeholder);
             }
         }
     });
 
-    return authStore.hasCapability(capability) ? element : placeholder;
+    return wrapper;
 }

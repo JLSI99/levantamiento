@@ -1,4 +1,3 @@
-// src/components/SelectorUbicacion.js
 import { ubicacionesService } from '../services/ubicaciones.js';
 
 export class SelectorUbicacion {
@@ -13,17 +12,15 @@ export class SelectorUbicacion {
         this.container.innerHTML = '<span>Cargando infraestructura institucional...</span>';
         
         try {
-            // Petición única al BFF (internamente utiliza asyncio.gather)
             const catalogos = await ubicacionesService.obtenerCatalogosUnificados();
             
-            this.container.innerHTML = ''; // Limpiar indicador de carga
+            this.container.innerHTML = '';
             this.domSelect.innerHTML = '<option value="">-- Seleccione el Aula de Destino --</option>';
 
-            // Renderizar las aulas unificadas e hidratadas por el BFF con formato compuesto: "Aula (Edificio)"
             catalogos.aulas.forEach(aula => {
                 const option = document.createElement('option');
                 option.value = aula.id_entidad;
-                option.textContent = aula.nombre; // Trae el formato "Laboratorio A (Edificio K)"
+                option.textContent = aula.nombre;
                 this.domSelect.appendChild(option);
             });
 

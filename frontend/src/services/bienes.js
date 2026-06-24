@@ -1,4 +1,3 @@
-// src/services/bienes.js
 import bffClient from '../api/client.js';
 
 export const bienesService = {
@@ -6,7 +5,7 @@ export const bienesService = {
         const response = await bffClient.get('/bienes', {
             params: { limit, offset, incluir_inactivos: incluirInactivos }
         });
-        return response.data; // schemas_bienes.BienPaginatedOutBFF
+        return response.data;
     },
 
     async obtenerPorId(idBien) {

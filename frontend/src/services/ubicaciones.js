@@ -1,11 +1,9 @@
-// src/services/ubicaciones.js
 import bffClient from '../api/client.js';
 
 export const ubicacionesService = {
-    // Consume la agregación unificada para inicializar los selectores de los formularios
     async obtenerCatalogosUnificados() {
         const response = await bffClient.get('/ubicaciones/catalogos');
-        return response.data; // { edificios: [], aulas: [], departments: [] }
+        return response.data;
     },
 
     async crearEdificio(edificioData) {

@@ -1,4 +1,3 @@
-// src/components/AsistenteAlta.js
 import bffClient from '../api/client.js';
 
 export class AsistenteAlta {
@@ -42,7 +41,6 @@ export class AsistenteAlta {
         const formPersona = this.container.querySelector('#form-persona-fase');
         const formUsuario = this.container.querySelector('#form-usuario-fase');
 
-        // Manejador del Paso 1: ms-personas
         formPersona.onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData(formPersona);
@@ -53,15 +51,12 @@ export class AsistenteAlta {
             };
 
             try {
-                // Invoca la sección de ms-personas en admin.py
                 const response = await bffClient.post('/admin/personas', payload);
                 const persona = response.data;
 
-                // Capturar el estado de identidad devuelto por el backend
                 this.idPersonaCreada = persona.id_persona;
                 this.curpPersonaCreada = persona.curp;
 
-                // Transición lógica y visual en la interfaz de usuario
                 this.container.querySelector('#txt-persona-vinculada').textContent = `${persona.nombres} ${persona.apellidos}`;
                 formPersona.style.display = 'none';
                 formUsuario.style.display = 'block';
@@ -73,21 +68,19 @@ export class AsistenteAlta {
             }
         };
 
-        // Manejador del Paso 2: ms-auth
         formUsuario.onsubmit = async (e) => {
             e.preventDefault();
             const payloadUser = {
                 username: this.container.querySelector('#inp-username').value,
                 email: this.container.querySelector('#inp-email').value,
                 password: this.container.querySelector('#inp-password').value,
-                curp: this.curpPersonaCreada // Enlace de integridad lógica entre ambos servicios
+                curp: this.curpPersonaCreada
             };
 
             try {
-                // Invoca la sección de ms-auth en admin.py
                 await bffClient.post('/admin/usuarios', payloadUser);
                 alert('Flujo completo finalizado con éxito. Identidad y cuenta digital vinculadas.');
-                this.render(); // Reiniciar el asistente
+                this.render();
             } catch (error) {
                 alert(`Error al generar la credencial digital: ${error.response?.data?.detail || error.message}`);
             }

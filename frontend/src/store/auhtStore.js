@@ -1,6 +1,5 @@
 import bffClient from '../api/client.js';
 
-// Estado privado inicial
 const state = {
     usuario: null,
     roles: [],
@@ -9,14 +8,11 @@ const state = {
     isLoaded: false
 };
 
-// Subscriptores para actualizaciones reactivas en la UI
 const listeners = new Set();
 
 const authStore = {
-    // Suscribirse a cambios de estado
     subscribe(listener) {
         listeners.add(listener);
-        // Ejecutar inmediatamente con el estado actual
         listener({ ...state });
         return () => listeners.delete(listener);
     },
@@ -78,7 +74,6 @@ const authStore = {
         }
     },
 
-    // Cierre de sesión perimetral
     async logout() {
         try {
             await bffClient.post('/auth/logout');

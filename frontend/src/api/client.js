@@ -1,15 +1,12 @@
 import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.8/+esm';
 
 const bffClient = axios.create({
-    // Obligatorio: Ruta relativa para pasar a través del proxy inverso perimetral de Nginx.
-    // Evita problemas de CORS y centraliza el tráfico en el puerto 80/8080 del contenedor del frontend.
     baseURL: '/api/v1',
     headers: {
         'Content-Type': 'application/json'
     }
 });
 
-// Bandera y cola para mitigar múltiples solicitudes de refresco simultáneas
 let isRefreshing = false;
 let failedQueue = [];
 
@@ -24,7 +21,6 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// Interceptor de Peticiones: Inyección del Token Portador (Bearer Token)
 bffClient.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('bff_token');
@@ -38,7 +34,6 @@ bffClient.interceptors.request.use(
     }
 );
 
-// Interceptor de Respuestas: Centralización de Errores, CapBAC y Refresco Automático de Tokens
 bffClient.interceptors.response.use(
     (response) => response,
     async (error) => {
@@ -51,10 +46,8 @@ bffClient.interceptors.response.use(
 
         const status = error.response.status;
 
-        // Manejo de Expiración de Token (401 Unauthorized) con reintento automático
         if (status === 401 && !originalRequest._retry) {
             if (originalRequest.url === '/auth/refresh') {
-                // Si el propio endpoint de refresco falla con 401, el token de refresco caducó. Expulsión inmediata.
                 localStorage.removeItem('bff_token');
                 localStorage.removeItem('bff_refresh_token');
                 window.dispatchEvent(new CustomEvent('auth-expired'));
@@ -62,7 +55,6 @@ bffClient.interceptors.response.use(
             }
 
             if (isRefreshing) {
-                // Encolar las solicitudes mientras se resuelve el refresco del token en curso
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 })
@@ -84,7 +76,6 @@ bffClient.interceptors.response.use(
             }
 
             try {
-                // Realizar la solicitud de renovación al BFF
                 const response = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken }, {
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -98,7 +89,6 @@ bffClient.interceptors.response.use(
                 processQueue(null, tokenData.access_token);
                 isRefreshing = false;
 
-                // Re-ejecutar la petición original fallida con el nuevo token inyectado
                 originalRequest.headers['Authorization'] = `Bearer ${tokenData.access_token}`;
                 return bffClient(originalRequest);
             } catch (refreshError) {
@@ -111,7 +101,6 @@ bffClient.interceptors.response.use(
             }
         }
 
-        // Manejo de Violación de Políticas de CapBAC (403 Forbidden)
         if (status === 403) {
             console.error('Violación de CapBAC: El usuario no posee la capacidad requerida.');
             alert('Acceso denegado: Tu rol actual no cuenta con las capacidades suficientes para ejecutar esta acción.');
