@@ -2,16 +2,18 @@ import os
 import httpx
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
-
 from src.schemas import bienes as schemas_bienes
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 
 router = APIRouter()
 
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000").rstrip("/")
-
-MS_BIENES_ROUTE = f"{MS_BIENES_URL}/api/v1/bienes"
-MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/api/v1/bienes/tipos-bien"
+# ==============================================================================
+# CONFIGURACIÓN DE RUTAS DOWNSTREAM CORREGIDA
+# Con la firma `prefix="/bienes"` en el MS, las URLs internas del cluster deben ser:
+# ==============================================================================
+MS_BIENES_ROUTE = f"{MS_BIENES_URL}/bienes"
+MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/bienes/tipos-bien"
 # ==============================================================================
 # SUBSISTEMA: BIENES (ACTIVOS FÍSICOS)
 # ==============================================================================
@@ -35,7 +37,6 @@ async def listar_bienes_revisor(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de enlace en cluster: {str(e)}")
 
-
 @router.get("/api/v1/bienes/{id_bien}", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_bien_por_id(
     request: Request, 
@@ -52,7 +53,6 @@ async def obtener_bien_por_id(
         return response.json()
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
-
 
 @router.post("/api/v1/bienes", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_nuevo_bien(
@@ -72,7 +72,6 @@ async def crear_nuevo_bien(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
-
 @router.patch("/api/v1/bienes/{id_bien}", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_200_OK)
 async def modificar_bien(
     request: Request, 
@@ -91,7 +90,6 @@ async def modificar_bien(
         return response.json()
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
-
 
 @router.delete("/api/v1/bienes/{id_bien}", status_code=status.HTTP_204_NO_CONTENT)
 async def dar_de_baja_bien(
@@ -131,7 +129,6 @@ async def listar_tipos_bien_revisor(
         return response.json()
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
-
 
 @router.get("/api/v1/bienes/tipos-bien/{id_tipo}", response_model=schemas_bienes.TipoBienOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_tipo_bien_por_id(
