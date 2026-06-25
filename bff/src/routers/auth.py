@@ -11,9 +11,7 @@ router = APIRouter()
 
 MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000")
 
-# Dependencia para recuperar de forma segura el pool de conexiones HTTPX
 def get_bff_http_client(request: Request) -> httpx.AsyncClient:
-    # Intenta obtener el cliente del estado de la app (inyectado en main.py)
     client = getattr(request.app.state, "http_client", None)
     if not client:
         raise HTTPException(
@@ -34,7 +32,6 @@ async def login_bff(
     client: httpx.AsyncClient = Depends(get_bff_http_client)
 ):
     try:
-        # Petición asíncrona hacia el microservicio interno (/auth/login)
         response = await client.post(
             f"{MS_AUTH_URL}/auth/login",
             json=login_data.model_dump()
@@ -153,7 +150,6 @@ async def logout_bff(
     description="Resuelve la identidad del cliente decodificando localmente el JWT sin tocar la base de datos de usuarios."
 )
 async def obtener_contexto_sesion(payload: TokenPayload = Depends(obtener_token_valido)):
-    # Los datos se extraen de forma segura gracias a la corrección del payload
     return {
         "usuario": {
             "id_usuario": payload.sub,

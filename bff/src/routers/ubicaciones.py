@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from uuid import UUID
 from typing import Optional
 
-from src.dependencies.auth import RequireCapabilityBFF
+from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import ubicaciones as schemas
 
 router = APIRouter(
@@ -24,17 +24,17 @@ def extraer_detalle_error(response: httpx.Response) -> str:
         return f"Error upstream no estructurado ({response.status_code}): {response.text[:200]}"
     except Exception:
         return f"Error de comunicación remota con código de estado: {response.status_code}"
-
 # ==============================================================================
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 # ==============================================================================
 @router.get("/catalogos", response_model=schemas.CatalogosUbicacionesOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_todos_los_catalogos_form(
     request: Request,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer")) 
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer")) 
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    # Acceso por atributo blindado contra fallas en compilación estática
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     try:
@@ -91,7 +91,6 @@ async def obtener_todos_los_catalogos_form(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
             detail=f"Capa de persistencia de infraestructura no disponible: {str(exc)}"
         )
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: EDIFICIOS
 # ==============================================================================
@@ -99,10 +98,10 @@ async def obtener_todos_los_catalogos_form(
 async def crear_edificio(
     request: Request,
     body: schemas.EdificioCreateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:crear"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.post(f"{MS_UBICACIONES_URL}/ubicaciones/edificios", json=body.model_dump(), headers=headers)
@@ -116,10 +115,10 @@ async def listar_edificios(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False),
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     params = {"limit": limit, "offset": offset, "incluir_inactivos": incluir_inactivos}
@@ -132,10 +131,10 @@ async def listar_edificios(
 async def obtener_edificio(
     request: Request,
     id_edificio: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios/{id_edificio}", headers=headers)
@@ -148,10 +147,10 @@ async def actualizar_edificio(
     request: Request,
     id_edificio: UUID,
     body: schemas.EdificioUpdateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:editar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:editar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.patch(
@@ -167,17 +166,16 @@ async def actualizar_edificio(
 async def borrar_edificio(
     request: Request,
     id_edificio: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.delete(f"{MS_UBICACIONES_URL}/ubicaciones/edificios/{id_edificio}", headers=headers)
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: AULAS
 # ==============================================================================
@@ -186,10 +184,10 @@ async def crear_aula(
     request: Request,
     id_edificio: UUID,
     body: schemas.AulaCreateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:crear"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.post(
@@ -205,10 +203,10 @@ async def crear_aula(
 async def obtener_aula(
     request: Request,
     id_aula: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.get(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers)
@@ -221,10 +219,10 @@ async def actualizar_aula(
     request: Request,
     id_aula: UUID,
     body: schemas.AulaUpdateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:editar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:editar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.patch(
@@ -240,17 +238,16 @@ async def actualizar_aula(
 async def borrar_aula(
     request: Request,
     id_aula: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.delete(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers)
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: DEPARTAMENTOS
 # ==============================================================================
@@ -258,10 +255,10 @@ async def borrar_aula(
 async def crear_departamento(
     request: Request,
     body: schemas.DepartamentoCreateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("departamentos:crear"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.post(f"{MS_UBICACIONES_URL}/departamentos", json=body.model_dump(), headers=headers)
@@ -275,10 +272,10 @@ async def listar_departamentos(
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False),
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("departamentos:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     params = {"limit": limit, "offset": offset, "incluir_inactivos": incluir_inactivos}
@@ -291,10 +288,10 @@ async def listar_departamentos(
 async def obtener_departamento(
     request: Request,
     id_departamento: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("departamentos:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.get(f"{MS_UBICACIONES_URL}/departamentos/{id_departamento}", headers=headers)
@@ -307,10 +304,10 @@ async def actualizar_departamento(
     request: Request,
     id_departamento: UUID,
     body: schemas.DepartamentoUpdateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:editar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("departamentos:editar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.patch(
@@ -326,10 +323,10 @@ async def actualizar_departamento(
 async def borrar_departamento(
     request: Request,
     id_departamento: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("departamentos:borrar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("departamentos:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     response = await client.delete(f"{MS_UBICACIONES_URL}/departamentos/{id_departamento}", headers=headers)

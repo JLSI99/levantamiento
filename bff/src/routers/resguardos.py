@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from typing import List, Optional
 from uuid import UUID
 
-from src.dependencies.auth import RequireCapabilityBFF
+from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import resguardos as schemas_resguardos
 
 router = APIRouter(
@@ -59,7 +59,6 @@ async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resgu
     )
 
 async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas_resguardos.ResguardoAdminOutBFF:
-
     id_bien = resguardo["id_bien"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
@@ -117,16 +116,17 @@ async def listar_mis_resguardos(
     request: Request,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
-    curp = token_payload.get("curp")
+    
+    curp = getattr(token_payload, "curp", None) or getattr(token_payload, "username", None)
     
     if not curp:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Operación inválida: El token de sesión no contiene la CURP del usuario."
+            detail="Operación inválida: El token de sesión no contiene la CURP o Identidad del usuario."
         )
 
     async with httpx.AsyncClient() as client:
@@ -155,14 +155,13 @@ async def listar_mis_resguardos(
 async def crear_asignacion_resguardo(
     request: Request,
     datos_entrada: schemas_resguardos.ResguardoCreateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:crear"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     async with httpx.AsyncClient() as client:
         try:
-        
             resp = await client.post(MS_RESGUARDOS_BASE_URL, json=datos_entrada.model_dump(), headers=headers)
             if resp.status_code != status.HTTP_201_CREATED:
                 raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al procesar asignación."))
@@ -182,9 +181,9 @@ async def listar_todos_los_resguardos_institucionales(
     solo_vigentes: bool = Query(True),
     incluir_borrados: bool = Query(False),
     curp: Optional[str] = Query(None),
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     params = {"limit": limit, "offset": offset, "solo_vigentes": solo_vigentes, "incluir_borrados": incluir_borrados}
@@ -214,9 +213,9 @@ async def listar_todos_los_resguardos_institucionales(
 async def modificar_asignacion_resguardo(
     id_asignacion: UUID,
     datos_cambio: schemas_resguardos.ResguardoUpdateBFF,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:editar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:editar"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     async with httpx.AsyncClient() as client:
@@ -237,9 +236,9 @@ async def modificar_asignacion_resguardo(
 @router.post("/{id_asignacion}/cerrar", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def concluir_resguardo_ordinario(
     id_asignacion: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:crear"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     async with httpx.AsyncClient() as client:
@@ -256,9 +255,9 @@ async def concluir_resguardo_ordinario(
 @router.delete("/{id_asignacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_baja_logica_resguardo(
     id_asignacion: UUID,
-    token_payload: dict = Depends(RequireCapabilityBFF("resguardos:borrar"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:borrar"))
 ):
-    jwt_crudo = token_payload.get("encoded_token")
+    jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     async with httpx.AsyncClient() as client:
