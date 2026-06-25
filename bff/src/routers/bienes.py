@@ -6,10 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
 from src.schemas import bienes as schemas_bienes
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 
-router = APIRouter(
-    prefix="/api/v1/bienes", 
-    tags=["BFF Catálogos y Bienes de la Institución"]
-)
+router = APIRouter()
 
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000")
 # ==============================================================================

@@ -9,10 +9,7 @@ from src.dependencies.network import get_bff_http_client
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import admin as schemas
 
-router = APIRouter(
-    prefix="/admin",
-    tags=["Administración Centralizada"]
-)
+router = APIRouter()
 
 MS_PERSONAS_BASE_URL = os.getenv("MS_PERSONAS_URL", "http://ms_personas_api:8000")
 MS_AUTH_BASE_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000")

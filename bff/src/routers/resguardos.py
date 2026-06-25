@@ -8,10 +8,7 @@ from uuid import UUID
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import resguardos as schemas_resguardos
 
-router = APIRouter(
-    prefix="/api/v1/resguardos",
-    tags=["BFF Módulo de Resguardos y Asignaciones"]
-)
+router = APIRouter()
 
 MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000")
 MS_BIENES_BASE_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000")

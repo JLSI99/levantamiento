@@ -8,10 +8,7 @@ from typing import Optional
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import ubicaciones as schemas
 
-router = APIRouter(
-    prefix="/api/v1/ubicaciones",
-    tags=["BFF Control Central de Infraestructura y Ubicaciones"]
-)
+router = APIRouter()
 
 MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000")
 
