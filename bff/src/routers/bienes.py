@@ -3,7 +3,7 @@ import httpx
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
 
-from src.schemas import schemas_bienes
+from src.schemas import bienes as schemas_bienes
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 
 router = APIRouter(
