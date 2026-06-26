@@ -10,22 +10,34 @@ from src.auditoria import Auditoria
 
 PERSONAS_SEMILLA = [
     {
-        "id_persona": "1ed3fc1c-ccf8-4b12-a6c8-e3cd77b8a051",
-        "nombres": "Jorge",
-        "apellidos": "Gomez Sanchez",
+        "id_persona": "1ed3fc1c-ccf8-4b12-a6c8-e3cd77b8a001",
+        "nombres": "Persona1",
+        "apellidos": "Apellidos1",
         "curp": "GOME900101HDFRRN01"
     },
     {
-        "id_persona": "2bd2ec1b-bbf7-4b11-a5c7-e2cd66b7a042",
-        "nombres": "Carlos",
-        "apellidos": "Izquierdo Lopez",
-        "curp": "IZQL950512HDFRND02"
+        "id_persona": "2bd2ec1b-bbf7-4b11-a5c7-e2cd66b7a002",
+        "nombres": "Persona2",
+        "apellidos": "Apellidos2",
+        "curp": "LEVA910202HDFRRN02"
     },
     {
-        "id_persona": "3ad1db1a-aaf6-4b10-a4c6-e1cd55b6a033",
-        "nombres": "Ana Maria",
-        "apellidos": "Perez Hernandez",
-        "curp": "PERH980324MDFRNN03"
+        "id_persona": "3ad1db1a-aaf6-4b10-a4c6-e1cd55b6a003",
+        "nombres": "Persona3",
+        "apellidos": "Apellidos3",
+        "curp": "REGI920303HDFRRN03"
+    },
+    {
+        "id_persona": "2bd2ec1b-bbf7-4b11-a5c7-e2cd66b7a004",
+        "nombres": "Persona4",
+        "apellidos": "Apellidos4",
+        "curp": "REVI930404HDFRRN04"
+    },
+    {
+        "id_persona": "3ad1db1a-aaf6-4b10-a4c6-e1cd55b6a005",
+        "nombres": "Persona5",
+        "apellidos": "Apellidos5",
+        "curp": "RESG940505HDFRRN05"
     }
 ]
 
