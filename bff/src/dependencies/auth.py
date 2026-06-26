@@ -1,3 +1,4 @@
+# bff/src/dependencies/auth.py
 import os
 from typing import List, Optional
 from fastapi import Depends, HTTPException, status
@@ -5,6 +6,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError, ExpiredSignatureError 
 from jose.exceptions import JWTClaimsError
 from pydantic import BaseModel, Field
+
 # --------------------------------------------------------------------------
 # CONFIGURACIÓN DE VARIABLES DE ENTORNO (PERÍMETRO DE SEGURIDAD)
 # --------------------------------------------------------------------------
@@ -17,6 +19,7 @@ if not SECRET_KEY:
     raise ValueError("CRÍTICO: SECRET_KEY no configurada en las variables de entorno del BFF.")
 
 bearer_scheme = HTTPBearer(auto_error=True)
+
 # --------------------------------------------------------------------------
 # ESQUEMAS DE DATOS ESTRUCTURADOS (PYDANTIC V2)
 # --------------------------------------------------------------------------
@@ -24,6 +27,7 @@ class TokenPayload(BaseModel):
     sub: str = Field(..., description="Identificador único del usuario (UUID de la cuenta)")
     username: str = Field(..., description="Nombre de usuario único extraído del microservicio")
     email: Optional[str] = Field(None, description="Correo institucional del usuario")
+    curp: Optional[str] = Field(None, description="Clave Única de Registro de Población (CURP) vinculada a la persona física")
     roles: List[str] = Field(default_factory=list, description="Lista de roles asignados al usuario")
     caps: List[str] = Field(default_factory=list, description="Lista explícita de capacidades CapBAC")
     type: str = Field(..., description="Tipo de token (debe ser 'access')")
@@ -31,6 +35,7 @@ class TokenPayload(BaseModel):
     aud: str = Field(..., description="Audiencia destino del token")
     exp: int = Field(..., description="Timestamp de expiración Unix")
     raw_token: str = Field(..., description="Cadena de texto original del JWT Bearer")
+
 # --------------------------------------------------------------------------
 # INTERCEPTOR Y VALIDADOR CRIPTOGRÁFICO DE TOKENS
 # --------------------------------------------------------------------------
@@ -38,6 +43,7 @@ async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depen
     token = credentials.credentials
     
     try:
+        # Descomprime y valida la firma criptográfica contra las invariantes del ecosistema
         payload_dict = jwt.decode(
             token,
             SECRET_KEY,
@@ -47,14 +53,17 @@ async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depen
             options={"require_exp": True, "require_iss": True, "require_aud": True}
         )
         
+        # Validar discriminador de tipo de token para mitigar ataques de confusión de token (ej. Refresh por Access)
         if payload_dict.get("type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Acceso denegado. El token provisto no cumple con el tipo 'access' requerido."
             )
             
+        # Preservar el string JWT original para delegación downstream si es requerida
         payload_dict["raw_token"] = token
         
+        # La instanciación ahora mapea y valida de forma estricta la propiedad 'curp'
         return TokenPayload(**payload_dict)
 
     except ExpiredSignatureError:
@@ -72,6 +81,7 @@ async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depen
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido, firma corrupta o estructura alterada ilegítimamente."
         )
+
 # --------------------------------------------------------------------------
 # CLASE DE CONTROL DE ACCESO BASADO EN CAPACIDADES (CapBAC)
 # --------------------------------------------------------------------------

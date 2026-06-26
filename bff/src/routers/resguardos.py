@@ -17,10 +17,8 @@ logger = logging.getLogger("bff.routers.resguardos")
 # SUBSISTEMA DE CONFIGURACIÓN DE RED E INVARIANTE DE DIRECCIONAMIENTO
 # ==============================================================================
 MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000").rstrip("/")
-# El microservicio base maneja sus rutas en la raíz o bajo su propio prefijo
 MS_RESGUARDOS_ENDPOINT = f"{MS_RESGUARDOS_BASE_URL}/resguardos"
 
-# Direccionamiento topológico corregido hacia microservicios aguas abajo (Upstream)
 MS_BIENES_ROUTE      = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000').rstrip('/')}/bienes"
 MS_UBICACIONES_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
 MS_DEPARTAMENTOS_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/departamentos"
@@ -40,7 +38,6 @@ async def hidratar_un_resguardo(
     id_edificio = resguardo["id_edificio"]
     id_departamento = resguardo["id_departamento"]
 
-    # Invariante de Red: Paths corregidos para acoplarse a los microservicios base
     tareas = [
         client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
@@ -50,7 +47,6 @@ async def hidratar_un_resguardo(
     
     respuestas = await asyncio.gather(*tareas, return_exceptions=True)
     
-    # Manejo de fallos con logging explícito para auditoría en Promtail/Loki
     def procesar_respuesta(r, nombre_servicio: str) -> dict:
         if isinstance(r, Exception):
             logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación: {str(r)}")
@@ -95,13 +91,15 @@ async def hidratar_resguardo_completo(
     id_departamento = resguardo["id_departamento"]
     curp_objetivo = resguardo["curp"]
 
-    # Invariante de Red: Paths y Query Params corregidos para ms-personas
+    # Corrección del Contrato: Consumir la ruta parametrizada por query string aceptada por ms-personas
+    url_personas_corregida = f"{MS_PERSONAS_ROUTE}?curp={curp_objetivo.upper().strip()}&limit=1&incluir_inactivos=true"
+
     tareas = [
         client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
         client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers),
-        client.get(f"{MS_PERSONAS_ROUTE}/{curp_objetivo}", headers=headers)
+        client.get(url_personas_corregida, headers=headers)
     ]
     
     respuestas = await asyncio.gather(*tareas, return_exceptions=True)
@@ -111,6 +109,7 @@ async def hidratar_resguardo_completo(
             logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación completa: {str(r)}")
             return {}
         if r.status_code != 200:
+            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación completa.")
             return {}
         return r.json()
 
@@ -118,13 +117,23 @@ async def hidratar_resguardo_completo(
     aula_data = procesar_respuesta(respuestas[1], "ms-ubicaciones (aulas)")
     edificio_data = procesar_respuesta(respuestas[2], "ms-ubicaciones (edificios)")
     depto_data = procesar_respuesta(respuestas[3], "ms-ubicaciones (departamentos)")
-    persona_data = procesar_respuesta(respuestas[4], "ms-personas")
+    personas_paginated_data = procesar_respuesta(respuestas[4], "ms-personas")
     
-    # Adaptación defensiva de la payload de la persona
+    # Extraer el registro individual de la estructura paginada devuelta por el Microservicio
+    lista_personas = personas_paginated_data.get("data", [])
+    
+    if lista_personas and len(lista_personas) > 0:
+        persona_data = lista_personas[0]
+        nombres_final = persona_data.get("nombres", "Desconocido")
+        apellidos_final = persona_data.get("apellidos", "Desconocido")
+    else:
+        nombres_final = "Desconocido"
+        apellidos_final = "Desconocido"
+    
     persona_final = {
         "curp": curp_objetivo, 
-        "nombres": persona_data.get("nombres", "Desconocido"), 
-        "apellidos": persona_data.get("apellidos", "Desconocido")
+        "nombres": nombres_final, 
+        "apellidos": apellidos_final
     }
 
     return schemas_resguardos.ResguardoAdminOutBFF(
@@ -150,7 +159,7 @@ async def hidratar_resguardo_completo(
 
 
 # ==============================================================================
-# ENDPOINTS: RUTA DEL RESGUARDANTE (Montado bajo /api/v1/resguardos/mis-resguardos)
+# ENDPOINTS: RUTA DEL RESGUARDANTE
 # ==============================================================================
 @router.get("/mis-resguardos", response_model=schemas_resguardos.MisResguardosPaginatedOut)
 async def listar_mis_resguardos(
@@ -159,7 +168,6 @@ async def listar_mis_resguardos(
     offset: int = Query(0, ge=0),
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
-    # Optimización del ciclo de vida de conexiones utilizando el pool global de FastAPI
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
@@ -192,7 +200,7 @@ async def listar_mis_resguardos(
 
 
 # ==============================================================================
-# ENDPOINTS: CRUD DEL ADMINISTRADOR (Montado bajo /api/v1/resguardos)
+# ENDPOINTS: CRUD DEL ADMINISTRADOR
 # ==============================================================================
 @router.post("", response_model=schemas_resguardos.ResguardoAdminOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_asignacion_resguardo(
