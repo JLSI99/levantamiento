@@ -44,8 +44,10 @@ PERMISOS_BASE = [
     (20, "ubicaciones:leer", "Consultar el catálogo geográfico y estructural de inmuebles"),
     (21, "ubicaciones:editar", "Modificar delimitaciones o nomenclaturas de espacios físicos"),
     (22, "ubicaciones:borrar", "Dar de baja zonas físicas o áreas de resguardo en desuso"),
-    (23, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
-    (24, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento")
+    (23, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
+    (24, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
+    (25, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
+    (26, "departamentos:borrar", "Dar de alta estructuras organizacionales o jefaturas de departamento")
 ]
 
 MATRIZ_ACCESO = {

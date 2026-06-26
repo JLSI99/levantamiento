@@ -9,12 +9,12 @@ from src.database import engine, Base
 from src import models
 from src.auditoria import Auditoria
 
-UUID_BIEN_LAPTOP = uuid.UUID("11111111-2222-3333-4444-555555555555")
-UUID_AULA_INGENIERIA = uuid.UUID("fa111111-b222-c333-d444-e55555555555")
-UUID_EDIFICIO_C = uuid.UUID("ec333333-4444-5555-6666-777777777777")
-UUID_DEP_SISTEMAS = uuid.UUID("de999999-0000-1111-2222-333333333333")
+UUID_BIEN_LAPTOP = uuid.UUID("66666666-7777-8888-9999-000000000000")
+UUID_AULA_INGENIERIA = uuid.UUID("e9d8c7b6-a5f4-4e3d-2c1b-0a9f8e7d6c5b")
+UUID_EDIFICIO= uuid.UUID("a0e1b2c3-d4e5-4f6a-bf7a-9e8d7c6b5a41")
+UUID_DEP_SISTEMAS = uuid.UUID("f1e2d3c4-b5a6-4f7e-8d9c-0b1a2f3e4d5c")
 
-CURP_DESARROLLADOR = "GODE561231HDFRRN09"
+CURP_DESARROLLADOR = "GOME900101HDFRRN01"
 
 RESGUARDOS_SEMILLA = [
     {
@@ -22,7 +22,7 @@ RESGUARDOS_SEMILLA = [
         "id_bien": UUID_BIEN_LAPTOP,
         "curp": CURP_DESARROLLADOR,
         "id_aula": UUID_AULA_INGENIERIA,
-        "id_edificio": UUID_EDIFICIO_C,
+        "id_edificio": UUID_EDIFICIO,
         "id_departamento": UUID_DEP_SISTEMAS,
         "fecha_inicio": datetime.date(2026, 1, 16),
         "esta_activo": True,

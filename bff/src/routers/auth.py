@@ -1,3 +1,4 @@
+# bff/src/routers/auth.py
 import os
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -6,34 +7,30 @@ import httpx
 from src.schemas import auth as schemas_auth
 from src.dependencies.auth import obtener_token_valido, TokenPayload
 
-logger = logging.getLogger("bff_router_auth")
+logger = logging.getLogger("bff.routers.auth")
 router = APIRouter()
 
-MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000")
+# Invariante de Red: URL base del microservicio limpia
+MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000").rstrip("/")
 
-def get_bff_http_client(request: Request) -> httpx.AsyncClient:
-    client = getattr(request.app.state, "http_client", None)
-    if not client:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Pool de conexiones HTTPX no inicializado en el contexto de la aplicación."
-        )
-    return client
+# Target del proxy perimetral hacia la autenticación del microservicio base
+MS_AUTH_ROUTE = f"{MS_AUTH_URL}/auth"
 
 @router.post(
     "/login", 
     response_model=schemas_auth.TokenBFF,
     status_code=status.HTTP_200_OK,
     summary="Login Perimetral",
-    description="Actúa como proxy inverso asíncrono transmitiendo las credenciales hacia ms-usuarios-y-autenticacion."
+    description="Proxy inverso asíncrono que transmite credenciales hacia ms-usuarios-y-autenticacion."
 )
 async def login_bff(
-    login_data: schemas_auth.UserLoginBFF,
-    client: httpx.AsyncClient = Depends(get_bff_http_client)
+    request: Request,
+    login_data: schemas_auth.UserLoginBFF
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     try:
         response = await client.post(
-            f"{MS_AUTH_URL}/auth/login",
+            f"{MS_AUTH_ROUTE}/login",
             json=login_data.model_dump()
         )
         
@@ -76,12 +73,13 @@ async def login_bff(
     description="Propaga el Refresh Token hacia el microservicio interno para generar un nuevo par de claves."
 )
 async def refresh_bff(
-    refresh_data: schemas_auth.TokenRefreshBFF,
-    client: httpx.AsyncClient = Depends(get_bff_http_client)
+    request: Request,
+    refresh_data: schemas_auth.TokenRefreshBFF
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     try:
         response = await client.post(
-            f"{MS_AUTH_URL}/auth/refresh",
+            f"{MS_AUTH_ROUTE}/refresh",
             json=refresh_data.model_dump()
         )
         
@@ -122,9 +120,9 @@ async def refresh_bff(
     description="Invalida perimetralmente la sesión reenviando las cabeceras de autenticación si existen."
 )
 async def logout_bff(
-    request: Request,
-    client: httpx.AsyncClient = Depends(get_bff_http_client)
+    request: Request
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     auth_header = request.headers.get("Authorization")
     
     headers = {}
@@ -132,7 +130,7 @@ async def logout_bff(
         headers["Authorization"] = auth_header
         
     try:
-        response = await client.post(f"{MS_AUTH_URL}/auth/logout", headers=headers)
+        response = await client.post(f"{MS_AUTH_ROUTE}/logout", headers=headers)
         if response.status_code == status.HTTP_200_OK:
             return response.json()
         

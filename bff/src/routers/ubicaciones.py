@@ -1,3 +1,4 @@
+# bff/src/routers/ubicaciones.py
 import os
 import asyncio
 import httpx
@@ -10,7 +11,8 @@ from src.schemas import ubicaciones as schemas
 
 router = APIRouter()
 
-MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000")
+# Invariante de Red: URL base purgada de barras finales
+MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000").rstrip("/")
 
 def extraer_detalle_error(response: httpx.Response) -> str:
     """Evita caídas por JSONDecodeError si el microservicio devuelve HTML (e.g. Nginx 502)"""
@@ -21,6 +23,7 @@ def extraer_detalle_error(response: httpx.Response) -> str:
         return f"Error upstream no estructurado ({response.status_code}): {response.text[:200]}"
     except Exception:
         return f"Error de comunicación remota con código de estado: {response.status_code}"
+
 # ==============================================================================
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 # ==============================================================================
@@ -30,11 +33,11 @@ async def obtener_todos_los_catalogos_form(
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer")) 
 ):
     client: httpx.AsyncClient = request.app.state.http_client
-    # Acceso por atributo blindado contra fallas en compilación estática
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
     try:
+        # Se normaliza la construcción de los paths de destino hacia el microservicio base
         tareas_reales = [
             client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios?limit=1000&incluir_inactivos=false", headers=headers),
             client.get(f"{MS_UBICACIONES_URL}/departamentos?limit=1000&incluir_inactivos=false", headers=headers)
@@ -43,10 +46,14 @@ async def obtener_todos_los_catalogos_form(
         respuestas = await asyncio.gather(*tareas_reales)
         
         if any(r.status_code != 200 for r in respuestas):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Error de consistencia interna al consolidar infraestructura desde el microservicio base."
-            )
+            # Identificar cuál falló para no enmascarar errores de diagnóstico en desarrollo
+            for idx, r in enumerate(respuestas):
+                if r.status_code != 200:
+                    detalle_origen = extraer_detalle_error(r)
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST, 
+                        detail=f"Error de consistencia interna en catálogo { 'Edificios' if idx == 0 else 'Departamentos' }: {detalle_origen}"
+                    )
             
         edificios_raw = respuestas[0].json().get("data", [])
         deptos_raw = respuestas[1].json().get("data", [])
@@ -88,8 +95,9 @@ async def obtener_todos_los_catalogos_form(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
             detail=f"Capa de persistencia de infraestructura no disponible: {str(exc)}"
         )
+
 # ==============================================================================
-# CRUD SUB-DOMINIO: EDIFICIOS
+# CRUD SUB-DOMINIO: EDIFICIOS (Montado en /api/v1/ubicaciones/edificios)
 # ==============================================================================
 @router.post("/edificios", response_model=schemas.EdificioOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_edificio(
@@ -173,8 +181,9 @@ async def borrar_edificio(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
+
 # ==============================================================================
-# CRUD SUB-DOMINIO: AULAS
+# CRUD SUB-DOMINIO: AULAS (Montado en /api/v1/ubicaciones/...)
 # ==============================================================================
 @router.post("/edificios/{id_edificio}/aulas", response_model=schemas.AulaOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_aula(
@@ -206,6 +215,8 @@ async def obtener_aula(
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
+    # NOTA DE ARQUITECTURA: Asegurar que ms-ubicaciones tenga expuesto /ubicaciones/aulas/{id} 
+    # y no dependa obligatoriamente del ID de edificio en el path para operaciones atómicas.
     response = await client.get(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers)
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
@@ -224,7 +235,7 @@ async def actualizar_aula(
     
     response = await client.patch(
         f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", 
-        json=body.model_dump(), 
+        json=body.model_dump(exclude_unset=True), 
         headers=headers
     )
     if response.status_code != 200:
@@ -245,8 +256,9 @@ async def borrar_aula(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
+
 # ==============================================================================
-# CRUD SUB-DOMINIO: DEPARTAMENTOS
+# CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
 # ==============================================================================
 @router.post("/departamentos", response_model=schemas.DepartamentoOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_departamento(
@@ -258,6 +270,7 @@ async def crear_departamento(
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
+    # Mapeo explícito a la raíz del microservicio según se observó en la función de catálogos
     response = await client.post(f"{MS_UBICACIONES_URL}/departamentos", json=body.model_dump(), headers=headers)
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))

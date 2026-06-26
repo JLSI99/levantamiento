@@ -1,6 +1,8 @@
+# bff/src/routers/resguardos.py
 import os
 import asyncio
 import httpx
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from typing import List, Optional
 from uuid import UUID
@@ -9,33 +11,59 @@ from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import resguardos as schemas_resguardos
 
 router = APIRouter()
+logger = logging.getLogger("bff.routers.resguardos")
 
-MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000")
-MS_BIENES_BASE_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000")
-MS_UBICACIONES_BASE_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000")
-MS_PERSONAS_BASE_URL = os.getenv("MS_PERSONAS_URL", "http://ms_personas_api:8000")
+# ==============================================================================
+# SUBSISTEMA DE CONFIGURACIÓN DE RED E INVARIANTE DE DIRECCIONAMIENTO
+# ==============================================================================
+MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000").rstrip("/")
+# El microservicio base maneja sus rutas en la raíz o bajo su propio prefijo
+MS_RESGUARDOS_ENDPOINT = f"{MS_RESGUARDOS_BASE_URL}/resguardos"
+
+# Direccionamiento topológico corregido hacia microservicios aguas abajo (Upstream)
+MS_BIENES_ROUTE      = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000').rstrip('/')}/bienes"
+MS_UBICACIONES_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
+MS_DEPARTAMENTOS_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/departamentos"
+MS_PERSONAS_ROUTE    = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
+
+
 # ==============================================================================
 # FUNCIONES AUXILIARES DE HIDRATACIÓN (ORQUESTACIÓN ASÍNCRONA)
 # ==============================================================================
-async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resguardos.MisResguardosOut:
+async def hidratar_un_resguardo(
+    resguardo: dict, 
+    headers: dict, 
+    client: httpx.AsyncClient
+) -> schemas_resguardos.MisResguardosOut:
     id_bien = resguardo["id_bien"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
     id_departamento = resguardo["id_departamento"]
 
-    async with httpx.AsyncClient() as client:
-        tareas = [
-            client.get(f"{MS_BIENES_BASE_URL}/{id_bien}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/departamentos/{id_departamento}", headers=headers)
-        ]
-        respuestas = await asyncio.gather(*tareas, return_exceptions=True)
-        
-    bien_data = respuestas[0].json() if not isinstance(respuestas[0], Exception) and respuestas[0].status_code == 200 else {}
-    aula_data = respuestas[1].json() if not isinstance(respuestas[1], Exception) and respuestas[1].status_code == 200 else {}
-    edificio_data = respuestas[2].json() if not isinstance(respuestas[2], Exception) and respuestas[2].status_code == 200 else {}
-    depto_data = respuestas[3].json() if not isinstance(respuestas[3], Exception) and respuestas[3].status_code == 200 else {}
+    # Invariante de Red: Paths corregidos para acoplarse a los microservicios base
+    tareas = [
+        client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
+        client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
+        client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
+        client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers)
+    ]
+    
+    respuestas = await asyncio.gather(*tareas, return_exceptions=True)
+    
+    # Manejo de fallos con logging explícito para auditoría en Promtail/Loki
+    def procesar_respuesta(r, nombre_servicio: str) -> dict:
+        if isinstance(r, Exception):
+            logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación: {str(r)}")
+            return {}
+        if r.status_code != 200:
+            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación.")
+            return {}
+        return r.json()
+
+    bien_data = procesar_respuesta(respuestas[0], "ms-bienes")
+    aula_data = procesar_respuesta(respuestas[1], "ms-ubicaciones (aulas)")
+    edificio_data = procesar_respuesta(respuestas[2], "ms-ubicaciones (edificios)")
+    depto_data = procesar_respuesta(respuestas[3], "ms-ubicaciones (departamentos)")
 
     return schemas_resguardos.MisResguardosOut(
         id_asignacion=resguardo["id_asignacion"],
@@ -55,35 +83,49 @@ async def hidratar_un_resguardo(resguardo: dict, headers: dict) -> schemas_resgu
         )
     )
 
-async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas_resguardos.ResguardoAdminOutBFF:
+
+async def hidratar_resguardo_completo(
+    resguardo: dict, 
+    headers: dict, 
+    client: httpx.AsyncClient
+) -> schemas_resguardos.ResguardoAdminOutBFF:
     id_bien = resguardo["id_bien"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
     id_departamento = resguardo["id_departamento"]
     curp_objetivo = resguardo["curp"]
 
-    async with httpx.AsyncClient() as client:
-        tareas = [
-            client.get(f"{MS_BIENES_BASE_URL}/{id_bien}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/aulas/{id_aula}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/ubicaciones/edificios/{id_edificio}", headers=headers),
-            client.get(f"{MS_UBICACIONES_BASE_URL}/departamentos/{id_departamento}", headers=headers),
-            client.get(f"{MS_PERSONAS_BASE_URL}", params={"curp": curp_objetivo}, headers=headers)
-        ]
-        respuestas = await asyncio.gather(*tareas, return_exceptions=True)
-
-    bien_data = respuestas[0].json() if not isinstance(respuestas[0], Exception) and respuestas[0].status_code == 200 else {}
-    aula_data = respuestas[1].json() if not isinstance(respuestas[1], Exception) and respuestas[1].status_code == 200 else {}
-    edificio_data = respuestas[2].json() if not isinstance(respuestas[2], Exception) and respuestas[2].status_code == 200 else {}
-    depto_data = respuestas[3].json() if not isinstance(respuestas[3], Exception) and respuestas[3].status_code == 200 else {}
+    # Invariante de Red: Paths y Query Params corregidos para ms-personas
+    tareas = [
+        client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
+        client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
+        client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
+        client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers),
+        client.get(f"{MS_PERSONAS_ROUTE}/{curp_objetivo}", headers=headers)
+    ]
     
-    persona_final = {"curp": curp_objetivo, "nombres": "Desconocido", "apellidos": "Desconocido"}
-    if not isinstance(respuestas[4], Exception) and respuestas[4].status_code == 200:
-        personas_list = respuestas[4].json().get("data", [])
-        if personas_list:
-            p = personas_list[0]
-            persona_final["nombres"] = p.get("nombres", "Desconocido")
-            persona_final["apellidos"] = p.get("apellidos", "Desconocido")
+    respuestas = await asyncio.gather(*tareas, return_exceptions=True)
+
+    def procesar_respuesta(r, nombre_servicio: str) -> dict:
+        if isinstance(r, Exception):
+            logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación completa: {str(r)}")
+            return {}
+        if r.status_code != 200:
+            return {}
+        return r.json()
+
+    bien_data = procesar_respuesta(respuestas[0], "ms-bienes")
+    aula_data = procesar_respuesta(respuestas[1], "ms-ubicaciones (aulas)")
+    edificio_data = procesar_respuesta(respuestas[2], "ms-ubicaciones (edificios)")
+    depto_data = procesar_respuesta(respuestas[3], "ms-ubicaciones (departamentos)")
+    persona_data = procesar_respuesta(respuestas[4], "ms-personas")
+    
+    # Adaptación defensiva de la payload de la persona
+    persona_final = {
+        "curp": curp_objetivo, 
+        "nombres": persona_data.get("nombres", "Desconocido"), 
+        "apellidos": persona_data.get("apellidos", "Desconocido")
+    }
 
     return schemas_resguardos.ResguardoAdminOutBFF(
         id_asignacion=resguardo["id_asignacion"],
@@ -105,8 +147,10 @@ async def hidratar_resguardo_completo(resguardo: dict, headers: dict) -> schemas
             departamento=depto_data.get("nombre", "N/D")
         )
     )
+
+
 # ==============================================================================
-# ENDPOINTS: RUTA DEL RESGUARDANTE
+# ENDPOINTS: RUTA DEL RESGUARDANTE (Montado bajo /api/v1/resguardos/mis-resguardos)
 # ==============================================================================
 @router.get("/mis-resguardos", response_model=schemas_resguardos.MisResguardosPaginatedOut)
 async def listar_mis_resguardos(
@@ -115,38 +159,40 @@ async def listar_mis_resguardos(
     offset: int = Query(0, ge=0),
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
+    # Optimización del ciclo de vida de conexiones utilizando el pool global de FastAPI
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     curp = getattr(token_payload, "curp", None) or getattr(token_payload, "username", None)
-    
     if not curp:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Operación inválida: El token de sesión no contiene la CURP o Identidad del usuario."
         )
 
-    async with httpx.AsyncClient() as client:
-        params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False, "curp": curp}
-        try:
-            resguardos_resp = await client.get(MS_RESGUARDOS_BASE_URL, params=params, headers=headers)
-            if resguardos_resp.status_code != 200:
-                raise HTTPException(status_code=resguardos_resp.status_code, detail="Error al recuperar asignaciones personales.")
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Servicio no disponible: {str(exc)}")
+    params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False, "curp": curp}
+    try:
+        resguardos_resp = await client.get(MS_RESGUARDOS_ENDPOINT, params=params, headers=headers)
+        if resguardos_resp.status_code != 200:
+            raise HTTPException(status_code=resguardos_resp.status_code, detail="Error al recuperar asignaciones personales del microservicio.")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Servicio de resguardos no disponible: {str(exc)}")
 
     resguardos_data = resguardos_resp.json()
     lista_resguardos_puros = resguardos_data.get("data", [])
     total_registros = resguardos_data.get("total", 0)
 
-    tareas_hidratacion = [hidratar_un_resguardo(r, headers) for r in lista_resguardos_puros]
+    tareas_hidratacion = [hidratar_un_resguardo(r, headers, client) for r in lista_resguardos_puros]
     resultados_finales = await asyncio.gather(*tareas_hidratacion)
 
     return schemas_resguardos.MisResguardosPaginatedOut(
         total=total_registros, limit=limit, offset=offset, data=resultados_finales
     )
+
+
 # ==============================================================================
-# ENDPOINTS: CRUD DEL LEVANTADOR (OPERATIVO GENERAL INSTITUCIONAL)
+# ENDPOINTS: CRUD DEL ADMINISTRADOR (Montado bajo /api/v1/resguardos)
 # ==============================================================================
 @router.post("", response_model=schemas_resguardos.ResguardoAdminOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_asignacion_resguardo(
@@ -154,21 +200,24 @@ async def crear_asignacion_resguardo(
     datos_entrada: schemas_resguardos.ResguardoCreateBFF,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:crear"))
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.post(MS_RESGUARDOS_BASE_URL, json=datos_entrada.model_dump(), headers=headers)
-            if resp.status_code != status.HTTP_201_CREATED:
-                raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al procesar asignación."))
-            
-            resguardo_creado = resp.json()
-            resguardo_hidratado = await hidratar_resguardo_completo(resguardo_creado, headers)
-            return resguardo_hidratado
-            
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Fallo de conexión con microservicios: {str(exc)}")
+    try:
+        cuerpo_solicitud = datos_entrada.model_dump(mode="json")
+        resp = await client.post(MS_RESGUARDOS_ENDPOINT, json=cuerpo_solicitud, headers=headers)
+        
+        if resp.status_code != status.HTTP_201_CREATED:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al procesar asignación en el microservicio."))
+        
+        resguardo_creado = resp.json()
+        resguardo_hidratado = await hidratar_resguardo_completo(resguardo_creado, headers, client)
+        return resguardo_hidratado
+        
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Fallo de conexión con microservicio de resguardos: {str(exc)}")
+
 
 @router.get("", response_model=schemas_resguardos.ResguardoAdminPaginatedOutBFF)
 async def listar_todos_los_resguardos_institucionales(
@@ -180,6 +229,7 @@ async def listar_todos_los_resguardos_institucionales(
     curp: Optional[str] = Query(None),
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
@@ -187,81 +237,89 @@ async def listar_todos_los_resguardos_institucionales(
     if curp:
         params["curp"] = curp
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.get(MS_RESGUARDOS_BASE_URL, params=params, headers=headers)
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail="Error devuelto por el microservicio de resguardos.")
-        except httpx.RequestError as exc:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red: {str(exc)}")
+    try:
+        resp = await client.get(MS_RESGUARDOS_ENDPOINT, params=params, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail="Error devuelto por el microservicio de resguardos.")
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red con microservicio de resguardos: {str(exc)}")
 
     resguardos_data = resp.json()
     lista_puros = resguardos_data.get("data", [])
     total = resguardos_data.get("total", 0)
 
-    tareas_hidratacion = [hidratar_resguardo_completo(r, headers) for r in lista_puros]
+    tareas_hidratacion = [hidratar_resguardo_completo(r, headers, client) for r in lista_puros]
     resultados_finales = await asyncio.gather(*tareas_hidratacion)
 
     return schemas_resguardos.ResguardoAdminPaginatedOutBFF(
         total=total, limit=limit, offset=offset, data=resultados_finales
     )
 
+
 @router.patch("/{id_asignacion}", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def modificar_asignacion_resguardo(
+    request: Request,
     id_asignacion: UUID,
     datos_cambio: schemas_resguardos.ResguardoUpdateBFF,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:editar"))
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.patch(
-                f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}", 
-                json=datos_cambio.model_dump(exclude_unset=True), 
-                headers=headers
-            )
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "No se pudo actualizar el resguardo."))
-            
-            resguardo_modificado = resp.json()
-            return await hidratar_resguardo_completo(resguardo_modificado, headers)
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error en comunicación interna: {str(e)}")
+    try:
+        cuerpo_parcial = datos_cambio.model_dump(mode="json", exclude_unset=True)
+        url_recurso = f"{MS_RESGUARDOS_ENDPOINT}/{id_asignacion}"
+        
+        resp = await client.patch(url_recurso, json=cuerpo_parcial, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "No se pudo actualizar el resguardo."))
+        
+        resguardo_modificado = resp.json()
+        return await hidratar_resguardo_completo(resguardo_modificado, headers, client)
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error en comunicación interna: {str(e)}")
+
 
 @router.post("/{id_asignacion}/cerrar", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def concluir_resguardo_ordinario(
+    request: Request,
     id_asignacion: UUID,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:crear"))
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.post(f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}/cerrar", headers=headers)
-            if resp.status_code != 200:
-                raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al asentar fecha de fin."))
-            
-            resguardo_cerrado = resp.json()
-            return await hidratar_resguardo_completo(resguardo_cerrado, headers)
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red: {str(e)}")
+    try:
+        url_recurso = f"{MS_RESGUARDOS_ENDPOINT}/{id_asignacion}/cerrar"
+        
+        resp = await client.post(url_recurso, headers=headers)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al asentar fecha de fin."))
+        
+        resguardo_cerrado = resp.json()
+        return await hidratar_resguardo_completo(resguardo_cerrado, headers, client)
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red interna: {str(e)}")
+
 
 @router.delete("/{id_asignacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_baja_logica_resguardo(
+    request: Request,
     id_asignacion: UUID,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:borrar"))
 ):
+    client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
-    async with httpx.AsyncClient() as client:
-        try:
-            resp = await client.delete(f"{MS_RESGUARDOS_BASE_URL}/{id_asignacion}", headers=headers)
-            if resp.status_code != status.HTTP_204_NO_CONTENT:
-                raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al aplicar baja lógica."))
-            return
-        except httpx.RequestError as e:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error crítico: {str(e)}")
+    try:
+        url_recurso = f"{MS_RESGUARDOS_ENDPOINT}/{id_asignacion}"
+        
+        resp = await client.delete(url_recurso, headers=headers)
+        if resp.status_code != status.HTTP_204_NO_CONTENT:
+            raise HTTPException(status_code=resp.status_code, detail=resp.json().get("detail", "Error al aplicar baja lógica."))
+        return
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error crítico de red: {str(e)}")
