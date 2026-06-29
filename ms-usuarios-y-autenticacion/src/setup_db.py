@@ -47,7 +47,7 @@ PERMISOS_BASE = [
     (23, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
     (24, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
     (25, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
-    (26, "departamentos:borrar", "Dar de alta estructuras organizacionales o jefaturas de departamento")
+    (26, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento")
 ]
 
 MATRIZ_ACCESO = {
