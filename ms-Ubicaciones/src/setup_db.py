@@ -27,7 +27,7 @@ UBICACIONES_SEMILLA = {
         {
             "id_departamento": "f1e2d3c4-b5a6-4f7e-8d9c-0b1a2f3e4d5c",
             "nombre": "División de Estudios de Posgrado e Investigación",
-            "id_jefe_departamento": None
+            "id_jefe_departamento": "RESG940505HDFRRN05"
         }
     ]
 }

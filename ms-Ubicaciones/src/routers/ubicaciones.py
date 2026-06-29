@@ -62,7 +62,7 @@ async def crear_edificio(
 async def listar_edificios(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False, description="Incluir registros dados de baja"),
     token_payload: dict = Depends(require_capability("ubicaciones:leer"))

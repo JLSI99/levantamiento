@@ -16,7 +16,7 @@ UUID_TIPO_MOBILIARIO = uuid.UUID("c4d4e4f4-a4b4-4c4d-8e4f-2a4b4c4d4e4f")
 BIENES_SEMILLA = {
     "tipos_bien": [
         {
-            "id_tipo": UUID_TIPO_COMPUTO,
+            "id_tipo": uuid.UUID("b3c3d3e3-f3a3-4b3c-9d3e-1f3a3b3c3d3e"),
             "nombre": "Equipo de Cómputo y Tecnologías de Información",
             "tasa_depreciacion_anual": Decimal("30.00")
         },

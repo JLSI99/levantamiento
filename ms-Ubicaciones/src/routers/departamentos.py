@@ -58,7 +58,7 @@ async def crear_departamento(
 async def listar_departamentos(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    limit: int = Query(10, ge=1, le=100),
+    limit: int = Query(10, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
     token_payload: dict = Depends(require_capability("departamentos:leer"))
