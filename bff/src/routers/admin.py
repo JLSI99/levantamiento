@@ -16,11 +16,10 @@ MS_AUTH_BASE_URL     = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000").r
 
 # Rutas explícitas de destino en la red del clúster (Upstream Contracts)
 MS_PERSONAS_ROUTE = f"{MS_PERSONAS_BASE_URL}/personas"
-MS_USUARIOS_ROUTE = f"{MS_AUTH_BASE_URL}/usuarios"
+MS_USUARIOS_ROUTE = f"{MS_AUTH_BASE_URL}/users"
 MS_ROLES_ROUTE    = f"{MS_AUTH_BASE_URL}/roles"
 
 def _extraer_detalle_error(response: httpx.Response) -> Any:
-
     content_type = response.headers.get("content-type", "")
     if "application/json" in content_type:
         try:
