@@ -10,28 +10,21 @@ from src.schemas import ubicaciones as schemas
 
 router = APIRouter()
 
-# Invariante de configuración: Sanitización de la URL base del microservicio remoto
 MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000").rstrip("/")
 
-
 def extraer_detalle_error(response: httpx.Response) -> str:
-    """
-    Normaliza y extrae los mensajes de error devueltos por los microservicios 
-    para evitar fugas de trazas internas en el cliente final.
-    """
+
     try:
         content_type = response.headers.get("content-type", "")
         if "application/json" in content_type:
             detail = response.json().get("detail")
-            # Si el detalle es una lista de errores de Pydantic, la convertimos a string legible
+        
             if isinstance(detail, list):
                 return str(detail)
             return str(detail or response.text)
         return f"Error upstream no estructurado ({response.status_code}): {response.text[:200]}"
     except Exception:
         return f"Error de comunicación remota con código de estado: {response.status_code}"
-
-
 # ==============================================================================
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 # ==============================================================================
@@ -48,14 +41,12 @@ async def obtener_todos_los_catalogos_form(
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 
-    # Definición de tareas concurrentes con el nuevo límite admitido por el microservicio
     tareas_reales = [
         client.get(f"{MS_UBICACIONES_URL}/ubicaciones/edificios?limit=1000&incluir_inactivos=false", headers=headers),
         client.get(f"{MS_UBICACIONES_URL}/departamentos?limit=1000&incluir_inactivos=false", headers=headers)
     ]
     
     try:
-        # Ejecución en paralelo a través del event loop de asyncio
         respuestas = await asyncio.gather(*tareas_reales)
     except httpx.RequestError as exc:
         raise HTTPException(
@@ -63,7 +54,6 @@ async def obtener_todos_los_catalogos_form(
             detail=f"Capa de persistencia de infraestructura no disponible: {str(exc)}"
         )
         
-    # Evaluación de códigos de estado e identificación precisa del catálogo que falló
     if any(r.status_code != 200 for r in respuestas):
         for idx, r in enumerate(respuestas):
             if r.status_code != 200:
@@ -74,14 +64,12 @@ async def obtener_todos_los_catalogos_form(
                     detail=f"Error de consistencia interna en catálogo {nombre_catalogo}: {detalle_origen}"
                 )
         
-    # Extracción segura de los payloads JSON
     edificios_raw = respuestas[0].json().get("data", [])
     deptos_raw = respuestas[1].json().get("data", [])
     
     lista_edificios = []
     lista_aulas = []
     
-    # Mapeo y transformación de estructuras jerárquicas (Edificios -> Aulas)
     for ed in edificios_raw:
         lista_edificios.append({
             "id_entidad": ed["id_edificio"],
@@ -96,7 +84,6 @@ async def obtener_todos_los_catalogos_form(
                     "clave": None
                 })
                 
-    # Transformación del catálogo lineal de departamentos
     lista_deptos = [
         {
             "id_entidad": d["id_departamento"], 
@@ -111,8 +98,6 @@ async def obtener_todos_los_catalogos_form(
         aulas=lista_aulas,
         departamentos=lista_deptos
     )
-
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: EDIFICIOS (Montado en /api/v1/ubicaciones/edificios)
 # ==============================================================================
@@ -130,7 +115,6 @@ async def crear_edificio(
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
-
 
 @router.get("/edificios", response_model=schemas.EdificioPaginatedOutBFF)
 async def listar_edificios(
@@ -150,7 +134,6 @@ async def listar_edificios(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.get("/edificios/{id_edificio}", response_model=schemas.EdificioOutBFF)
 async def obtener_edificio(
     request: Request,
@@ -165,7 +148,6 @@ async def obtener_edificio(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
-
 
 @router.patch("/edificios/{id_edificio}", response_model=schemas.EdificioOutBFF)
 async def actualizar_edificio(
@@ -187,7 +169,6 @@ async def actualizar_edificio(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.delete("/edificios/{id_edificio}", status_code=status.HTTP_204_NO_CONTENT)
 async def borrar_edificio(
     request: Request,
@@ -202,8 +183,6 @@ async def borrar_edificio(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: AULAS (Montado en /api/v1/ubicaciones/...)
 # ==============================================================================
@@ -227,7 +206,6 @@ async def crear_aula(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.get("/aulas/{id_aula}", response_model=schemas.AulaOutBFF)
 async def obtener_aula(
     request: Request,
@@ -242,7 +220,6 @@ async def obtener_aula(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
-
 
 @router.patch("/aulas/{id_aula}", response_model=schemas.AulaOutBFF)
 async def actualizar_aula(
@@ -264,7 +241,6 @@ async def actualizar_aula(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.delete("/aulas/{id_aula}", status_code=status.HTTP_204_NO_CONTENT)
 async def borrar_aula(
     request: Request,
@@ -279,7 +255,6 @@ async def borrar_aula(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-
 
 # ==============================================================================
 # CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
@@ -299,7 +274,6 @@ async def crear_departamento(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.get("/departamentos", response_model=schemas.DepartamentoPaginatedOutBFF)
 async def listar_departamentos(
     request: Request,
@@ -318,7 +292,6 @@ async def listar_departamentos(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
 
-
 @router.get("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOutBFF)
 async def obtener_departamento(
     request: Request,
@@ -333,7 +306,6 @@ async def obtener_departamento(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
-
 
 @router.patch("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOutBFF)
 async def actualizar_departamento(
@@ -354,7 +326,6 @@ async def actualizar_departamento(
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return response.json()
-
 
 @router.delete("/departamentos/{id_departamento}", status_code=status.HTTP_204_NO_CONTENT)
 async def borrar_departamento(

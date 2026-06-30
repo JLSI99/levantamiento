@@ -1,9 +1,9 @@
-# bff/src/routers/admin.py
 import os
+import re
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from uuid import UUID
 import httpx
-from typing import Optional, List
+from typing import Optional, List, Any
 
 from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import admin as schemas
@@ -19,6 +19,27 @@ MS_PERSONAS_ROUTE = f"{MS_PERSONAS_BASE_URL}/personas"
 MS_USUARIOS_ROUTE = f"{MS_AUTH_BASE_URL}/usuarios"
 MS_ROLES_ROUTE    = f"{MS_AUTH_BASE_URL}/roles"
 
+def _extraer_detalle_error(response: httpx.Response) -> Any:
+
+    content_type = response.headers.get("content-type", "")
+    if "application/json" in content_type:
+        try:
+            payload = response.json()
+            if isinstance(payload, dict):
+                return payload.get("detail", payload)
+            return payload
+        except (ValueError, TypeError):
+            pass
+    
+    texto_crudo = response.text.strip() if response.text else ""
+    if not texto_crudo:
+        return f"Error upstream sin cuerpo de respuesta. Código HTTP: {response.status_code}"
+    
+    if texto_crudo.startswith("<") or "<html>" in texto_crudo.lower():
+        return f"Error de infraestructura upstream (HTTP {response.status_code}). Servidor denegó la petición o está inaccesible."
+        
+    return texto_crudo
+
 # ==============================================================================
 # ORQUESTACIÓN TRANSACCIONAL BIFÁSICA (Alta Compuesta - Patrón Saga Orquestado)
 # ==============================================================================
@@ -32,12 +53,10 @@ async def alta_personal_centralizada(
     body: schemas.AltaPersonalCompuestaRequestBFF,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("usuarios:crear"))
 ):
-    # Acceso optimizado al pool de conexiones global de la aplicación
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
-    # Validar consistencia simétrica antes de tocar el almacenamiento de datos
     if body.persona.curp.upper() != body.usuario.curp.upper():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -58,15 +77,15 @@ async def alta_personal_centralizada(
         )
 
     if response_persona.status_code != 201:
+        detalle_error = _extraer_detalle_error(response_persona)
         raise HTTPException(
             status_code=response_persona.status_code, 
-            detail=response_persona.json().get("detail", "Error al registrar datos demográficos.")
+            detail=detalle_error
         )
     
     persona_data = response_persona.json()
     id_persona_creada = persona_data.get("id_persona")
 
-    # Flags de control para la fase de compensación
     ejecucion_usuario_correcta = False
     error_detalle = None
     status_error = status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -86,16 +105,17 @@ async def alta_personal_centralizada(
                 "usuario": response_usuario.json()
             }
         else:
-            error_detalle = response_usuario.json().get("detail", "Error al crear credenciales de acceso.")
+            error_detalle = _extraer_detalle_error(response_usuario)
             status_error = response_usuario.status_code
 
     except httpx.RequestError as exc:
         error_detalle = f"Falla de red con ms-auth durante la fase de acoplamiento: {str(exc)}"
         status_error = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    # Paso 3: FASE DE COMPENSACIÓN (Garantía de Atomicidad de la Saga Orquestada)
+    # Paso 3: FASE DE COMPENSACIÓN (Reversión Idempotente de la Saga Orquestada)
     if not ejecucion_usuario_correcta:
         try:
+            # Llama al endpoint de eliminación (Reactivable mediante la lógica idempotente de ms-personas)
             response_compensacion = await client.delete(
                 f"{MS_PERSONAS_ROUTE}/{id_persona_creada}", 
                 headers=headers
@@ -105,7 +125,7 @@ async def alta_personal_centralizada(
                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                     detail={
                         "error": "Inconsistencia Crítica del Ecosistema",
-                        "mensaje": "Falló el registro de credenciales y la posterior purga de datos demográficos.",
+                        "mensaje": "Falló el registro de credenciales y la subsecuente compensación demográfica.",
                         "origen": error_detalle
                     }
                 )
@@ -115,7 +135,6 @@ async def alta_personal_centralizada(
                 detail=f"Error catastrófico en red de compensación: {str(comp_exc)}. Origen: {error_detalle}"
             )
 
-        # Propagar el error original que causó la falla tras limpiar el ecosistema de datos
         raise HTTPException(status_code=status_error, detail=error_detalle)
 
 
@@ -132,7 +151,7 @@ async def crear_persona(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.post(MS_PERSONAS_ROUTE, json=body.model_dump(), headers=headers)
     if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.get("/personas", response_model=schemas.PersonaPaginatedOutBFF)
@@ -152,7 +171,7 @@ async def listar_personas(
         
     response = await client.get(MS_PERSONAS_ROUTE, params=params, headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.patch("/personas/{id_persona}", response_model=schemas.PersonaOutBFF)
@@ -166,7 +185,7 @@ async def actualizar_persona(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.patch(f"{MS_PERSONAS_ROUTE}/{id_persona}", json=body.model_dump(exclude_unset=True), headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.delete("/personas/{id_persona}", status_code=status.HTTP_204_NO_CONTENT)
@@ -179,7 +198,7 @@ async def dar_baja_persona(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.delete(f"{MS_PERSONAS_ROUTE}/{id_persona}", headers=headers)
     if response.status_code != 204:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return
 
 @router.post("/usuarios", response_model=schemas.UserOutBFF, status_code=status.HTTP_201_CREATED)
@@ -192,7 +211,7 @@ async def crear_usuario(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.post(MS_USUARIOS_ROUTE, json=body.model_dump(), headers=headers)
     if response.status_code != 201:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.get("/usuarios", response_model=schemas.UserPaginatedOutBFF)
@@ -208,7 +227,7 @@ async def listar_usuarios(
     params = {"limit": limit, "offset": offset, "incluir_inactivos": incluir_inactivos}
     response = await client.get(MS_USUARIOS_ROUTE, params=params, headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.patch("/usuarios/{id_usuario}", response_model=schemas.UserOutBFF)
@@ -222,7 +241,7 @@ async def actualizar_usuario(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.patch(f"{MS_USUARIOS_ROUTE}/{id_usuario}", json=body.model_dump(exclude_unset=True), headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.put("/usuarios/{id_usuario}/roles", response_model=schemas.UserOutBFF)
@@ -236,7 +255,7 @@ async def actualizar_roles_usuario(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.put(f"{MS_USUARIOS_ROUTE}/{id_usuario}/roles", json=body.model_dump(), headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.delete("/usuarios/{id_usuario}", status_code=status.HTTP_204_NO_CONTENT)
@@ -249,7 +268,7 @@ async def dar_baja_usuario(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.delete(f"{MS_USUARIOS_ROUTE}/{id_usuario}", headers=headers)
     if response.status_code != 204:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return
 
 # ==============================================================================
@@ -264,7 +283,7 @@ async def listar_roles(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.get(MS_ROLES_ROUTE, headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()
 
 @router.put("/roles/{id_rol}/permisos", response_model=List[schemas.PermisoOutBFF])
@@ -278,5 +297,5 @@ async def actualizar_permisos_del_rol(
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
     response = await client.put(f"{MS_ROLES_ROUTE}/{id_rol}/permisos", json=body.model_dump(), headers=headers)
     if response.status_code != 200:
-        raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return response.json()

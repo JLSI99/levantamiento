@@ -19,10 +19,10 @@ logger = logging.getLogger("bff.routers.resguardos")
 MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000").rstrip("/")
 MS_RESGUARDOS_ENDPOINT = f"{MS_RESGUARDOS_BASE_URL}/resguardos"
 
-MS_BIENES_ROUTE      = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000').rstrip('/')}/bienes"
-MS_UBICACIONES_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
+MS_BIENES_ROUTE        = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000').rstrip('/')}/bienes"
+MS_UBICACIONES_ROUTE   = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
 MS_DEPARTAMENTOS_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/departamentos"
-MS_PERSONAS_ROUTE    = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
+MS_PERSONAS_ROUTE      = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
 
 
 # ==============================================================================
@@ -52,7 +52,7 @@ async def hidratar_un_resguardo(
             logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación: {str(r)}")
             return {}
         if r.status_code != 200:
-            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación.")
+            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación. Detalle: {r.text}")
             return {}
         return r.json()
 
@@ -91,15 +91,19 @@ async def hidratar_resguardo_completo(
     id_departamento = resguardo["id_departamento"]
     curp_objetivo = resguardo["curp"]
 
-    # Corrección del Contrato: Consumir la ruta parametrizada por query string aceptada por ms-personas
-    url_personas_corregida = f"{MS_PERSONAS_ROUTE}?curp={curp_objetivo.upper().strip()}&limit=1&incluir_inactivos=true"
+    # Invariante de Contrato: Delegar la parametrización al motor de HTTPX para evitar fallos de escape
+    personas_params = {
+        "curp": curp_objetivo.upper().strip(),
+        "limit": 1,
+        "incluir_inactivos": "true"
+    }
 
     tareas = [
         client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
         client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers),
-        client.get(url_personas_corregida, headers=headers)
+        client.get(MS_PERSONAS_ROUTE, params=personas_params, headers=headers)
     ]
     
     respuestas = await asyncio.gather(*tareas, return_exceptions=True)
@@ -109,7 +113,8 @@ async def hidratar_resguardo_completo(
             logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación completa: {str(r)}")
             return {}
         if r.status_code != 200:
-            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación completa.")
+            # Exponer explícitamente el payload de error del microservicio en los logs del contenedor BFF
+            logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación completa. Detalle: {r.text}")
             return {}
         return r.json()
 

@@ -83,7 +83,7 @@ class EdificioPaginatedOut(BaseModel):
 
 class DepartamentoBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150)
-    id_jefe_departamento: Optional[UUID] = None
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
 
     @field_validator('nombre')
     @classmethod
@@ -98,7 +98,8 @@ class DepartamentoCreate(DepartamentoBase):
 
 class DepartamentoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=150)
-    id_jefe_departamento: Optional[UUID] = None
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
+
 
     @field_validator('nombre')
     @classmethod

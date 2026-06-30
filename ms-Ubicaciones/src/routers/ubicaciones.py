@@ -16,7 +16,6 @@ router = APIRouter(
     prefix="/ubicaciones",
     tags=["Ubicaciones Físicas"]
 )
-
 # ------------------------------------------------------------------------------
 # SUBSISTEMA: EDIFICIOS
 # ------------------------------------------------------------------------------
@@ -32,7 +31,6 @@ async def crear_edificio(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("ubicaciones:crear"))
 ):
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     nuevo = models.Edificio(
@@ -82,7 +80,6 @@ async def listar_edificios(
     
     return {"total": total, "limit": limit, "offset": offset, "data": edificios}
 
-
 @router.get(
     "/edificios/{id_edificio}", 
     response_model=schemas.EdificioOut
@@ -101,7 +98,6 @@ async def obtener_edificio(
     if not edificio:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Edificio no encontrado.")
     return edificio
-
 
 @router.patch(
     "/edificios/{id_edificio}", 
@@ -134,7 +130,6 @@ async def actualizar_edificio(
     try:
         await db.commit()
         
-        # Re-fetch con carga relacional explícita post-commit
         stmt_refresh = select(models.Edificio).options(selectinload(models.Edificio.aulas)).where(models.Edificio.id_edificio == id_edificio)
         res_refresh = await db.execute(stmt_refresh)
         return res_refresh.scalars().first()
@@ -144,7 +139,6 @@ async def actualizar_edificio(
             status_code=status.HTTP_409_CONFLICT, 
             detail="Ya existe un edificio con ese nombre o clave."
         )
-
 
 @router.delete(
     "/edificios/{id_edificio}", 
@@ -166,18 +160,15 @@ async def borrar_edificio(
     if not edificio.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El edificio ya está dado de baja.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     edificio.is_active = False 
     
-    # Cascading Soft Delete imperativo sobre sub-entidades vinculadas
     stmt_aulas = update(models.Aula).where(models.Aula.id_edificio == id_edificio).values(is_active=False)
     await db.execute(stmt_aulas)
     
     await db.commit()
     return
-
 # ------------------------------------------------------------------------------
 # SUBSISTEMA: AULAS
 # ------------------------------------------------------------------------------
@@ -200,7 +191,6 @@ async def crear_aula(
     if not edificio.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes agregar aulas a un edificio inactivo.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     nueva_aula = models.Aula(
@@ -217,7 +207,6 @@ async def crear_aula(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Error de integridad relacional al crear el aula.")
-
 
 @router.get(
     "/aulas/{id_aula}", 
@@ -237,7 +226,6 @@ async def obtener_aula(
     if not aula:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Aula no encontrada.")
     return aula
-
 
 @router.patch(
     "/aulas/{id_aula}", 
@@ -260,7 +248,6 @@ async def actualizar_aula(
     if not aula.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un aula inactiva.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     update_data = aula_in.model_dump(exclude_unset=True)
@@ -274,7 +261,6 @@ async def actualizar_aula(
     except IntegrityError:
         await db.rollback()
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Restricción de unicidad violada en la modificación.")
-
 
 @router.delete(
     "/aulas/{id_aula}", 
@@ -296,7 +282,6 @@ async def borrar_aula(
     if not aula.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El aula ya está dada de baja.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     aula.is_active = False

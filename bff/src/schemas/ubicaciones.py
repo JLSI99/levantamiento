@@ -1,4 +1,4 @@
- from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from uuid import UUID
 
@@ -77,16 +77,16 @@ class AulaOutBFF(BaseModel):
 # ==============================================================================
 class DepartamentoCreateBFF(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150, description="Nombre oficial del departamento")
-    id_jefe_departamento: Optional[UUID] = Field(None, description="UUID referencial débil del encargado en ms-personas")
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
 
 class DepartamentoUpdateBFF(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=150)
-    id_jefe_departamento: Optional[UUID] = None
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
 
 class DepartamentoOutBFF(BaseModel):
     id_departamento: UUID
     nombre: str
-    id_jefe_departamento: Optional[UUID] = None
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
     is_active: bool
 
     model_config = {

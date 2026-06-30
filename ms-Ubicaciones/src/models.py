@@ -9,7 +9,7 @@ class Departamento(Base):
 
     id_departamento = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nombre = Column(String(150), unique=True, nullable=False, index=True)
-    id_jefe_departamento = Column(UUID(as_uuid=True), nullable=True) # ID lógico débil a ms-personas
+    curp_jefe_departamento = Column(String(18), nullable=False, index=True) # ID lógico débil a ms-personas
     is_active = Column(Boolean, default=True, nullable=False)
 
 

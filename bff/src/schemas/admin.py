@@ -3,9 +3,8 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from uuid import UUID
 from typing import Optional, List
 
-# Expresión regular oficial RENAPO con flag (?i) para asegurar interoperabilidad en la fase de parseo
 PATRON_CURP_COMPLIANT = r"(?i)^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
-
+PATRON_NOMBRES_BFF = r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$"
 # ------------------------------------------------------------------------------
 # SUBSISTEMA DE PERSONAS (DATOS DEMOGRÁFICOS)
 # ------------------------------------------------------------------------------
@@ -24,8 +23,8 @@ class PersonaCreateBFF(BaseModel):
     @classmethod
     def limpiar_y_validar_nombres(cls, v: str) -> str:
         v = v.strip()
-        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
-            raise ValueError("Los nombres y apellidos solo pueden contener letras y espacios.")
+        if not re.match(PATRON_NOMBRES_BFF, v):
+            raise ValueError("Los nombres y apellidos solo pueden contener letras, espacios y caracteres acentuados o diéresis.")
         return v
 
     @field_validator("curp")
@@ -44,8 +43,8 @@ class PersonaUpdateBFF(BaseModel):
         if v is None:
             return v
         v = v.strip()
-        if not re.match(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$", v):
-            raise ValueError("Los nombres y apellidos solo pueden contener letras y espacios.")
+        if not re.match(PATRON_NOMBRES_BFF, v):
+            raise ValueError("Los nombres y apellidos solo pueden contener letras, espacios y caracteres acentuados o diéresis.")
         return v
 
     @field_validator("curp")
@@ -67,7 +66,6 @@ class PersonaPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[PersonaOutBFF]
-
 # ------------------------------------------------------------------------------
 # SUBSISTEMA DE USUARIOS E IDENTIDADES CRIPTOGRÁFICAS
 # ------------------------------------------------------------------------------
@@ -154,7 +152,6 @@ class UserPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[UserOutBFF]
-
 # ------------------------------------------------------------------------------
 # ESTRUCTURAS COMPUESTAS ATÓMICAS (ORQUESTACIÓN)
 # ------------------------------------------------------------------------------
@@ -165,7 +162,6 @@ class AltaPersonalCompuestaRequestBFF(BaseModel):
 class AltaPersonalCompuestaOutBFF(BaseModel):
     persona: PersonaOutBFF
     usuario: UserOutBFF
-
 # ------------------------------------------------------------------------------
 # SUBSISTEMA DE CAPACIDADES Y ROLES GLOBALES
 # ------------------------------------------------------------------------------
