@@ -1,20 +1,26 @@
 import { ubicacionesService } from '../services/ubicaciones.js';
 
 export class SelectorUbicacion {
+    /**
+     * @param {string} containerId - ID del contenedor que alojará el elemento select.
+     */
     constructor(containerId) {
-        this.container = document.getElementById(containerId);
+        this.containerId = containerId;
         this.domSelect = document.createElement('select');
         this.domSelect.className = 'form-select-custom';
         this.domSelect.name = 'id_aula_destino';
     }
 
     async inicializar() {
-        this.container.innerHTML = '<span>Cargando infraestructura institucional...</span>';
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+        
+        container.innerHTML = '<span>Cargando infraestructura institucional...</span>';
         
         try {
             const catalogos = await ubicacionesService.obtenerCatalogosUnificados();
             
-            this.container.innerHTML = '';
+            container.innerHTML = '';
             this.domSelect.innerHTML = '<option value="">-- Seleccione el Aula de Destino --</option>';
 
             catalogos.aulas.forEach(aula => {
@@ -24,9 +30,9 @@ export class SelectorUbicacion {
                 this.domSelect.appendChild(option);
             });
 
-            this.container.appendChild(this.domSelect);
+            container.appendChild(this.domSelect);
         } catch (error) {
-            this.container.innerHTML = '<span class="text-error">Error al cargar catálogos de infraestructura</span>';
+            container.innerHTML = '<span class="text-error">Error al cargar catálogos de infraestructura</span>';
         }
     }
 

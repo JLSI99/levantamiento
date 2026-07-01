@@ -1,7 +1,6 @@
 import bffClient from '../api/client.js';
 
 export const authService = {
-
     async login(username, password) {
         try {
             const response = await bffClient.post('/auth/login', { username, password });

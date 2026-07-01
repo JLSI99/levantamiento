@@ -1,5 +1,4 @@
-import { authService } from '../services/auth.js';
-import authStore from '../store/auhtStore.js';
+import authStore from '../store/authStore.js';
 
 export function renderLoginView() {
     const loginFrame = document.createElement('div');
@@ -26,13 +25,7 @@ export function renderLoginView() {
             submitBtn.textContent = 'Autenticando en Perímetro...';
             errorOutput.textContent = '';
 
-            const datosSesion = await authService.login(username, password);
-            
-            authStore.setState({
-                isAuthenticated: true,
-                user: datosSesion.user,
-                capabilities: datosSesion.capabilities
-            });
+            await authStore.login(username, password);
         } catch (error) {
             errorOutput.textContent = error.response?.data?.detail || 'Falla crítica de comunicación con el BFF.';
         } finally {

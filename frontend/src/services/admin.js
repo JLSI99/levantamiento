@@ -1,7 +1,6 @@
 import bffClient from '../api/client.js';
 
 export const adminService = {
-
     async crearPersona(personaData) {
         try {
             const response = await bffClient.post('/admin/personas', personaData);

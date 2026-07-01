@@ -1,4 +1,4 @@
-import bffClient from '../api/client.js';
+import { authService } from '../services/auth.js';
 
 const state = {
     usuario: null,
@@ -11,56 +11,67 @@ const state = {
 const listeners = new Set();
 
 const authStore = {
+    /**
+     * @param {Function} listener 
+     * @returns {Function} 
+     */
     subscribe(listener) {
         listeners.add(listener);
         listener({ ...state });
         return () => listeners.delete(listener);
     },
 
+    /**
+     * @private
+     */
     _notify() {
+        const stateCopy = { ...state };
         for (const listener of listeners) {
-            listener({ ...state });
+            listener(stateCopy);
         }
     },
 
+    /**
+     * @param {Object} newState 
+     */
+    setState(newState) {
+        Object.assign(state, newState);
+        this._notify();
+    },
+
+    /**
+     * @returns {Promise<boolean>}
+     */
     async checkSessionContext() {
         const token = localStorage.getItem('bff_token');
         if (!token) {
-            state.usuario = null;
-            state.roles = [];
-            state.capabilities = [];
-            state.isAuthenticated = false;
-            state.isLoaded = true;
-            this._notify();
+            this.clearLocalSession();
             return false;
         }
 
         try {
-            const response = await bffClient.get('/auth/me');
-            const data = response.data;
-
-            state.usuario = data.usuario;
-            state.roles = data.roles;
-            state.capabilities = data.capabilities;
-            state.isAuthenticated = true;
-            state.isLoaded = true;
-            this._notify();
+            const data = await authService.obtenerContextoMe();
+            this.setState({
+                usuario: data.usuario,
+                roles: data.roles,
+                capabilities: data.capabilities,
+                isAuthenticated: true,
+                isLoaded: true
+            });
             return true;
         } catch (error) {
-            state.usuario = null;
-            state.roles = [];
-            state.capabilities = [];
-            state.isAuthenticated = false;
-            state.isLoaded = true;
-            this._notify();
+            this.clearLocalSession();
             return false;
         }
     },
 
+    /**
+     * @param {string} username 
+     * @param {string} password 
+     */
     async login(username, password) {
         try {
-            const response = await bffClient.post('/auth/login', { username, password });
-            const tokenData = response.data;
+            const tokenData = await authService.login(username, password);
             
             localStorage.setItem('bff_token', tokenData.access_token);
             if (tokenData.refresh_token) {
@@ -69,27 +80,37 @@ const authStore = {
             
             return await this.checkSessionContext();
         } catch (error) {
-            console.error('Error en las credenciales provistas al BFF:', error);
+            this.clearLocalSession();
             throw error;
         }
     },
 
     async logout() {
         try {
-            await bffClient.post('/auth/logout');
+            await authService.logout();
         } catch (e) {
-            console.warn('Cierre de sesión asentado de forma puramente perimetral.');
+            console.warn('Cierre de sesión remoto fallido; purgando estado local de forma restrictiva.');
         } finally {
-            localStorage.removeItem('bff_token');
-            localStorage.removeItem('bff_refresh_token');
-            state.usuario = null;
-            state.roles = [];
-            state.capabilities = [];
-            state.isAuthenticated = false;
-            this._notify();
+            this.clearLocalSession();
         }
     },
 
+    clearLocalSession() {
+        localStorage.removeItem('bff_token');
+        localStorage.removeItem('bff_refresh_token');
+        this.setState({
+            usuario: null,
+            roles: [],
+            capabilities: [],
+            isAuthenticated: false,
+            isLoaded: true
+        });
+    },
+
+    /**
+     * @param {string} capability 
+     * @returns {boolean}
+     */
     hasCapability(capability) {
         return state.capabilities.includes(capability);
     }

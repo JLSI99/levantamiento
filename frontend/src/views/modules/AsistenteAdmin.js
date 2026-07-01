@@ -1,7 +1,7 @@
 import { AsistenteAlta } from '../../components/AsistenteAlta.js';
 import { guardElement } from '../../components/CanRender.js';
 
-export function crearModuloAsistenteAdministrativo() {
+export function crearModuloAsistenteAdministrativo(state) {
     const widget = document.createElement('section');
     widget.className = 'widget-box';
     
@@ -10,10 +10,8 @@ export function crearModuloAsistenteAdministrativo() {
     innerContainer.id = containerId;
     widget.appendChild(innerContainer);
 
-    setTimeout(() => {
-        const asistente = new AsistenteAlta(containerId);
-        asistente.render();
-    }, 0);
+    const asistente = new AsistenteAlta(innerContainer);
+    asistente.render();
 
-    return guardElement('OP_ADMIN_USUARIOS', widget);
+    return guardElement(['usuarios:crear', 'personas:crear'], widget, true);
 }

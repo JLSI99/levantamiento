@@ -1,8 +1,11 @@
-import bffClient from '../api/client.js';
+import { adminService } from '../services/admin.js';
 
 export class AsistenteAlta {
-    constructor(containerId) {
-        this.container = document.getElementById(containerId);
+    /**
+     * @param {HTMLElement} containerElement - Referencia directa al nodo del DOM.
+     */
+    constructor(containerElement) {
+        this.container = containerElement;
         this.idPersonaCreada = null;
         this.curpPersonaCreada = null;
     }
@@ -44,26 +47,33 @@ export class AsistenteAlta {
         formPersona.onsubmit = async (e) => {
             e.preventDefault();
             const formData = new FormData(formPersona);
+            const targetCurp = formData.get('curp').toUpperCase();
             const payload = {
-                curp: formData.get('curp').toUpperCase(),
+                curp: targetCurp,
                 nombres: formData.get('nombres'),
                 apellidos: formData.get('apellidos')
             };
 
             try {
-                const response = await bffClient.post('/admin/personas', payload);
-                const persona = response.data;
-
-                this.idPersonaCreada = persona.id_persona;
-                this.curpPersonaCreada = persona.curp;
-
-                this.container.querySelector('#txt-persona-vinculada').textContent = `${persona.nombres} ${persona.apellidos}`;
-                formPersona.style.display = 'none';
-                formUsuario.style.display = 'block';
-                
-                this.container.querySelector('#step-1-label').className = 'step-done';
-                this.container.querySelector('#step-2-label').className = 'step-active';
+                // Desacoplamiento de bffClient; enrutamiento a través de la capa de servicios de administración
+                const persona = await adminService.crearPersona(payload);
+                this.avanzarFaseUsuario(persona);
             } catch (error) {
+                // Estrategia de Resiliencia ante Fallas No Atómicas en Transacciones Distribuidas
+                if (error.response?.status === 409) {
+                    const confirmacion = confirm("La CURP provista ya cuenta con un registro en ms-personas. ¿Desea recuperar la identidad existente y proceder con el Paso 2?");
+                    if (confirmacion) {
+                        try {
+                            const catalogo = await adminService.listarPersonas(1, 0, true, targetCurp);
+                            if (catalogo && catalogo.length > 0) {
+                                this.avanzarFaseUsuario(catalogo[0]);
+                                return;
+                            }
+                        } catch (fetchErr) {
+                            alert(`Fallo en la recuperación forzada de identidad: ${fetchErr.message}`);
+                        }
+                    }
+                }
                 alert(`Error al registrar la identidad física: ${error.response?.data?.detail || error.message}`);
             }
         };
@@ -78,12 +88,27 @@ export class AsistenteAlta {
             };
 
             try {
-                await bffClient.post('/admin/usuarios', payloadUser);
+                await adminService.crearUsuario(payloadUser);
                 alert('Flujo completo finalizado con éxito. Identidad y cuenta digital vinculadas.');
                 this.render();
             } catch (error) {
                 alert(`Error al generar la credencial digital: ${error.response?.data?.detail || error.message}`);
             }
         };
+    }
+
+    avanzarFaseUsuario(persona) {
+        const formPersona = this.container.querySelector('#form-persona-fase');
+        const formUsuario = this.container.querySelector('#form-usuario-fase');
+
+        this.idPersonaCreada = persona.id_persona;
+        this.curpPersonaCreada = persona.curp;
+
+        this.container.querySelector('#txt-persona-vinculada').textContent = `${persona.nombres} ${persona.apellidos}`;
+        formPersona.style.display = 'none';
+        formUsuario.style.display = 'block';
+        
+        this.container.querySelector('#step-1-label').className = 'step-done';
+        this.container.querySelector('#step-2-label').className = 'step-active';
     }
 }
