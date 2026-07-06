@@ -42,7 +42,7 @@ bffClient.interceptors.response.use(
         if (!error.response) {
             console.error('Fallo de red severo o caída perimetral del BFF:', error.message);
             return Promise.reject(error);
-        }
+        }    
 
         const status = error.response.status;
 

@@ -2,7 +2,7 @@ import { ubicacionesService } from '../services/ubicaciones.js';
 
 export class SelectorUbicacion {
     /**
-     * @param {string} containerId - ID del contenedor que alojará el elemento select.
+     * @param {string} containerId 
      */
     constructor(containerId) {
         this.containerId = containerId;

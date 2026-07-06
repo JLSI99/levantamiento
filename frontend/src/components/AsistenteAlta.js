@@ -2,7 +2,7 @@ import { adminService } from '../services/admin.js';
 
 export class AsistenteAlta {
     /**
-     * @param {HTMLElement} containerElement - Referencia directa al nodo del DOM.
+     * @param {HTMLElement} containerElement
      */
     constructor(containerElement) {
         this.container = containerElement;
@@ -55,11 +55,9 @@ export class AsistenteAlta {
             };
 
             try {
-                // Desacoplamiento de bffClient; enrutamiento a través de la capa de servicios de administración
                 const persona = await adminService.crearPersona(payload);
                 this.avanzarFaseUsuario(persona);
             } catch (error) {
-                // Estrategia de Resiliencia ante Fallas No Atómicas en Transacciones Distribuidas
                 if (error.response?.status === 409) {
                     const confirmacion = confirm("La CURP provista ya cuenta con un registro en ms-personas. ¿Desea recuperar la identidad existente y proceder con el Paso 2?");
                     if (confirmacion) {

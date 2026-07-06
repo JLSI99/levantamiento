@@ -52,7 +52,6 @@ export function crearModuloHistorialResguardos(state) {
                 fback.className = 'text-success';
                 fback.textContent = 'Procesando firma y asignación...';
                 
-                // Consumo del servicio unificado en lugar de puenteo directo al cliente HTTP crudo
                 await resguardosService.crearAsignacion({ id_bien: idBien, curp_resguardatario: curpTarget });
                 
                 fback.textContent = 'Contrato de resguardo generado exitosamente.';
@@ -93,7 +92,6 @@ export function crearModuloHistorialResguardos(state) {
                 const row = document.createElement('tr');
                 row.style.borderBottom = '1px solid var(--border)';
                 
-                // Normalización estructural explícita en la capa del consumidor visual
                 const curpVisual = resguardo.curp_resguardatario || resguardo.curp || 'N/A';
                 
                 row.innerHTML = `

@@ -40,6 +40,7 @@ const authStore = {
     },
 
     /**
+     * Resuelve de forma centralizada la sesión contra el esquema UserSessionContextOut del BFF.
      * @returns {Promise<boolean>}
      */
     async checkSessionContext() {
@@ -51,6 +52,7 @@ const authStore = {
 
         try {
             const data = await authService.obtenerContextoMe();
+            // Mapeo simétrico del payload UserSessionContextOut
             this.setState({
                 usuario: data.usuario,
                 roles: data.roles,
@@ -66,6 +68,7 @@ const authStore = {
     },
 
     /**
+     * Operación atómica de autenticación.
      * @param {string} username 
      * @param {string} password 
      */
@@ -73,6 +76,7 @@ const authStore = {
         try {
             const tokenData = await authService.login(username, password);
             
+            // Seteo de tokens basado en las claves de TokenBFF
             localStorage.setItem('bff_token', tokenData.access_token);
             if (tokenData.refresh_token) {
                 localStorage.setItem('bff_refresh_token', tokenData.refresh_token);
@@ -108,6 +112,7 @@ const authStore = {
     },
 
     /**
+     * Interceptor lógico para protección de rutas y renderizado CapBAC.
      * @param {string} capability 
      * @returns {boolean}
      */
@@ -115,5 +120,10 @@ const authStore = {
         return state.capabilities.includes(capability);
     }
 };
+
+// Escucha perimetral de caducidad del token (disparado por los interceptores de red)
+window.addEventListener('auth-expired', () => {
+    authStore.clearLocalSession();
+});
 
 export default authStore;

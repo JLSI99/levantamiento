@@ -53,9 +53,9 @@ PERMISOS_BASE = [
 MATRIZ_ACCESO = {
     1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], 
     2: [8, 12, 15, 16, 17, 18, 20, 24], 
-    3: [11, 12, 13, 14, 20, 24],  # Resuelve bloqueo de carga de catálogos en AltaBienes.js
-    4: [2, 8, 12, 16, 20, 24],     # Habilita lectura transversal analítica al Revisor
-    5: [8, 12, 16, 20]             # Permite al Resguardante aislar sus registros en la UI
+    3: [11, 12, 13, 14],
+    4: [12],    
+    5: [8, 12, 16, 20,24]             
 }
 
 USUARIOS_SEMILLA = [

@@ -1,7 +1,6 @@
-import authStore from './store/auhtStore.js';
-import { authService } from './services/auth.js';
-import { renderLoginView } from './views/LoginView.js';
-import { renderDashboardView } from './views/DashboardView.js';
+import authStore from './store/authStore.js';
+import { renderLoginView } from './views/LoginViews.js';
+import { renderDashboardView } from './views/DashboardViews.js';
 
 class AppOrchestrator {
     constructor() {
@@ -12,25 +11,13 @@ class AppOrchestrator {
     }
 
     inicializar() {
+        // Enlazar el ciclo de vida reactivo del Store al contenedor principal
         authStore.subscribe((state) => {
             this.renderizarSegunEstado(state);
         });
 
-        this.verificarSesionExistente();
-    }
-
-    async verificarSesionExistente() {
-        try {
-            const contexto = await authService.obtenerContextoMe();
-            authStore.setState({
-                isAuthenticated: true,
-                user: contexto.usuario,
-                capabilities: contexto.capacidades || []
-            });
-        } catch (error) {
-            console.log('Sin sesión activa previa, direccionando a pasarela de acceso.');
-            authStore.setState({ isAuthenticated: false, user: null, capabilities: [] });
-        }
+        // Delegar la evaluación inicial al gestor central de contexto
+        authStore.checkSessionContext();
     }
 
     renderizarSegunEstado(state) {

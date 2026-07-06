@@ -2,7 +2,6 @@ from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 
 class UserLoginBFF(BaseModel):
-    """Esquema de entrada para la autenticación perimetral."""
     identifier: str = Field(
         ..., 
         min_length=3,
@@ -12,23 +11,19 @@ class UserLoginBFF(BaseModel):
     password: str = Field(..., min_length=8, description="Contraseña en texto plano")
 
 class TokenBFF(BaseModel):
-    """Esquema de salida que representa el par de tokens criptográficos."""
     access_token: str = Field(..., description="JWT Access Token firmado con capacidades CapBAC")
     refresh_token: str = Field(..., description="JWT Refresh Token para extensión de sesión")
     token_type: str = Field("bearer", description="Esquema de autenticación estandarizado")
 
 class TokenRefreshBFF(BaseModel):
-    """Esquema de entrada obligatorio para la renovación de tokens expirados."""
     refresh_token: str = Field(..., description="Refresh Token criptográfico vigente")
 
 class UserDataSession(BaseModel):
-    """Sub-esquema representativo de la identidad del usuario en sesión."""
     id_usuario: str = Field(..., description="UUID del usuario mapeado desde el claim 'sub'")
     username: str = Field(..., description="Username extraído de los claims")
     email: Optional[EmailStr] = Field(None, description="Email institucional validado")
 
 class UserSessionContextOut(BaseModel):
-    """Contrato de salida unificado para la resolución de contexto en el cliente."""
     usuario: UserDataSession
     roles: List[str] = Field(default_factory=list, description="Roles asignados al rol relacional")
     capabilities: List[str] = Field(default_factory=list, description="Set plano de capacidades CapBAC permitidas")

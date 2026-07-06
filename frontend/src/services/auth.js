@@ -1,9 +1,22 @@
 import bffClient from '../api/client.js';
 
 export const authService = {
+    /**
+     * Transmite las credenciales de acceso perimetral cumpliendo de forma simétrica
+     * el esquema Pydantic UserLoginBFF del backend (/auth/login).
+     * @param {string} username - Usuario o Email Institucional capturado en interfaz.
+     * @param {string} password - Contraseña en texto plano.
+     * @returns {Promise<Object>} Estructura TokenBFF firmada por el backend.
+     */
     async login(username, password) {
         try {
-            const response = await bffClient.post('/auth/login', { username, password });
+            // El backend exige estrictamente la clave 'identifier' y 'password' en un JSON plano.
+            // bffClient (Axios) serializa el objeto de forma automática y asienta 'application/json'.
+            const response = await bffClient.post('/auth/login', { 
+                identifier: username.trim(), 
+                password: password 
+            });
+            
             return response.data;
         } catch (error) {
             console.error('Fallo en el servicio de autenticación perimetral (Login):', error);
@@ -11,6 +24,10 @@ export const authService = {
         }
     },
 
+    /**
+     * Resuelve el contexto de capacidades del usuario bajo el estándar CapBAC (/auth/me).
+     * @returns {Promise<Object>} Contexto mapeado simétricamente desde UserSessionContextOut
+     */
     async obtenerContextoMe() {
         try {
             const response = await bffClient.get('/auth/me');
@@ -21,6 +38,10 @@ export const authService = {
         }
     },
 
+    /**
+     * Destruye de forma segura la sesión activa en el servidor perimetral.
+     * @returns {Promise<boolean>}
+     */
     async logout() {
         try {
             await bffClient.post('/auth/logout');
@@ -31,6 +52,12 @@ export const authService = {
         }
     },
 
+    /**
+     * Esquema de entrada obligatorio para la renovación de tokens expirados.
+     * Mapea de forma idéntica la clave 'refresh_token' exigida por TokenRefreshBFF.
+     * @param {string} refreshToken - Token criptográfico de refresco.
+     * @returns {Promise<Object>} Nuevo par de claves TokenBFF.
+     */
     async refrescarSesion(refreshToken) {
         try {
             const response = await bffClient.post('/auth/refresh', { refresh_token: refreshToken });
