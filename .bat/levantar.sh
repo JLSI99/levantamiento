@@ -1,10 +1,8 @@
 #!/bin/bash
-# Forzar detención si algún comando intermedio falla
 set -e
 
 echo "=== INICIALIZANDO ECOSISTEMA DE LEVANTAMIENTO DE BIENES ==="
 
-# Función para verificar disponibilidad de puertos / salud (Sincronización)
 esperar_servicio() {
     local host=$1
     local puerto=$2
@@ -26,8 +24,6 @@ cd ms-observabilidad && docker compose up --build -d && cd ..
 
 echo "--- Levantando ms usuarios y autenticacion ---"
 cd ms-usuarios-y-autenticacion && docker compose up --build -d && cd ..
-# Bloqueo de sincronización activa si el contenedor expone puerto a la red externa
-# o si ejecutas pruebas locales. Ajustar el host/puerto correspondiente.
 
 echo "--- Levantando ms personas ---"
 cd ms-personas && docker compose up --build -d && cd ..

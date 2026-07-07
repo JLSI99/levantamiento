@@ -3,7 +3,6 @@ set -e
 
 echo "=== DETENIENDO ECOSISTEMA COMPLETO ==="
 
-# Se detiene en orden inverso para evitar huérfanos de red
 echo "--- Deteniendo Frontend ---"
 cd frontend && docker compose down -v && cd ..
 
