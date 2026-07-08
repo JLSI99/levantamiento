@@ -33,10 +33,7 @@ async def obtener_todos_los_catalogos_form(
     request: Request,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer")) 
 ):
-    """
-    Consolida de manera concurrente los catálogos de edificios, aulas y departamentos.
-    Aprovecha la flexibilización de contratos del microservicio base (limit=1000).
-    """
+
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
@@ -255,7 +252,6 @@ async def borrar_aula(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-
 # ==============================================================================
 # CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
 # ==============================================================================

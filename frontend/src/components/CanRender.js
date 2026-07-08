@@ -1,11 +1,5 @@
 import authStore from '../store/authStore.js';
 
-/**
- * @param {string|string[]} requiredCapabilities 
- * @param {HTMLElement} element 
- * @param {boolean} matchAll 
- * @returns {HTMLElement} 
- */
 export function guardElement(requiredCapabilities, element, matchAll = false) {
     const wrapper = document.createElement('div');
     wrapper.style.display = 'contents';
@@ -13,19 +7,19 @@ export function guardElement(requiredCapabilities, element, matchAll = false) {
     const capabilities = Array.isArray(requiredCapabilities) ? requiredCapabilities : [requiredCapabilities];
     wrapper.setAttribute('data-capability-guard', capabilities.join(' '));
 
-    const placeholder = document.createComment(`Hidden: Requires capabilities [${capabilities.join(', ')}]`);
+    const placeholder = document.createComment(`Hidden: Requires [${capabilities.join(', ')}]`);
     wrapper.appendChild(placeholder);
 
     let isFirstRun = true;
 
     const unsubscribe = authStore.subscribe((state) => {
         if (!isFirstRun && !wrapper.isConnected) {
-            unsubscribe();
+            cleanup();
             return;
         }
         isFirstRun = false;
 
-        if (!state.isAuthenticated) {
+        if (!state.isAuthenticated || !state.capabilities) {
             if (!wrapper.contains(placeholder)) {
                 wrapper.innerHTML = '';
                 wrapper.appendChild(placeholder);
@@ -50,7 +44,25 @@ export function guardElement(requiredCapabilities, element, matchAll = false) {
         }
     });
 
-    wrapper.__cleanupGuard = unsubscribe;
+    function cleanup() {
+        unsubscribe();
+        observer.disconnect();
+    }
 
+    const observer = new MutationObserver(() => {
+        if (!wrapper.isConnected) cleanup();
+    });
+
+    Promise.resolve().then(() => {
+        if (wrapper.isConnected) {
+            observer.observe(document.body, { childList: true, subtree: true });
+        } else if (wrapper.parentElement) {
+            observer.observe(wrapper.parentElement, { childList: true, subtree: true });
+        } else {
+            observer.observe(document.body, { childList: true, subtree: true });
+        }
+    });
+
+    wrapper.__cleanupGuard = cleanup;
     return wrapper;
 }

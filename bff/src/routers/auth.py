@@ -1,4 +1,3 @@
-# bff/src/routers/auth.py
 import os
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -10,10 +9,8 @@ from src.dependencies.auth import obtener_token_valido, TokenPayload
 logger = logging.getLogger("bff.routers.auth")
 router = APIRouter()
 
-# Invariante de Red: URL base del microservicio limpia
 MS_AUTH_URL = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000").rstrip("/")
 
-# Target del proxy perimetral hacia la autenticación del microservicio base
 MS_AUTH_ROUTE = f"{MS_AUTH_URL}/auth"
 
 @router.post(

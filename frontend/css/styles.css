@@ -1,299 +1,68 @@
-/* ==========================================================================
-   1. VARIABLES DEL SISTEMA (DISEÑO INSTITUCIONAL TECNM)
-   ========================================================================== */
 :root {
-    /* Paleta de Colores Básica */
     --bg-main: #f4f6f9;
     --bg-card: #ffffff;
-    --primary: #1b396a;         /* Azul Institucional */
-    --primary-hover: #142b52;
-    --secondary: #6c757d;       /* Gris de Contención */
-    --secondary-hover: #5a6268;
-    --border: #dcdfe6;
-    --radius: 6px;
-
-    /* Tipografía y Texto */
-    --text-primary: #2d3748;
-    --text-muted: #718096;
-    
-    /* Estados Semánticos (Validaciones Pydantic / Red) */
-    --color-error: #ff3b30;
-    --bg-error: #ffe5e5;
-    --color-success: #34c759;
-    --bg-success: #e6f9ed;
-    --color-warning: #ff9500;
-    --bg-warning: #fff2e0;
-}
-
-/* Base de Renderizado */
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
+    --border-color: #d1d5db;
+    --text-main: #1f2937;
+    --text-muted: #6b7280;
+    --primary: #003366;
+    --primary-hover: #002244;
+    --text-error: #dc2626;
+    --bg-error: #fef2f2;
+    --success: #16a34a;
+    --sidebar-width: 260px;
 }
 
 body {
+    margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-main);
-    color: var(--text-primary);
-    line-height: 1.5;
-    -webkit-font-smoothing: antialiased;
+    color: var(--text-main);
+    overflow-x: hidden;
 }
 
-/* ==========================================================================
-   2. CAPA DE COMPONENTES: AUTENTICACIÓN (Login)
-   ========================================================================== */
-.login-frame {
-    max-width: 400px;
-    margin: 120px auto;
-    padding: 35px;
-    background: var(--bg-card);
-    border-radius: var(--radius);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-    border: 1px solid var(--border);
-}
-
-.login-frame h2 {
-    margin-top: 0;
-    margin-bottom: 25px;
-    font-size: 22px;
-    text-align: center;
-    color: var(--text-primary);
-    font-weight: 600;
-}
-
-/* ==========================================================================
-   3. ARQUITECTURA DE CONTENEDORES GLOBAL (Dashboard Grid)
-   ========================================================================== */
-.main-header {
-    width: 100%;
-    position: sticky;
-    top: 0;
-    z-index: 1000;
-}
-
-.header-container h1 {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--primary);
-    letter-spacing: -0.5px;
-}
-
-.dashboard-grid {
-    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
-    max-width: 1600px;
-    margin: 0 auto;
-}
-
-@media (max-width: 768px) {
-    .dashboard-grid {
-        grid-template-columns: 1fr;
-        padding: 10px;
-    }
-    .header-container {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start !important;
-    }
-}
-
-.widget-box {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 25px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+#app {
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
-    gap: 15px;
 }
 
-.widget-box h3 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--primary);
-    border-left: 3px solid var(--primary);
-    padding-left: 10px;
-    margin-bottom: 5px;
-}
-
-/* ==========================================================================
-   4. FORMULARIOS, ELEMENTOS DE CONTROL Y SELECTS
-   ========================================================================== */
-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-input[type="text"],
-input[type="password"],
-input[type="email"],
-select,
-.form-select-custom {
-    width: 100%;
-    padding: 10px 14px;
-    font-size: 14px;
-    font-family: inherit;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background-color: var(--bg-card);
-    color: var(--text-primary);
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
-
-input:focus,
-select:focus,
-.form-select-custom:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(27, 57, 106, 0.15);
-}
-
-input:disabled,
-select:disabled,
-button:disabled {
-    background-color: #f5f7fa;
-    color: var(--text-muted);
-    cursor: not-allowed;
-}
-
-/* Botones */
-button {
-    cursor: pointer;
-    padding: 11px 20px;
-    font-size: 14px;
+.text-error {
+    color: var(--text-error);
     font-weight: 500;
-    font-family: inherit;
-    border-radius: var(--radius);
-    border: 1px solid transparent;
-    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* Botón Primario */
-button[type="submit"],
 .btn-primary {
     background-color: var(--primary);
-    color: #ffffff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: 600;
+    transition: background-color 0.2s ease;
 }
 
-button[type="submit"]:hover:not(:disabled),
-.btn-primary:hover:not(:disabled) {
+.btn-primary:hover {
     background-color: var(--primary-hover);
 }
 
-/* Botón Secundario */
-.btn-secondary {
-    background-color: transparent;
-    border: 1px solid var(--border);
-    color: var(--text-primary);
+.form-select-custom, .form-input-custom {
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: white;
+    color: var(--text-main);
 }
 
-.btn-secondary:hover:not(:disabled) {
-    background-color: var(--bg-main);
-    border-color: var(--text-muted);
+.form-select-custom:focus, .form-input-custom:focus {
+    outline: 2px solid var(--primary);
 }
 
-/* ==========================================================================
-   5. COMPONENTE ESPECÍFICO: ASISTENTE DE ALTA (Wizard Flujos)
-   ========================================================================== */
 .wizard-container {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-}
-
-.steps-indicator {
-    display: flex;
-    gap: 10px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 12px;
-}
-
-.steps-indicator span {
-    flex: 1;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 8px;
-    border-radius: var(--radius);
-    transition: all 0.2s ease;
-}
-
-.step-inactive {
-    background-color: var(--bg-main);
-    color: var(--text-muted);
-    border: 1px dashed var(--border);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .step-active {
-    background-color: rgba(27, 57, 106, 0.08);
-    color: var(--primary);
-    border: 1px solid var(--primary);
-}
-
-.step-done {
-    background-color: var(--bg-success);
-    color: var(--color-success);
-    border: 1px solid var(--color-success);
-}
-
-/* ==========================================================================
-   6. VISUALIZACIÓN DE DATOS (Tablas Responsivas y Badges)
-   ========================================================================== */
-.table-responsive {
-    width: 100%;
-    margin-top: 10px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-}
-
-.table-responsive table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.table-responsive table th {
-    font-weight: 600;
-    color: var(--text-primary);
-    background-color: var(--bg-main);
-    user-select: none;
-}
-
-.table-responsive table tr {
-    transition: background-color 0.1s ease;
-}
-
-.table-responsive table tr:hover {
-    background-color: var(--bg-main);
-}
-
-.badge-rol {
-    font-family: monospace;
-    font-weight: 600;
-    color: var(--primary);
-    border: 1px solid var(--border);
-}
-
-/* ==========================================================================
-   7. UTILERÍAS DE RETROALIMENTACIÓN DINÁMICA (Feedbacks / Red)
-   ========================================================================== */
-.text-error {
-    color: var(--color-error) !important;
-    background-color: var(--bg-error);
-    border: 1px solid rgba(255, 59, 48, 0.2);
-    padding: 10px;
-    border-radius: var(--radius);
-    font-family: monospace;
-    font-size: 12px;
-    word-break: break-word;
-}
-
-.text-success {
-    color: var(--color-success) !important;
-    background-color: var(--bg-success);
-    border: 1px solid rgba(52, 199, 89, 0.2);
-    padding: 10px;
-    border-radius: var(--radius);
-    font-size: 13px;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 4px;
 }

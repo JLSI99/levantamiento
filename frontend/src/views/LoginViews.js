@@ -1,55 +1,66 @@
+import { authService } from '../services/auth.js';
 import authStore from '../store/authStore.js';
 
-/**
- * @returns {HTMLDivElement}
- */
-export function renderLoginView() {
-    const loginFrame = document.createElement('div');
-    loginFrame.className = 'login-frame';
-    loginFrame.innerHTML = `
-        <h2>Sistema de Gestión de Activos Fijos</h2>
-        <form id="form-login-ejecucion">
-            <input type="text" id="login-username" placeholder="Usuario Institucional o Email" required autocomplete="username">
-            <input type="password" id="login-password" placeholder="Contraseña" required autocomplete="current-password">
-            <button type="submit" id="btn-login-submit">Iniciar Sesión</button>
-            <div id="login-error-output" class="text-error" style="margin-top: 15px; text-align: center; color: #ff3b30; font-family: monospace; font-size: 13px;"></div>
-        </form>
-    `;
+export class LoginView {
+    constructor(containerId) {
+        this.containerId = containerId;
+    }
 
-    loginFrame.querySelector('#form-login-ejecucion').onsubmit = async (e) => {
-        e.preventDefault();
-        const username = loginFrame.querySelector('#login-username').value;
-        const password = loginFrame.querySelector('#login-password').value;
-        const errorOutput = loginFrame.querySelector('#login-error-output');
-        const submitBtn = loginFrame.querySelector('#btn-login-submit');
+    render() {
+        const root = document.getElementById(this.containerId);
+        if (!root) return;
 
-        try {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Autenticando en Perímetro...';
-            errorOutput.textContent = '';
+        root.innerHTML = `
+            <div style="display:flex; justify-content:center; align-items:center; min-height:100vh; background-color:var(--bg-main);">
+                <div class="wizard-container" style="padding:30px; width:100%; max-width:400px; box-sizing:border-box;">
+                    <div style="text-align:center; margin-bottom:20px;">
+                        <h2 style="color:var(--primary); margin:0; font-size:20px;">TecNM - Inventarios</h2>
+                        <p style="color:var(--text-muted); font-size:12px; margin-top:5px;">Control Patrimonial de Activos Fijos</p>
+                    </div>
+                    <form id="form-login" style="display:flex; flex-direction:column; gap:15px;">
+                        <div>
+                            <label style="display:block; font-size:12px; margin-bottom:5px; font-weight:600;">Identificador Institucional</label>
+                            <input type="text" id="login-username" class="form-input-custom" required style="width:100%; padding:8px; box-sizing:border-box;" placeholder="Usuario o correo">
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:12px; margin-bottom:5px; font-weight:600;">Contraseña</label>
+                            <input type="password" id="login-password" class="form-input-custom" required style="width:100%; padding:8px; box-sizing:border-box;" placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="btn-primary" style="padding:10px; font-size:14px; margin-top:5px;">Acceder al Sistema</button>
+                        <div id="login-error" class="text-error" style="font-size:12px; text-align:center; min-height:18px;"></div>
+                    </form>
+                </div>
+            </div>
+        `;
 
-            await authStore.login(username, password);
-        } catch (error) {
-            if (error.response) {
-                const status = error.response.status;
-                const data = error.response.data;
+        this.vincularEventos();
+    }
 
-                if (status === 422) {
-                    console.error('Detalle de validación Pydantic (422):', data.detail);
-                    errorOutput.textContent = 'Error 422: Contrato de datos inválido ante el BFF.';
-                } else if (data && data.detail) {
-                    errorOutput.textContent = typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail);
-                } else {
-                    errorOutput.textContent = `Error del servidor (${status}): Operación rechazada.`;
-                }
-            } else {
-                errorOutput.textContent = 'Falla crítica de red o caída perimetral del BFF.';
+    vincularEventos() {
+        const form = document.getElementById('form-login');
+        const errDiv = document.getElementById('login-error');
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            errDiv.textContent = '';
+            
+            const userInp = document.getElementById('login-username').value;
+            const passInp = document.getElementById('login-password').value;
+
+            try {
+                const tokenData = await authService.login(userInp, passInp);
+                // Carga paralela controlada del contexto CapBAC posterior al login exitoso
+                const contextMe = await authService.obtenerContextoMe();
+                
+                authStore.setSession(
+                    tokenData.access_token,
+                    tokenData.refresh_token,
+                    contextMe.user,
+                    contextMe.capabilities
+                );
+            } catch (error) {
+                errDiv.textContent = error.response?.data?.detail || 'Error de conexión perimetral.';
             }
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Iniciar Sesión';
-        }
-    };
-
-    return loginFrame;
+        };
+    }
 }

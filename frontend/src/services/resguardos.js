@@ -10,9 +10,8 @@ export const resguardosService = {
 
     async listarTodosLosResguardosInstitucionales(filtros = {}) {
         const { limit = 10, offset = 0, soloVigentes = true, incluirBorrados = false, curp = null } = filtros;
-        
         const params = { limit, offset, solo_vigentes: soloVigentes, incluir_borrados: incluirBorrados };
-        if (curp) params['curp'] = curp;
+        if (curp) params['curp'] = curp.trim().toUpperCase();
 
         const response = await bffClient.get('/resguardos', { params });
         return response.data;
@@ -20,6 +19,11 @@ export const resguardosService = {
 
     async crearAsignacion(resguardoCreateData) {
         const response = await bffClient.post('/resguardos', resguardoCreateData);
+        return response.data;
+    },
+
+    async modificarAsignacion(idAsignacion, datosCambio) {
+        const response = await bffClient.patch(`/resguardos/${idAsignacion}`, datosCambio);
         return response.data;
     },
 

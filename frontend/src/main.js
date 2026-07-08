@@ -1,39 +1,47 @@
 import authStore from './store/authStore.js';
-import { renderLoginView } from './views/LoginViews.js';
-import { renderDashboardView } from './views/DashboardViews.js';
+import { LoginView } from './views/LoginViews.js';
+import { DashboardView } from './views/DashboardViews.js';
 
-class AppOrchestrator {
+/**
+ * Hilo conductor y orquestador táctico del ciclo de vida de la SPA.
+ * Garantiza la resiliencia en la alternancia de vistas ante mutaciones del token.
+ */
+class AppKernel {
     constructor() {
-        this.appContainer = document.getElementById('app');
-        if (!this.appContainer) {
-            throw new Error("Error fatal de infraestructura: El contenedor '#app' no existe en el DOM.");
-        }
+        this.currentViewState = null;
     }
 
     inicializar() {
-        // Enlazar el ciclo de vida reactivo del Store al contenedor principal
+        // Suscripción al núcleo transaccional del estado de autenticación
         authStore.subscribe((state) => {
-            this.renderizarSegunEstado(state);
+            this.evaluarEstrategiaRuta(state);
         });
-
-        // Delegar la evaluación inicial al gestor central de contexto
-        authStore.checkSessionContext();
     }
 
-    renderizarSegunEstado(state) {
-        this.appContainer.innerHTML = '';
+    evaluarEstrategiaRuta(sessionState) {
+        const appContainer = document.getElementById('app');
+        if (!appContainer) return;
 
-        if (!state.isAuthenticated) {
-            const loginNode = renderLoginView();
-            this.appContainer.appendChild(loginNode);
+        // Limpieza atómica preventiva del árbol del DOM en re-enrutamiento
+        if (appContainer.firstChild && appContainer.firstChild.__cleanupGuard) {
+            appContainer.firstChild.__cleanupGuard();
+        }
+        appContainer.innerHTML = '';
+
+        if (sessionState.isAuthenticated) {
+            // Usuario con sesión activa -> Inyección del entorno del sistema
+            this.currentViewState = new DashboardView('app');
+            this.currentViewState.render();
         } else {
-            const dashboardFragment = renderDashboardView(state);
-            this.appContainer.appendChild(dashboardFragment);
+            // Sesión nula o expirada -> Redirección inmediata al perímetro de login
+            this.currentViewState = new LoginView('app');
+            this.currentViewState.render();
         }
     }
 }
 
+// Inicialización asíncrona diferida del Kernel de presentación
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new AppOrchestrator();
-    app.inicializar();
+    const kernel = new AppKernel();
+    kernel.inicializar();
 });

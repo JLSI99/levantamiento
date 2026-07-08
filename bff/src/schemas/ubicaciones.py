@@ -15,7 +15,6 @@ class CatalogosUbicacionesOutBFF(BaseModel):
     edificios: List[ElementoCatalogoBFF] = Field(..., description="Listado unificado de edificios activos")
     aulas: List[ElementoCatalogoBFF] = Field(..., description="Listado mapeado de aulas activas con contexto posicional")
     departamentos: List[ElementoCatalogoBFF] = Field(..., description="Listado unificado de departamentos organizacionales")
-
 # ==============================================================================
 # SUB-DOMINIO: EDIFICIOS
 # ==============================================================================
@@ -52,7 +51,6 @@ class EdificioPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[EdificioOutBFF]
-
 # ==============================================================================
 # SUB-DOMINIO: AULAS
 # ==============================================================================
@@ -71,7 +69,6 @@ class AulaOutBFF(BaseModel):
     model_config = {
         "from_attributes": True
     }
-
 # ==============================================================================
 # SUB-DOMINIO: DEPARTAMENTOS
 # ==============================================================================

@@ -1,88 +1,67 @@
 import { bienesService } from '../../services/bienes.js';
 import { SelectorUbicacion } from '../../components/SelectorUbicaciones.js';
-import { guardElement } from '../../components/CanRender.js';
 
-export function crearModuloAltaBienes(state) {
-    const widget = document.createElement('section');
-    widget.className = 'widget-box';
-    
-    const puedeEscribir = state.capabilities.includes('bienes:crear');
+export class AltaBienes {
+    constructor(containerId) {
+        this.containerId = containerId;
+        this.selectorUbicacion = null;
+    }
 
-    if (puedeEscribir) {
-        widget.innerHTML = `
-            <h3>Levantamiento Físico de Bienes</h3>
-            <form id="form-alta-bien">
-                <input type="text" name="numero_serie" placeholder="Número de Serie / Identificador Único" required>
-                <input type="text" name="descripcion" placeholder="Descripción Detallada del Activo" required>
-                <input type="text" name="marca" placeholder="Marca" required>
-                <input type="text" name="modelo" placeholder="Modelo" required>
-                
-                <label style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 10px;">Estado Físico Operacional:</label>
-                <select name="estado_fisico" required style="width: 100%; padding: 8px; margin-bottom: 10px;">
-                    <option value="EXCELENTE">Excelente</option>
-                    <option value="REGULAR">Regular</option>
-                    <option value="MALO">Malo</option>
-                    <option value="CHATARRA">Chatarra</option>
-                </select>
+    render() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
 
-                <div id="contenedor-selector-ubicacion" style="margin-bottom: 15px;"></div>
-                <button type="submit" style="width: 100%;">Persistir Activo en ms-bienes</button>
-                <div id="bien-feedback" style="margin-top:10px; font-size: 12px;"></div>
-            </form>
+        container.innerHTML = `
+            <div class="wizard-container" style="padding:20px; max-width:600px;">
+                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Alta e Indexación de Activos Fijos</h3>
+                <form id="form-alta-bien" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
+                    <div style="display:flex; gap:10px;">
+                        <input type="text" id="bien-codigo" placeholder="Código de Inventario Único" required style="flex-grow:1; padding:6px;">
+                        <input type="text" id="bien-marca" placeholder="Marca" required style="padding:6px; width:150px;">
+                    </div>
+                    <input type="text" id="bien-descripcion" placeholder="Descripción Detallada del Activo (Características, Número de Serie)" required style="padding:6px;">
+                    
+                    <div style="border:1px dashed var(--border-color); padding:10px; border-radius:4px;">
+                        <label style="display:block; font-size:11px; font-weight:bold; color:var(--text-muted); margin-bottom:8px;">DESTINO TOPOLÓGICO INICIAL</label>
+                        <div id="wrapper-selector-ubicacion"></div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="padding:10px; align-self:flex-end; width:180px;">Registrar Físicamente</button>
+                    <div id="alta-bien-error" class="text-error" style="font-size:12px;"></div>
+                </form>
+            </div>
         `;
 
-        const contenedorUbicacion = widget.querySelector('#contenedor-selector-ubicacion');
-        const idUnicoSelector = `select-aula-${Math.random().toString(36).substring(2, 9)}`;
-        contenedorUbicacion.id = idUnicoSelector;
-        
-        const selectorUbicacionLocal = new SelectorUbicacion(idUnicoSelector);
-        selectorUbicacionLocal.inicializar();
+        this.selectorUbicacion = new SelectorUbicacion('wrapper-selector-ubicacion');
+        this.selectorUbicacion.inicializar();
+        this.vincularEventos();
+    }
 
-        widget.querySelector('#form-alta-bien').onsubmit = async (e) => {
+    vincularEventos() {
+        const form = document.getElementById('form-alta-bien');
+        const errDiv = document.getElementById('alta-bien-error');
+
+        form.onsubmit = async (e) => {
             e.preventDefault();
-            const form = e.target;
-            const feedback = widget.querySelector('#bien-feedback');
-            const idAula = selectorUbicacionLocal.obtenerValor();
+            errDiv.textContent = '';
 
-            if (!idAula) {
-                feedback.className = 'text-error';
-                feedback.textContent = 'Error: Debe especificar un aula de destino institucional.';
-                return;
-            }
-
-            const formData = new FormData(form);
+            const geoData = this.selectorUbicacion.obtenerValoresEstructurales();
             const payload = {
-                numero_serie: formData.get('numero_serie'),
-                descripcion: formData.get('descripcion'),
-                marca: formData.get('marca'),
-                modelo: formData.get('modelo'),
-                estado_fisico: formData.get('estado_fisico'),
-                id_aula: idAula
+                codigo_inventario: document.getElementById('bien-codigo').value.trim().toUpperCase(),
+                descripcion: document.getElementById('bien-descripcion').value,
+                marca: document.getElementById('bien-marca').value,
+                id_edificio: geoData.id_edificio,
+                id_aula: geoData.id_aula,
+                id_departamento: geoData.id_departamento
             };
 
             try {
-                feedback.className = 'text-success';
-                feedback.textContent = 'Enviando payload al BFF...';
                 await bienesService.crear(payload);
-                feedback.textContent = 'Activo registrado exitosamente en el inventario.';
-                form.reset();
-                selectorUbicacionLocal.inicializar();
+                alert('Activo fijo registrado e indexado estructuralmente en el inventario.');
+                this.render();
             } catch (error) {
-                feedback.className = 'text-error';
-                feedback.textContent = `Fallo de persistencia: ${error.response?.data?.detail || error.message}`;
+                errDiv.textContent = error.response?.data?.detail || 'Error de consistencia en el payload enviado.';
             }
         };
-    } else {
-        widget.innerHTML = `
-            <h3>Módulo de Bienes Patrimoniales</h3>
-            <p style="font-size: 13px; color: var(--text-muted);">
-                Tu perfil posee autorizaciones de consulta. Usa los reportes globales para verificar auditorías físicas.
-            </p>
-            <div style="background: var(--bg-main); padding: 15px; border-radius: 4px; font-family: monospace; font-size: 11px;">
-                Estatus del Operador: Solo Lectura (ms-bienes Conectado)
-            </div>
-        `;
     }
-
-    return guardElement(['bienes:crear', 'bienes:leer'], widget, false);
 }

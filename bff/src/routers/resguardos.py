@@ -1,4 +1,3 @@
-# bff/src/routers/resguardos.py
 import os
 import asyncio
 import httpx
@@ -12,7 +11,6 @@ from src.schemas import resguardos as schemas_resguardos
 
 router = APIRouter()
 logger = logging.getLogger("bff.routers.resguardos")
-
 # ==============================================================================
 # SUBSISTEMA DE CONFIGURACIÓN DE RED E INVARIANTE DE DIRECCIONAMIENTO
 # ==============================================================================
@@ -23,8 +21,6 @@ MS_BIENES_ROUTE        = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:800
 MS_UBICACIONES_ROUTE   = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
 MS_DEPARTAMENTOS_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/departamentos"
 MS_PERSONAS_ROUTE      = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
-
-
 # ==============================================================================
 # FUNCIONES AUXILIARES DE HIDRATACIÓN (ORQUESTACIÓN ASÍNCRONA)
 # ==============================================================================
@@ -79,7 +75,6 @@ async def hidratar_un_resguardo(
         )
     )
 
-
 async def hidratar_resguardo_completo(
     resguardo: dict, 
     headers: dict, 
@@ -91,7 +86,6 @@ async def hidratar_resguardo_completo(
     id_departamento = resguardo["id_departamento"]
     curp_objetivo = resguardo["curp"]
 
-    # Invariante de Contrato: Delegar la parametrización al motor de HTTPX para evitar fallos de escape
     personas_params = {
         "curp": curp_objetivo.upper().strip(),
         "limit": 1,
@@ -113,7 +107,6 @@ async def hidratar_resguardo_completo(
             logger.error(f"Fallo de red al conectar con {nombre_servicio} durante hidratación completa: {str(r)}")
             return {}
         if r.status_code != 200:
-            # Exponer explícitamente el payload de error del microservicio en los logs del contenedor BFF
             logger.warning(f"Microservicio {nombre_servicio} retornó código {r.status_code} en hidratación completa. Detalle: {r.text}")
             return {}
         return r.json()
@@ -124,7 +117,6 @@ async def hidratar_resguardo_completo(
     depto_data = procesar_respuesta(respuestas[3], "ms-ubicaciones (departamentos)")
     personas_paginated_data = procesar_respuesta(respuestas[4], "ms-personas")
     
-    # Extraer el registro individual de la estructura paginada devuelta por el Microservicio
     lista_personas = personas_paginated_data.get("data", [])
     
     if lista_personas and len(lista_personas) > 0:
@@ -161,8 +153,6 @@ async def hidratar_resguardo_completo(
             departamento=depto_data.get("nombre", "N/D")
         )
     )
-
-
 # ==============================================================================
 # ENDPOINTS: RUTA DEL RESGUARDANTE
 # ==============================================================================
@@ -202,8 +192,6 @@ async def listar_mis_resguardos(
     return schemas_resguardos.MisResguardosPaginatedOut(
         total=total_registros, limit=limit, offset=offset, data=resultados_finales
     )
-
-
 # ==============================================================================
 # ENDPOINTS: CRUD DEL ADMINISTRADOR
 # ==============================================================================
@@ -230,7 +218,6 @@ async def crear_asignacion_resguardo(
         
     except httpx.RequestError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Fallo de conexión con microservicio de resguardos: {str(exc)}")
-
 
 @router.get("", response_model=schemas_resguardos.ResguardoAdminPaginatedOutBFF)
 async def listar_todos_los_resguardos_institucionales(
@@ -268,7 +255,6 @@ async def listar_todos_los_resguardos_institucionales(
         total=total, limit=limit, offset=offset, data=resultados_finales
     )
 
-
 @router.patch("/{id_asignacion}", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def modificar_asignacion_resguardo(
     request: Request,
@@ -293,7 +279,6 @@ async def modificar_asignacion_resguardo(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error en comunicación interna: {str(e)}")
 
-
 @router.post("/{id_asignacion}/cerrar", response_model=schemas_resguardos.ResguardoAdminOutBFF)
 async def concluir_resguardo_ordinario(
     request: Request,
@@ -316,7 +301,6 @@ async def concluir_resguardo_ordinario(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Error de red interna: {str(e)}")
 
-
 @router.delete("/{id_asignacion}", status_code=status.HTTP_204_NO_CONTENT)
 async def eliminar_baja_logica_resguardo(
     request: Request,
@@ -324,6 +308,7 @@ async def eliminar_baja_logica_resguardo(
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:borrar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
+    
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
 

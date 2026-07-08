@@ -1,6 +1,16 @@
 import bffClient from '../api/client.js';
 
 export const adminService = {
+    async altaPersonalCentralizada(altaCompuestaData) {
+        try {
+            const response = await bffClient.post('/admin/alta-personal', altaCompuestaData);
+            return response.data;
+        } catch (error) {
+            console.error('Fallo crítico en la transacción distribuida de alta compuesta (Saga):', error);
+            throw error;
+        }
+    },
+
     async crearPersona(personaData) {
         try {
             const response = await bffClient.post('/admin/personas', personaData);
@@ -13,7 +23,7 @@ export const adminService = {
 
     async listarPersonas(limit = 50, offset = 0, incluirInactivos = false, curp = null) {
         const params = { limit, offset, incluir_inactivos: incluirInactivos };
-        if (curp) params['curp'] = curp;
+        if (curp) params['curp'] = curp.trim().toUpperCase();
 
         try {
             const response = await bffClient.get('/admin/personas', { params });
@@ -78,9 +88,7 @@ export const adminService = {
 
     async actualizarRolesUsuario(idUsuario, listaRoles) {
         try {
-            const response = await bffClient.put(`/admin/usuarios/${idUsuario}/roles`, {
-                roles: listaRoles
-            });
+            const response = await bffClient.put(`/admin/usuarios/${idUsuario}/roles`, { roles: listaRoles });
             return response.data;
         } catch (error) {
             console.error(`Fallo en la re-estructuración de roles del usuario [ID: ${idUsuario}]:`, error);
@@ -110,9 +118,7 @@ export const adminService = {
 
     async actualizarPermisosDelRol(idRol, listaPermisos) {
         try {
-            const response = await bffClient.put(`/admin/roles/${idRol}/permisos`, {
-                permisos: listaPermisos
-            });
+            const response = await bffClient.put(`/admin/roles/${idRol}/permisos`, { permisos: listaPermisos });
             return response.data;
         } catch (error) {
             console.error(`Fallo crítico al re-escribir capacidades sobre el Rol ID [${idRol}]:`, error);

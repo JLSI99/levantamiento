@@ -1,7 +1,9 @@
-import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.8/+esm';
+import axios from 'axios';
+import authStore from '../store/authStore.js';
 
 const bffClient = axios.create({
-    baseURL: '/api/v1',
+    baseURL: 'http://localhost:8000/api/v1', // URL base del Backend-for-Frontend (BFF)
+    timeout: 15000,
     headers: {
         'Content-Type': 'application/json'
     }
@@ -21,39 +23,25 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
+// Interceptor de Salida: Inyección Dinámica del Token Criptográfico
 bffClient.interceptors.request.use(
     (config) => {
-        const token = localStorage.getItem('bff_token');
-        if (token) {
-            config.headers['Authorization'] = `Bearer ${token}`;
+        const state = authStore.getSnapshot();
+        if (state.token) {
+            config.headers['Authorization'] = `Bearer ${state.token}`;
         }
         return config;
     },
-    (error) => {
-        return Promise.reject(error);
-    }
+    (error) => Promise.reject(error)
 );
 
+// Interceptor de Entrada: Manejo de Expiración de Sesión y Reintento Atómico
 bffClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        if (!error.response) {
-            console.error('Fallo de red severo o caída perimetral del BFF:', error.message);
-            return Promise.reject(error);
-        }    
-
-        const status = error.response.status;
-
-        if (status === 401 && !originalRequest._retry) {
-            if (originalRequest.url === '/auth/refresh') {
-                localStorage.removeItem('bff_token');
-                localStorage.removeItem('bff_refresh_token');
-                window.dispatchEvent(new CustomEvent('auth-expired'));
-                return Promise.reject(error);
-            }
-
+        if (error.response?.status === 401 && !originalRequest._retry) {
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -68,42 +56,29 @@ bffClient.interceptors.response.use(
             originalRequest._retry = true;
             isRefreshing = true;
 
-            const refreshToken = localStorage.getItem('bff_refresh_token');
-            if (!refreshToken) {
-                isRefreshing = false;
-                window.dispatchEvent(new CustomEvent('auth-expired'));
-                return Promise.reject(error);
-            }
-
             try {
-                const response = await axios.post('/api/v1/auth/refresh', { refresh_token: refreshToken }, {
-                    headers: { 'Content-Type': 'application/json' }
+                const state = authStore.getSnapshot();
+                if (!state.refreshToken) throw new Error('No existe un token de refresco local.');
+
+                // Llamada directa usando axios plano para evitar interceptores cíclicos
+                const res = await axios.post('http://localhost:8000/api/v1/auth/refresh', {
+                    refresh_token: state.refreshToken
                 });
+
+                const { access_token, refresh_token } = res.data;
                 
-                const tokenData = response.data;
-                localStorage.setItem('bff_token', tokenData.access_token);
-                if (tokenData.refresh_token) {
-                    localStorage.setItem('bff_refresh_token', tokenData.refresh_token);
-                }
-
-                processQueue(null, tokenData.access_token);
-                isRefreshing = false;
-
-                originalRequest.headers['Authorization'] = `Bearer ${tokenData.access_token}`;
+                authStore.updateTokens(access_token, refresh_token);
+                processQueue(null, access_token);
+                
+                originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
                 return bffClient(originalRequest);
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                isRefreshing = false;
-                localStorage.removeItem('bff_token');
-                localStorage.removeItem('bff_refresh_token');
-                window.dispatchEvent(new CustomEvent('auth-expired'));
+                authStore.clearSession(); // Forzar cierre de sesión local (Fail-Safe)
                 return Promise.reject(refreshError);
+            } finally {
+                isRefreshing = false;
             }
-        }
-
-        if (status === 403) {
-            console.error('Violación de CapBAC: El usuario no posee la capacidad requerida.');
-            alert('Acceso denegado: Tu rol actual no cuenta con las capacidades suficientes para ejecutar esta acción.');
         }
 
         return Promise.reject(error);

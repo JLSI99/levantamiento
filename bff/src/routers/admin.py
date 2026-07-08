@@ -10,11 +10,9 @@ from src.schemas import admin as schemas
 
 router = APIRouter()
 
-# Invariantes de Red: URLs base purgadas de barras finales
 MS_PERSONAS_BASE_URL = os.getenv("MS_PERSONAS_URL", "http://ms_personas_api:8000").rstrip("/")
 MS_AUTH_BASE_URL     = os.getenv("MS_AUTH_URL", "http://ms_usuarios_api:8000").rstrip("/")
 
-# Rutas explícitas de destino en la red del clúster (Upstream Contracts)
 MS_PERSONAS_ROUTE = f"{MS_PERSONAS_BASE_URL}/personas"
 MS_USUARIOS_ROUTE = f"{MS_AUTH_BASE_URL}/users"
 MS_ROLES_ROUTE    = f"{MS_AUTH_BASE_URL}/roles"
@@ -38,7 +36,6 @@ def _extraer_detalle_error(response: httpx.Response) -> Any:
         return f"Error de infraestructura upstream (HTTP {response.status_code}). Servidor denegó la petición o está inaccesible."
         
     return texto_crudo
-
 # ==============================================================================
 # ORQUESTACIÓN TRANSACCIONAL BIFÁSICA (Alta Compuesta - Patrón Saga Orquestado)
 # ==============================================================================
@@ -62,7 +59,6 @@ async def alta_personal_centralizada(
             detail="Inconsistencia de Identidad: El CURP de la persona no coincide con el del usuario."
         )
 
-    # Paso 1: Intentar persistir en ms-personas (Fase de ejecución)
     try:
         response_persona = await client.post(
             MS_PERSONAS_ROUTE, 
@@ -89,7 +85,6 @@ async def alta_personal_centralizada(
     error_detalle = None
     status_error = status.HTTP_500_INTERNAL_SERVER_ERROR
 
-    # Paso 2: Intentar persistir en ms-usuarios-y-autenticacion
     try:
         response_usuario = await client.post(
             MS_USUARIOS_ROUTE, 
@@ -111,10 +106,8 @@ async def alta_personal_centralizada(
         error_detalle = f"Falla de red con ms-auth durante la fase de acoplamiento: {str(exc)}"
         status_error = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    # Paso 3: FASE DE COMPENSACIÓN (Reversión Idempotente de la Saga Orquestada)
     if not ejecucion_usuario_correcta:
         try:
-            # Llama al endpoint de eliminación (Reactivable mediante la lógica idempotente de ms-personas)
             response_compensacion = await client.delete(
                 f"{MS_PERSONAS_ROUTE}/{id_persona_creada}", 
                 headers=headers
@@ -135,8 +128,6 @@ async def alta_personal_centralizada(
             )
 
         raise HTTPException(status_code=status_error, detail=error_detalle)
-
-
 # ==============================================================================
 # OPERACIONES PASIVAS DE REDIRECCIÓN SÍNCRONA (PROXY-BFF)
 # ==============================================================================
@@ -269,7 +260,6 @@ async def dar_baja_usuario(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return
-
 # ==============================================================================
 # CONTROL DE ROLES Y PERMISOS GLOBAL (PROXY DIRECTO)
 # ==============================================================================
