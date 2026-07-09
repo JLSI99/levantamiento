@@ -34,7 +34,11 @@ export class HistorialResguardos {
     }
 
     async cargarTabla() {
-        const tbody = document.getElementById('tabla-resguardos-personales').querySelector('tbody');
+        const tabla = document.getElementById('tabla-resguardos-personales');
+        if (!tabla) return;
+        const tbody = tabla.querySelector('tbody');
+        if (!tbody) return;
+
         try {
             const datos = await resguardosService.listarMisResguardos(50, 0);
             tbody.innerHTML = '';
@@ -47,17 +51,29 @@ export class HistorialResguardos {
             datos.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="padding:8px; border:1px solid var(--border-color); font-family:monospace; font-weight:bold; color:var(--primary);">${item.bien_codigo}</td>
-                    <td style="padding:8px; border:1px solid var(--border-color);">${item.bien_descripcion}</td>
+                    <td style="padding:8px; border:1px solid var(--border-color); font-family:monospace; font-weight:bold; color:var(--primary);">${this._escapeHtml(item.bien_codigo)}</td>
+                    <td style="padding:8px; border:1px solid var(--border-color);">${this._escapeHtml(item.bien_descripcion)}</td>
                     <td style="padding:8px; border:1px solid var(--border-color);">${new Date(item.fecha_asignacion).toLocaleDateString('es-MX')}</td>
                     <td style="padding:8px; border:1px solid var(--border-color);">
-                        <span style="color:var(--success); font-weight:600; background-color:#hnf2f2; padding:2px 6px; border-radius:10px;">${item.vigente ? 'Vigente' : 'Concluido'}</span>
+                        <span style="color:var(--success); font-weight:600; background-color:#e0f2f1; padding:2px 6px; border-radius:10px;">${item.vigente ? 'Vigente' : 'Concluido'}</span>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--text-error); font-weight:600;">Error de interconexión con el subdominio de resguardos</td></tr>';
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--text-error); font-weight:600;">Error de interconexión con el subdominio de resguardos</td></tr>';
+            }
         }
+    }
+
+    _escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    unmount() {
+    
     }
 }

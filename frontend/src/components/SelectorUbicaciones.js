@@ -4,6 +4,7 @@ export class SelectorUbicacion {
     constructor(containerId) {
         this.containerId = containerId;
         this.activeFetchId = 0;
+        this.estaDesmontado = false;
         
         this.selectEdificio = document.createElement('select');
         this.selectEdificio.className = 'form-select-custom';
@@ -29,7 +30,8 @@ export class SelectorUbicacion {
         
         try {
             const catalogos = await ubicacionesService.obtenerCatalogosUnificados();
-            if (currentFetchId !== this.activeFetchId) return;
+            
+            if (this.estaDesmontado || currentFetchId !== this.activeFetchId) return;
             
             container.innerHTML = '';
 
@@ -66,7 +68,7 @@ export class SelectorUbicacion {
             
             container.appendChild(divFlex);
         } catch (error) {
-            if (currentFetchId === this.activeFetchId) {
+            if (!this.estaDesmontado && currentFetchId === this.activeFetchId) {
                 container.innerHTML = '<span class="text-error">Error de carga topográfica</span>';
             }
         }
@@ -78,5 +80,10 @@ export class SelectorUbicacion {
             id_aula: this.selectAula.value || null,
             id_departamento: this.selectDepartamento.value || null
         };
+    }
+
+    unmount() {
+        this.estaDesmontado = true;
+        this.activeFetchId++; 
     }
 }

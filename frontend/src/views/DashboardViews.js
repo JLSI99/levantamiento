@@ -5,10 +5,15 @@ import { AltaBienes } from './modules/AltaBienes.js';
 import { HistorialResguardos } from './modules/HistorialResguardos.js';
 import { guardElement } from '../components/CanRender.js';
 
+/**
+ * Consola central operativa.
+ * Administra el montaje de los sub-módulos y el cierre seguro de la sesión.
+ */
 export class DashboardView {
     constructor(containerId) {
         this.containerId = containerId;
         this.activeModule = null;
+        this.onLogoutBound = null;
     }
 
     render() {
@@ -22,7 +27,7 @@ export class DashboardView {
                 <div style="width:var(--sidebar-width); background-color:var(--primary); color:white; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
                     <div style="padding-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.2); margin-bottom:20px;">
                         <h3 style="margin:0; font-size:16px;">Control Patrimonial</h3>
-                        <p style="margin:5px 0 0 0; font-size:11px; color:rgba(255,255,255,0.7);">${snapshot.user?.username || 'Operador'}</p>
+                        <p style="margin:5px 0 0 0; font-size:11px; color:rgba(255,255,255,0.7);" id="user-display-profile"></p>
                     </div>
                     <nav style="display:flex; flex-direction:column; gap:8px; flex-grow:1;" id="sidebar-nav"></nav>
                     <button id="btn-logout" style="background:transparent; border:1px solid rgba(255,255,255,0.4); color:white; padding:8px; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">Cerrar Sesión</button>
@@ -38,68 +43,109 @@ export class DashboardView {
             </div>
         `;
 
-        this.generarMenuSeguro();
+        // Inyección controlada de datos de usuario con sanitización nativa frente a XSS
+        const userProfile = document.getElementById('user-display-profile');
+        if (userProfile) {
+            userProfile.textContent = snapshot.user?.username || 'Operador No Identificado';
+        }
+
+        this.generarMenuSeguro(snapshot.capabilities);
         this.vincularGlobales();
-        
-        // Renderizado del módulo por defecto inicial
-        this.cargarModulo('mis-resguardos');
+        this.enrutarModuloInicial(snapshot.capabilities);
     }
 
-    generarMenuSeguro() {
+    generarMenuSeguro(userCapabilities) {
         const nav = document.getElementById('sidebar-nav');
+        if (!nav) return;
         
-        const links = [
+        const linksConfiguration = [
             { id: 'mis-resguardos', label: 'Mis Resguardos', caps: ['resguardos:read_personal'], view: HistorialResguardos },
             { id: 'alta-bienes', label: 'Inventariar Activo', caps: ['bienes:create'], view: AltaBienes },
             { id: 'admin-panel', label: 'Consola de Control', caps: ['usuarios:write'], view: AsistenteAdmin }
         ];
 
-        links.forEach(link => {
+        linksConfiguration.forEach(config => {
             const btn = document.createElement('button');
-            btn.textContent = link.label;
-            btn.style.cssText = "background:transparent; border:none; color:rgba(255,255,255,0.8); text-align:left; padding:10px; border-radius:4px; cursor:pointer; font-size:13px; font-weight:500;";
+            btn.id = `nav-link-${config.id}`;
+            btn.textContent = config.label;
+            btn.style.cssText = "background:transparent; border:none; color:rgba(255,255,255,0.8); text-align:left; padding:10px; border-radius:4px; cursor:pointer; font-size:13px; font-weight:500; width:100%;";
+            
             btn.onclick = () => {
-                // Limpieza visual de selección previa
                 nav.querySelectorAll('button').forEach(b => b.style.backgroundColor = 'transparent');
                 btn.style.backgroundColor = 'rgba(255,255,255,0.1)';
-                this.cargarModulo(link.id, link.view, link.label);
+                this.cargarModulo(config.view, config.label);
             };
 
-            // Inyección bajo el perímetro reactivo seguro CapBAC
-            const guardedBtn = guardElement(link.caps, btn);
+            // Envoltura defensiva usando el componente CapBAC perimetral
+            const guardedBtn = guardElement(config.caps, btn);
             nav.appendChild(guardedBtn);
         });
     }
 
-    cargarModulo(id, ViewClass, title) {
-        const content = document.getElementById('workspace-content');
-        const titleContainer = document.getElementById('workspace-title');
-        
-        // Ejecución preventiva de limpieza de ataduras del módulo saliente
-        if (content.firstChild && content.firstChild.__cleanupGuard) {
-            content.firstChild.__cleanupGuard();
-        }
-        content.innerHTML = '';
-
-        if (!ViewClass) {
-            // Carga inicial por defecto automatizada
-            if (id === 'mis-resguardos') {
-                titleContainer.textContent = 'Historial de Resguardos';
-                this.activeModule = new HistorialResguardos('workspace-content');
-                this.activeModule.render();
+    enrutarModuloInicial(capabilities) {
+        // Reglas jerárquicas de enrutamiento por defecto en base al rol/capacidad
+        if (capabilities.includes('bienes:create')) {
+            this.cargarModulo(AltaBienes, 'Alta de Activos Fijos');
+        } else if (capabilities.includes('resguardos:read_personal')) {
+            this.cargarModulo(HistorialResguardos, 'Historial de Resguardos');
+        } else if (capabilities.includes('usuarios:write')) {
+            this.cargarModulo(AsistenteAdmin, 'Consola de Control Operativo');
+        } else {
+            const content = document.getElementById('workspace-content');
+            if (content) {
+                content.innerHTML = `<p style="font-size:12px; color:var(--text-muted);">Espacio de trabajo restringido. Su token carece de capacidades funcionales.</p>`;
             }
-            return;
+        }
+    }
+
+    cargarModulo(ViewClass, title) {
+        // Garantizar la descarga limpia del módulo activo previo
+        if (this.activeModule && typeof this.activeModule.unmount === 'function') {
+            try {
+                this.activeModule.unmount();
+            } catch (err) {
+                console.error("Error al desmontar el módulo secundario:", err);
+            }
         }
 
-        titleContainer.textContent = title;
+        const titleContainer = document.getElementById('workspace-title');
+        if (titleContainer) titleContainer.textContent = title;
+
+        const content = document.getElementById('workspace-content');
+        if (content) content.innerHTML = '';
+
+        // Instanciación y renderizado dinámico del submódulo de negocio
         this.activeModule = new ViewClass('workspace-content');
         this.activeModule.render();
     }
 
     vincularGlobales() {
-        document.getElementById('btn-logout').onclick = async () => {
-            await authService.logout();
-            authStore.clearSession();
+        const logoutBtn = document.getElementById('btn-logout');
+        if (!logoutBtn) return;
+
+        this.onLogoutBound = async () => {
+            try {
+                logoutBtn.disabled = true;
+                await authService.logout();
+            } catch (err) {
+                console.warn("Fallo en la invalidación remota del token en el BFF:", err);
+            } finally {
+                // Invariante de seguridad: Se destruye la sesión local pase lo que pase con la red
+                authStore.clearSession();
+            }
         };
+
+        logoutBtn.addEventListener('click', this.onLogoutBound);
+    }
+
+    unmount() {
+        // Desvincular eventos y recolectar basura de submódulos antes de salir
+        if (this.activeModule && typeof this.activeModule.unmount === 'function') {
+            this.activeModule.unmount();
+        }
+        const logoutBtn = document.getElementById('btn-logout');
+        if (logoutBtn && this.onLogoutBound) {
+            logoutBtn.removeEventListener('click', this.onLogoutBound);
+        }
     }
 }

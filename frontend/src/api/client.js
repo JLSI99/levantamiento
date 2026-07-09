@@ -1,8 +1,10 @@
-import axios from 'axios';
+import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.8/+esm';
 import authStore from '../store/authStore.js';
 
+const BASE_URL_BFF = 'http://localhost:8081/api/v1';
+
 const bffClient = axios.create({
-    baseURL: 'http://localhost:8000/api/v1', // URL base del Backend-for-Frontend (BFF)
+    baseURL: BASE_URL_BFF,
     timeout: 15000,
     headers: {
         'Content-Type': 'application/json'
@@ -23,11 +25,14 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// Interceptor de Salida: Inyección Dinámica del Token Criptográfico
+// =========================================================================
+// INTERCEPTOR DE PETICIONES (Inyección de Estado de Sesión)
+// =========================================================================
 bffClient.interceptors.request.use(
     (config) => {
         const state = authStore.getSnapshot();
         if (state.token) {
+            config.headers = config.headers || {};
             config.headers['Authorization'] = `Bearer ${state.token}`;
         }
         return config;
@@ -35,18 +40,24 @@ bffClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Interceptor de Entrada: Manejo de Expiración de Sesión y Reintento Atómico
+// =========================================================================
+// INTERCEPTOR DE RESPUESTAS (Ciclo de Vida de Refresco de Token / Concurrencia)
+// =========================================================================
 bffClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Validar el código de error 401 HTTP sin caer en loops infinitos de reintentos
+        if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+            
+            // Si ya existe una petición de refresco en vuelo, encolar los demás requests concurrentes
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
                 })
                 .then(token => {
+                    originalRequest.headers = originalRequest.headers || {};
                     originalRequest.headers['Authorization'] = `Bearer ${token}`;
                     return bffClient(originalRequest);
                 })
@@ -58,23 +69,33 @@ bffClient.interceptors.response.use(
 
             try {
                 const state = authStore.getSnapshot();
-                if (!state.refreshToken) throw new Error('No existe un token de refresco local.');
+                if (!state.refreshToken) {
+                    throw new Error('Invariante de sesión roto: No existe un token de refresco local.');
+                }
 
-                // Llamada directa usando axios plano para evitar interceptores cíclicos
-                const res = await axios.post('http://localhost:8000/api/v1/auth/refresh', {
+                // Sincronización de Red: Apuntar a la variable dinámica con puerto 8081
+                const res = await axios.post(`${BASE_URL_BFF}/auth/refresh`, {
                     refresh_token: state.refreshToken
+                }, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 10000
                 });
 
                 const { access_token, refresh_token } = res.data;
                 
+                // Actualizar la máquina de estados e invalidar instantáneas previas
                 authStore.updateTokens(access_token, refresh_token);
+                
+                // Resolver de forma masiva la cola de promesas en espera con el nuevo JWT
                 processQueue(null, access_token);
                 
+                originalRequest.headers = originalRequest.headers || {};
                 originalRequest.headers['Authorization'] = `Bearer ${access_token}`;
                 return bffClient(originalRequest);
+                
             } catch (refreshError) {
                 processQueue(refreshError, null);
-                authStore.clearSession(); // Forzar cierre de sesión local (Fail-Safe)
+                authStore.clearSession();
                 return Promise.reject(refreshError);
             } finally {
                 isRefreshing = false;

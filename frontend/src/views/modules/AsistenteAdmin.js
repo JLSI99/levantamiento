@@ -5,6 +5,7 @@ export class AsistenteAdmin {
     constructor(containerId) {
         this.containerId = containerId;
         this.altaComponent = null;
+        this.onTablaClickBound = null;
     }
 
     render() {
@@ -36,13 +37,18 @@ export class AsistenteAdmin {
             </div>
         `;
 
-        this.altaComponent = new AsistenteAlta(document.getElementById('sub-container-wizard'));
+        const subWizard = document.getElementById('sub-container-wizard');
+        this.altaComponent = new AsistenteAlta(subWizard);
         this.altaComponent.render();
         this.cargarListaUsuarios();
     }
 
     async cargarListaUsuarios() {
-        const tbody = document.getElementById('tabla-usuarios').querySelector('tbody');
+        const tabla = document.getElementById('tabla-usuarios');
+        if (!tabla) return;
+        const tbody = tabla.querySelector('tbody');
+        if (!tbody) return;
+
         try {
             const usuarios = await adminService.listarUsuarios(50, 0, false);
             tbody.innerHTML = '';
@@ -50,8 +56,8 @@ export class AsistenteAdmin {
             usuarios.forEach(user => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td style="padding:6px; border:1px solid var(--border-color); font-weight:600;">${user.username}</td>
-                    <td style="padding:6px; border:1px solid var(--border-color); color:var(--text-muted);">${user.email}</td>
+                    <td style="padding:6px; border:1px solid var(--border-color); font-weight:600;">${this._escapeHtml(user.username)}</td>
+                    <td style="padding:6px; border:1px solid var(--border-color); color:var(--text-muted);">${this._escapeHtml(user.email)}</td>
                     <td style="padding:6px; border:1px solid var(--border-color);">
                         <button class="btn-baja" data-id="${user.id_usuario}" style="background-color:var(--text-error); color:white; border:none; padding:3px 6px; border-radius:3px; cursor:pointer; font-size:11px;">Suspender</button>
                     </td>
@@ -61,12 +67,21 @@ export class AsistenteAdmin {
 
             this.vincularTabla();
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-error); padding:10px;">Fallo al conectar con ms-auth</td></tr>';
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-error); padding:10px;">Fallo al conectar con ms-auth</td></tr>';
+            }
         }
     }
 
     vincularTabla() {
-        document.getElementById('tabla-usuarios').onclick = async (e) => {
+        const tabla = document.getElementById('tabla-usuarios');
+        if (!tabla) return;
+
+        if (this.onTablaClickBound) {
+            tabla.removeEventListener('click', this.onTablaClickBound);
+        }
+
+        this.onTablaClickBound = async (e) => {
             if (e.target.classList.contains('btn-baja')) {
                 const id = e.target.getAttribute('data-id');
                 if (confirm('¿Aplicar revocación criptográfica y baja lógica a esta cuenta digital?')) {
@@ -79,5 +94,23 @@ export class AsistenteAdmin {
                 }
             }
         };
+
+        tabla.addEventListener('click', this.onTablaClickBound);
+    }
+
+    _escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    unmount() {
+        const tabla = document.getElementById('tabla-usuarios');
+        if (tabla && this.onTablaClickBound) {
+            tabla.removeEventListener('click', this.onTablaClickBound);
+        }
+        if (this.altaComponent) {
+            this.altaComponent.unmount();
+        }
     }
 }

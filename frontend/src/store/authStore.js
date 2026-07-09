@@ -1,7 +1,3 @@
-/**
- * Motor reactivo atómico para el control de la sesión del usuario.
- * Provee almacenamiento persistente e hilo de difusión síncrono para mutaciones de estado.
- */
 class AuthStore {
     constructor() {
         this.listeners = new Set();
@@ -9,18 +5,31 @@ class AuthStore {
             isAuthenticated: !!localStorage.getItem('tx_inv_token'),
             token: localStorage.getItem('tx_inv_token') || null,
             refreshToken: localStorage.getItem('tx_inv_refresh') || null,
-            user: JSON.parse(localStorage.getItem('tx_inv_user')) || null,
-            capabilities: JSON.parse(localStorage.getItem('tx_inv_caps')) || []
+            user: this._safeParse(localStorage.getItem('tx_inv_user')),
+            capabilities: this._safeParse(localStorage.getItem('tx_inv_caps')) || []
         };
+
+        if (typeof window !== 'undefined') {
+            window.addEventListener('storage', (event) => this._handleStorageChange(event));
+        }
+    }
+
+    _safeParse(jsonString) {
+        try {
+            return jsonString ? JSON.parse(jsonString) : null;
+        } catch (e) {
+            console.error('Error de parseo en la recuperación del medio de almacenamiento físico:', e);
+            return null;
+        }
     }
 
     getSnapshot() {
-        return { ...this.state };
+        return structuredClone(this.state);
     }
 
     subscribe(listener) {
         this.listeners.add(listener);
-        listener(this.getSnapshot()); // Ejecución inmediata en hidratación inicial
+        listener(this.getSnapshot());   
         return () => {
             this.listeners.delete(listener);
         };
@@ -28,15 +37,27 @@ class AuthStore {
 
     emit() {
         const snapshot = this.getSnapshot();
-        this.listeners.forEach(listener => listener(snapshot));
+        this.listeners.forEach(listener => {
+            try {
+                listener(snapshot);
+            } catch (error) {
+                console.error('Fallo en la ejecución de la cadena de listeners del DOM:', error);
+            }
+        });
     }
 
     setSession(accessToken, refreshToken, user, capabilities) {
-        this.state = { isAuthenticated: true, token: accessToken, refreshToken, user, capabilities };
+        this.state = { 
+            isAuthenticated: true, 
+            token: accessToken, 
+            refreshToken, 
+            user, 
+            capabilities: capabilities || [] 
+        };
         localStorage.setItem('tx_inv_token', accessToken);
         localStorage.setItem('tx_inv_refresh', refreshToken);
         localStorage.setItem('tx_inv_user', JSON.stringify(user));
-        localStorage.setItem('tx_inv_caps', JSON.stringify(capabilities));
+        localStorage.setItem('tx_inv_caps', JSON.stringify(capabilities || []));
         this.emit();
     }
 
@@ -49,11 +70,31 @@ class AuthStore {
     }
 
     clearSession() {
-        this.state = { isAuthenticated: false, token: null, refreshToken: null, user: null, capabilities: [] };
+        this.state = { 
+            isAuthenticated: false, 
+            token: null, 
+            refreshToken: null, 
+            user: null, 
+            capabilities: [] 
+        };
         localStorage.removeItem('tx_inv_token');
         localStorage.removeItem('tx_inv_refresh');
         localStorage.removeItem('tx_inv_user');
         localStorage.removeItem('tx_inv_caps');
+        this.emit();
+    }
+
+    _handleStorageChange(event) {
+        const keysToSync = ['tx_inv_token', 'tx_inv_refresh', 'tx_inv_user', 'tx_inv_caps'];
+        if (!keysToSync.includes(event.key)) return;
+
+        this.state = {
+            isAuthenticated: !!localStorage.getItem('tx_inv_token'),
+            token: localStorage.getItem('tx_inv_token') || null,
+            refreshToken: localStorage.getItem('tx_inv_refresh') || null,
+            user: this._safeParse(localStorage.getItem('tx_inv_user')),
+            capabilities: this._safeParse(localStorage.getItem('tx_inv_caps')) || []
+        };
         this.emit();
     }
 }
