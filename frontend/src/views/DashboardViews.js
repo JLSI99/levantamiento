@@ -3,12 +3,8 @@ import { authService } from '../services/auth.js';
 import { AsistenteAdmin } from './modules/AsistenteAdmin.js';
 import { AltaBienes } from './modules/AltaBienes.js';
 import { HistorialResguardos } from './modules/HistorialResguardos.js';
-import { guardElement } from '../components/CanRender.js';
+import { guardElement, checkAccess } from '../components/CanRender.js';
 
-/**
- * Consola central operativa.
- * Administra el montaje de los sub-módulos y el cierre seguro de la sesión.
- */
 export class DashboardView {
     constructor(containerId) {
         this.containerId = containerId;
@@ -43,7 +39,6 @@ export class DashboardView {
             </div>
         `;
 
-        // Inyección controlada de datos de usuario con sanitización nativa frente a XSS
         const userProfile = document.getElementById('user-display-profile');
         if (userProfile) {
             userProfile.textContent = snapshot.user?.username || 'Operador No Identificado';
@@ -76,19 +71,21 @@ export class DashboardView {
                 this.cargarModulo(config.view, config.label);
             };
 
-            // Envoltura defensiva usando el componente CapBAC perimetral
+            // Envoltura reactiva no invasiva utilizando el motor optimizado de CanRender
             const guardedBtn = guardElement(config.caps, btn);
             nav.appendChild(guardedBtn);
         });
     }
 
     enrutarModuloInicial(capabilities) {
-        // Reglas jerárquicas de enrutamiento por defecto en base al rol/capacidad
-        if (capabilities.includes('bienes:create')) {
+        const state = authStore.getSnapshot();
+
+        // Evaluación unificada utilizando la política centralizada del sistema (Bypass de admin e inyección de contexto)
+        if (checkAccess('bienes:create', state)) {
             this.cargarModulo(AltaBienes, 'Alta de Activos Fijos');
-        } else if (capabilities.includes('resguardos:read_personal')) {
+        } else if (checkAccess('resguardos:read_personal', state)) {
             this.cargarModulo(HistorialResguardos, 'Historial de Resguardos');
-        } else if (capabilities.includes('usuarios:write')) {
+        } else if (checkAccess('usuarios:write', state)) {
             this.cargarModulo(AsistenteAdmin, 'Consola de Control Operativo');
         } else {
             const content = document.getElementById('workspace-content');
@@ -99,7 +96,6 @@ export class DashboardView {
     }
 
     cargarModulo(ViewClass, title) {
-        // Garantizar la descarga limpia del módulo activo previo
         if (this.activeModule && typeof this.activeModule.unmount === 'function') {
             try {
                 this.activeModule.unmount();
@@ -114,7 +110,6 @@ export class DashboardView {
         const content = document.getElementById('workspace-content');
         if (content) content.innerHTML = '';
 
-        // Instanciación y renderizado dinámico del submódulo de negocio
         this.activeModule = new ViewClass('workspace-content');
         this.activeModule.render();
     }
@@ -130,7 +125,6 @@ export class DashboardView {
             } catch (err) {
                 console.warn("Fallo en la invalidación remota del token en el BFF:", err);
             } finally {
-                // Invariante de seguridad: Se destruye la sesión local pase lo que pase con la red
                 authStore.clearSession();
             }
         };
@@ -139,7 +133,6 @@ export class DashboardView {
     }
 
     unmount() {
-        // Desvincular eventos y recolectar basura de submódulos antes de salir
         if (this.activeModule && typeof this.activeModule.unmount === 'function') {
             this.activeModule.unmount();
         }

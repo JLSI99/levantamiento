@@ -8,9 +8,33 @@ export class AsistenteAdmin {
         this.onTablaClickBound = null;
     }
 
+    _obtenerUsuarioAutenticado() {
+        try {
+            const sesionRaw = localStorage.getItem('usuario_sesion');
+            if (!sesionRaw) return null;
+            return JSON.parse(sesionRaw);
+        } catch (e) {
+            return null;
+        }
+    }
+
     render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
+
+        // Circuit Breaker RBAC: Validación en la puerta de entrada
+        const usuario = this._obtenerUsuarioAutenticado();
+        const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
+
+        if (!esAdmin) {
+            container.innerHTML = `
+                <div style="padding:30px; background:#fff3e0; border:1px solid #ffe0b2; border-radius:6px; color:#e65100; font-family:sans-serif;">
+                    <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase;">Infracción de Capas Directivas (403 Forbidden)</h4>
+                    <p style="margin:0; font-size:12px; line-height:1.5;">Su cuenta operativa actual no posee el rol jerárquico de Administrador General. El aprovisionamiento de personal e identidades digitales queda estrictamente denegado.</p>
+                </div>
+            `;
+            return;
+        }
 
         container.innerHTML = `
             <div style="display:grid; grid-template-columns: 1.2fr 1.8fr; gap:20px; align-items: start;">
@@ -125,6 +149,7 @@ export class AsistenteAdmin {
     }
 
     _escapeHtml(str) {
+        if (!str) return '';
         const div = document.createElement('div');
         div.textContent = str;
         return div.innerHTML;

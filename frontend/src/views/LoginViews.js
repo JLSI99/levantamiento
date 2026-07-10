@@ -1,10 +1,6 @@
 import { authService } from '../services/auth.js';
 import authStore from '../store/authStore.js';
 
-/**
- * Vista de autenticación perimetral.
- * Garantiza el flujo secuencial estricto de resolución de tokens.
- */
 export class LoginView {
     constructor(containerId) {
         this.containerId = containerId;
@@ -61,26 +57,20 @@ export class LoginView {
                     submitBtn.textContent = 'Autenticando en el perímetro...';
                 }
 
-                // Paso 1: Intercambio de credenciales por tokens de acceso/refresco
                 const tokenData = await authService.login(userInp, passInp);
                 
-                // Paso 2: Inicializar sesión parcial en memoria y LocalStorage.
-                // Esto garantiza que el interceptor de Axios inyecte la cabecera en el paso siguiente.
                 authStore.setSession(tokenData.access_token, tokenData.refresh_token, null, []);
 
-                // Paso 3: Consumir el contexto criptográfico /me con las cabeceras ya alineadas
                 const contextMe = await authService.obtenerContextoMe();
                 
-                // Paso 4: Consolidar la sesión completa con los datos de usuario y capacidades evaluadas
                 authStore.setSession(
                     tokenData.access_token,
                     tokenData.refresh_token,
-                    contextMe.usuario, // Mapeado directo a la estructura Out del BFF
+                    contextMe.usuario,
                     contextMe.capabilities
                 );
 
             } catch (error) {
-                // Si falla en cualquier punto intermedio, limpiamos rastros parciales de tokens
                 authStore.clearSession();
                 if (submitBtn) {
                     submitBtn.disabled = false;

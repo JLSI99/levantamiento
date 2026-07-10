@@ -8,9 +8,32 @@ export class AsistenteAlta {
         this.eventoFormUsuario = null;
     }
 
+    _obtenerUsuarioAutenticado() {
+        try {
+            const sesionRaw = localStorage.getItem('usuario_sesion');
+            if (!sesionRaw) return null;
+            return JSON.parse(sesionRaw);
+        } catch (e) {
+            return null;
+        }
+    }
+
     render() {
         if (!this.container) return;
         
+        // Defensa en Profundidad: Validación perimetral interna inline
+        const usuario = this._obtenerUsuarioAutenticado();
+        const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
+
+        if (!esAdmin) {
+            this.container.innerHTML = `
+                <span style="font-size:12px; color:#c62828; font-weight:600; display:block; padding:10px; background:#ffebee; border-radius:4px;">
+                    Infracción Crítica: El sub-componente de aprovisionamiento requiere credenciales directas de Administrador Central.
+                </span>
+            `;
+            return;
+        }
+
         this.container.innerHTML = `
             <div class="wizard-context" style="padding:5px; margin-top:10px;">
                 <div style="display:flex; gap:20px; margin-bottom:15px; font-size:12px; border-bottom: 1px solid #f5f5f5; padding-bottom: 8px;">
@@ -76,6 +99,8 @@ export class AsistenteAlta {
         const formPersona = this.container.querySelector('#form-persona-fase');
         const formUsuario = this.container.querySelector('#form-usuario-fase');
 
+        if (!formPersona || !formUsuario) return;
+
         this.eventoFormPersona = async (e) => {
             e.preventDefault();
             const errP1 = this.container.querySelector('#wizard-p1-error');
@@ -87,8 +112,8 @@ export class AsistenteAlta {
 
             const payload = {
                 curp: targetCurp,
-                nombres: formData.get('nombres'),
-                apellidos: formData.get('apellidos')
+                nombres: formData.get('nombres').trim(),
+                apellidos: formData.get('apellidos').trim()
             };
 
             try {
@@ -146,8 +171,8 @@ export class AsistenteAlta {
             }
         };
 
-        if (formPersona) formPersona.addEventListener('submit', this.eventoFormPersona);
-        if (formUsuario) formUsuario.addEventListener('submit', this.eventoFormUsuario);
+        formPersona.addEventListener('submit', this.eventoFormPersona);
+        formUsuario.addEventListener('submit', this.eventoFormUsuario);
     }
 
     avanzarFaseUsuario(persona) {

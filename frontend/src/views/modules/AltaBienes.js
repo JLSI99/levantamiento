@@ -9,9 +9,34 @@ export class AltaBienes {
         this.catalogoTiposFijos = [];
     }
 
+    _obtenerUsuarioAutenticado() {
+        try {
+            const sesionRaw = localStorage.getItem('usuario_sesion');
+            if (!sesionRaw) return null;
+            return JSON.parse(sesionRaw);
+        } catch (e) {
+            return null;
+        }
+    }
+
     async render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
+
+        // Circuit Breaker RBAC: Solo el Administrador (1) o el Registrador (3) pueden crear bienes
+        const usuario = this._obtenerUsuarioAutenticado();
+        const idsRoles = usuario?.roles ? usuario.roles.map(r => parseInt(r.id_rol, 10)) : [];
+        const tienePermiso = idsRoles.includes(1) || idsRoles.includes(3);
+
+        if (!tienePermiso) {
+            container.innerHTML = `
+                <div style="padding:30px; background:#ffebee; border:1px solid #ffcdd2; border-radius:6px; color:#b71c1c; font-family:sans-serif;">
+                    <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase;">Acceso Restringido (403 Forbidden)</h4>
+                    <p style="margin:0; font-size:12px; line-height:1.5;">Su perfil operativo no cuenta con facultades de indexación patrimonial. El registro de bienes instrumentales queda limitado a los roles de Registrador de Bienes y Administrador General.</p>
+                </div>
+            `;
+            return;
+        }
 
         container.innerHTML = `
             <div class="module-card" style="padding:20px; max-width:700px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -137,7 +162,7 @@ export class AltaBienes {
                 if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Indexando en Repositorio Central...'; }
 
                 await bienesService.crear(payload);
-                alert('Activo instrumental registrado de forma exitosa en el inventario institucional del TECNM.');
+                alert('Activo instrumental registrado de forma exitosa en el inventario institucional del TECNM. Flujo de catalogación cerrado.');
                 await this.render();
                 
             } catch (error) {

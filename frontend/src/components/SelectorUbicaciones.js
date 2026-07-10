@@ -5,30 +5,35 @@ export class SelectorUbicaciones {
         this.containerId = containerId;
         this.activeFetchId = 0;
         this.estaDesmontado = false;
+        this.onCrearUbicacionInlineBound = null;
         
         this.selectEdificio = document.createElement('select');
-        this.selectEdificio.style.padding = '6px';
-        this.selectEdificio.style.border = '1px solid #bdbdbd';
-        this.selectEdificio.style.borderRadius = '4px';
-        this.selectEdificio.style.background = 'white';
-        this.selectEdificio.style.fontSize = '12px';
-        this.selectEdificio.style.flex = '1';
+        this._aplicarEstiloBaseSelect(this.selectEdificio);
 
         this.selectAula = document.createElement('select');
-        this.selectAula.style.padding = '6px';
-        this.selectAula.style.border = '1px solid #bdbdbd';
-        this.selectAula.style.borderRadius = '4px';
-        this.selectAula.style.background = 'white';
-        this.selectAula.style.fontSize = '12px';
-        this.selectAula.style.flex = '1';
+        this._aplicarEstiloBaseSelect(this.selectAula);
 
         this.selectDepartamento = document.createElement('select');
-        this.selectDepartamento.style.padding = '6px';
-        this.selectDepartamento.style.border = '1px solid #bdbdbd';
-        this.selectDepartamento.style.borderRadius = '4px';
-        this.selectDepartamento.style.background = 'white';
-        this.selectDepartamento.style.fontSize = '12px';
-        this.selectDepartamento.style.flex = '1';
+        this._aplicarEstiloBaseSelect(this.selectDepartamento);
+    }
+
+    _aplicarEstiloBaseSelect(el) {
+        el.style.padding = '6px';
+        el.style.border = '1px solid #bdbdbd';
+        el.style.borderRadius = '4px';
+        el.style.background = 'white';
+        el.style.fontSize = '12px';
+        el.style.flex = '1';
+    }
+
+    _obtenerUsuarioAutenticado() {
+        try {
+            const sesionRaw = localStorage.getItem('usuario_sesion');
+            if (!sesionRaw) return null;
+            return JSON.parse(sesionRaw);
+        } catch (e) {
+            return null;
+        }
     }
 
     async inicializar() {
@@ -77,16 +82,47 @@ export class SelectorUbicaciones {
                 });
             }
 
-            const divFlex = document.createElement('div');
-            divFlex.style.display = 'flex';
-            divFlex.style.gap = '10px';
-            divFlex.style.width = '100%';
+            const divContenedorEstructural = document.createElement('div');
+            divContenedorEstructural.style.display = 'flex';
+            divContenedorEstructural.style.flexDirection = 'column';
+            divContenedorEstructural.style.gap = '10px';
+            divContenedorEstructural.style.width = '100%';
+
+            const divFlexSelects = document.createElement('div');
+            divFlexSelects.style.display = 'flex';
+            divFlexSelects.style.gap = '10px';
+            divFlexSelects.style.width = '100%';
             
-            divFlex.appendChild(this.selectEdificio);
-            divFlex.appendChild(this.selectAula);
-            divFlex.appendChild(this.selectDepartamento);
+            divFlexSelects.appendChild(this.selectEdificio);
+            divFlexSelects.appendChild(this.selectAula);
+            divFlexSelects.appendChild(this.selectDepartamento);
             
-            container.appendChild(divFlex);
+            divContenedorEstructural.appendChild(divFlexSelects);
+
+            // Blindaje RBAC: Solo el Administrador ve el disparador del módulo de creación
+            const usuario = this._obtenerUsuarioAutenticado();
+            const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
+
+            if (esAdmin) {
+                const linkAdminUbicaciones = document.createElement('a');
+                linkAdminUbicaciones.href = '#/infraestructura/maestro';
+                linkAdminUbicaciones.id = 'lnk-crear-ubicacion-inline';
+                linkAdminUbicaciones.style.fontSize = '11px';
+                linkAdminUbicaciones.style.color = '#3f51b5';
+                linkAdminUbicaciones.style.textDecoration = 'none';
+                linkAdminUbicaciones.style.fontWeight = '700';
+                linkAdminUbicaciones.style.alignSelf = 'flex-start';
+                linkAdminUbicaciones.textContent = '+ Dar de Alta Nuevos Catálogos Físicos (Exclusivo Administrador)';
+                
+                this.onCrearUbicacionInlineBound = (e) => {
+                    e.preventDefault();
+                    alert("Redirección controlada al módulo maestro de infraestructura central para instanciar Edificios/Aulas.");
+                };
+                linkAdminUbicaciones.addEventListener('click', this.onCrearUbicacionInlineBound);
+                divContenedorEstructural.appendChild(linkAdminUbicaciones);
+            }
+            
+            container.appendChild(divContenedorEstructural);
 
         } catch (error) {
             if (!this.estaDesmontado && currentFetchId === this.activeFetchId) {
@@ -110,5 +146,9 @@ export class SelectorUbicaciones {
     unmount() {
         this.estaDesmontado = true;
         this.activeFetchId++; 
+        const linkBtn = document.getElementById('lnk-crear-ubicacion-inline');
+        if (linkBtn && this.onCrearUbicacionInlineBound) {
+            linkBtn.removeEventListener('click', this.onCrearUbicacionInlineBound);
+        }
     }
 }
