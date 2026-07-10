@@ -3,6 +3,8 @@ import { resguardosService } from '../../services/resguardos.js';
 export class HistorialResguardos {
     constructor(containerId) {
         this.containerId = containerId;
+        this.estaDesmontado = false;
+        this.tokenConcurrenciaId = 0;
     }
 
     async render() {
@@ -10,20 +12,28 @@ export class HistorialResguardos {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="wizard-container" style="padding:15px; background:white;">
-                <p style="font-size:12px; color:var(--text-muted); margin:0 0 15px 0;">Actas de resguardo vigentes asignadas bajo su resguardo directo o departamento.</p>
-                <div style="overflow-x:auto;">
-                    <table style="width:100%; border-collapse:collapse; font-size:12px;" id="tabla-resguardos-personales">
+            <div class="module-card" style="padding:20px; background:white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; font-weight:700;">
+                    Mis Resguardos y Asignaciones Vigentes
+                </h3>
+                <p style="font-size:12px; color:#546e7a; margin:8px 0 15px 0; font-weight: 500;">
+                    Listado oficial de activos fijos del instituto asignados bajo su responsabilidad legal y resguardo patrimonial directo.
+                </p>
+                <div style="overflow-x:auto; border: 1px solid #e0e0e0; border-radius:4px;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;" id="tabla-resguardos-personales">
                         <thead>
-                            <tr style="background-color:var(--bg-main); text-align:left;">
-                                <th style="padding:8px; border:1px solid var(--border-color);">Código Activo</th>
-                                <th style="padding:8px; border:1px solid var(--border-color);">Descripción del Bien</th>
-                                <th style="padding:8px; border:1px solid var(--border-color);">Fecha de Timbrado</th>
-                                <th style="padding:8px; border:1px solid var(--border-color);">Estado Legal</th>
+                            <tr style="background-color:#f5f5f5; border-bottom: 1px solid #e0e0e0;">
+                                <th style="padding:10px; color: #424242; font-weight:700;">Identificador Asignación</th>
+                                <th style="padding:10px; color: #424242; font-weight:700;">Descripción del Bien Fijo</th>
+                                <th style="padding:10px; color: #424242; font-weight:700;">Ubicación Topológica (Edificio - Aula - Depto)</th>
+                                <th style="padding:10px; color: #424242; font-weight:700;">Fecha Asignación</th>
+                                <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Vigencia Légitima</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="4" style="text-align:center; padding:10px; color:var(--text-muted);">Consultando asignaciones...</td></tr>
+                            <tr>
+                                <td colspan="5" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
+                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -39,31 +49,47 @@ export class HistorialResguardos {
         const tbody = tabla.querySelector('tbody');
         if (!tbody) return;
 
+        this.tokenConcurrenciaId++;
+        const currentTokenId = this.tokenConcurrenciaId;
+
         try {
-            const datos = await resguardosService.listarMisResguardos(50, 0);
+            const respuestaBFF = await resguardosService.listarMisResguardos(50, 0);
+            
+            if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
+
             tbody.innerHTML = '';
 
-            if (datos.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--text-muted);">No cuenta con activos fijos asignados bajo su CURP.</td></tr>';
+            const asignaciones = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
+
+            if (asignaciones.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#757575; font-weight:500;">Usted no cuenta con activos fijos asignados bajo su cargo en el ciclo actual.</td></tr>';
                 return;
             }
 
-            datos.forEach(item => {
+            asignaciones.forEach(item => {
+                const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
+                const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} - Aula: ${item.ubicacion.aula} (${item.ubicacion.departamento})` : 'Ubicación no asignada';
+                const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
+
                 const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #e0e0e0';
                 tr.innerHTML = `
-                    <td style="padding:8px; border:1px solid var(--border-color); font-family:monospace; font-weight:bold; color:var(--primary);">${this._escapeHtml(item.bien_codigo)}</td>
-                    <td style="padding:8px; border:1px solid var(--border-color);">${this._escapeHtml(item.bien_descripcion)}</td>
-                    <td style="padding:8px; border:1px solid var(--border-color);">${new Date(item.fecha_asignacion).toLocaleDateString('es-MX')}</td>
-                    <td style="padding:8px; border:1px solid var(--border-color);">
-                        <span style="color:var(--success); font-weight:600; background-color:#e0f2f1; padding:2px 6px; border-radius:10px;">${item.vigente ? 'Vigente' : 'Concluido'}</span>
+                    <td style="padding:10px; font-family:monospace; color:#1a237e; font-size:11px;">${this._escapeHtml(item.id_asignacion)}</td>
+                    <td style="padding:10px; font-weight:600; color: #212121;">${this._escapeHtml(bienDesc)}</td>
+                    <td style="padding:10px; color: #37474f;">${this._escapeHtml(ubicacionFisica)}</td>
+                    <td style="padding:10px; color: #616161;">${this._escapeHtml(fechaParseada)}</td>
+                    <td style="padding:10px; text-align:center;">
+                        <span style="color:#00796b; font-weight:700; background-color:#e0f2f1; padding:3px 8px; border-radius:12px; font-size:10px; text-transform:uppercase;">
+                            Activo (${item.dias_vigencia} días)
+                        </span>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
         } catch (error) {
-            if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:var(--text-error); font-weight:600;">Error de interconexión con el subdominio de resguardos</td></tr>';
-            }
+            if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px; color:#c62828; font-weight:600;">Error crítico: No se logró resolver la matriz de resguardos personales. Contrato alterado.</td></tr>';
+            console.error('Fallo en el mapeo de datos de resguardos desde el BFF:', error);
         }
     }
 
@@ -74,6 +100,7 @@ export class HistorialResguardos {
     }
 
     unmount() {
-    
+        this.estaDesmontado = true;
+        this.tokenConcurrenciaId++;
     }
 }

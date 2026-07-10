@@ -9,37 +9,63 @@ export class AsistenteAlta {
     }
 
     render() {
+        if (!this.container) return;
+        
         this.container.innerHTML = `
-            <div class="wizard-container" style="padding:15px; margin-top:10px;">
-                <div style="display:flex; gap:15px; margin-bottom:15px; font-size:12px;">
-                    <span id="step-1-label" class="step-active" style="font-weight:bold;">1. Datos Personales</span>
-                    <span id="step-2-label" style="color:var(--text-muted);">2. Cuenta Digital</span>
+            <div class="wizard-context" style="padding:5px; margin-top:10px;">
+                <div style="display:flex; gap:20px; margin-bottom:15px; font-size:12px; border-bottom: 1px solid #f5f5f5; padding-bottom: 8px;">
+                    <span id="step-1-label" style="font-weight:bold; color: #1a237e;">Fase 1: Datos Demográficos</span>
+                    <span id="step-2-label" style="color:#757575; font-weight: normal;">Fase 2: Identidad Digital</span>
                 </div>
                 
-                <form id="form-persona-fase" style="display: flex; flex-direction: column; gap: 10px;">
-                    <input type="text" name="curp" placeholder="CURP" required maxlength="18" style="padding:6px; font-family:monospace;">
-                    <input type="text" name="nombres" placeholder="Nombres" required style="padding:6px;">
-                    <input type="text" name="apellidos" placeholder="Apellidos" required style="padding:6px;">
-                    <button type="submit" class="btn-primary" style="padding:8px;">Validar e Indexar Identity</button>
-                    <div id="wizard-p1-error" class="text-error" style="font-size:11px;"></div>
+                <form id="form-persona-fase" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">CURP Oficial (RENAPO)</label>
+                        <input type="text" name="curp" placeholder="Ej. SANI990514HDFSZN01" required maxlength="18" style="width:100%; padding:6px; font-family:monospace; font-size:13px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Nombre(s)</label>
+                            <input type="text" name="nombres" placeholder="Nombres" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Apellidos</label>
+                            <input type="text" name="apellidos" placeholder="Apellidos" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                        </div>
+                    </div>
+                    <button type="submit" id="btn-wizard-p1" style="padding:8px; background-color: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; align-self: flex-end;">Validar e Indexar</button>
+                    <div id="wizard-p1-error" style="font-size:11px; color: #c62828; font-weight:600; margin-top:4px;"></div>
                 </form>
 
-                <form id="form-usuario-fase" style="display: none; flex-direction: column; gap: 10px;">
-                    <p style="font-size:12px; margin:0; color:var(--text-muted);">Vinculando a: <strong id="txt-persona-vinculada" style="color:var(--text-main);"></strong></p>
-                    <input type="text" id="inp-username" placeholder="Usuario Institucional" required style="padding:6px;">
-                    <input type="email" id="inp-email" placeholder="Correo Institucional" required style="padding:6px;">
-                    <input type="password" id="inp-password" placeholder="Contraseña Temporal" required style="padding:6px;">
-                    
-                    <select id="inp-role-id" style="padding:6px;">
-                        <option value="1">Administrador (Rol 1)</option>
-                        <option value="2">Levantador Físico (Rol 2)</option>
-                        <option value="3">Registrador de Bienes (Rol 3)</option>
-                        <option value="4">Revisor de Inventario (Rol 4)</option>
-                        <option value="5">Resguardante Patrimonial (Rol 5)</option>
-                    </select>
-
-                    <button type="submit" class="btn-primary" style="padding:8px;">Crear Acceso</button>
-                    <div id="wizard-p2-error" class="text-error" style="font-size:11px;"></div>
+                <form id="form-usuario-fase" style="display: none; flex-direction: column; gap: 12px;">
+                    <div style="background-color: #e8eaf6; padding: 8px; border-radius: 4px; border-left: 4px solid #3f51b5;">
+                        <p style="font-size:11px; margin:0; color:#1a237e; font-weight:600;">Identidad Asignada:</p>
+                        <span id="txt-persona-vinculada" style="font-size:12px; color:#212121; font-family: monospace;"></span>
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Username Único</label>
+                        <input type="text" id="inp-username" placeholder="Ej. jsanchez" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Correo Electrónico Institucional</label>
+                        <input type="email" id="inp-email" placeholder="usuario@tecnm.mx" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Contraseña de Acceso (Min. 1 Mayúscula, 1 Minúscula, 1 Número)</label>
+                        <input type="password" id="inp-password" placeholder="••••••••" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
+                    </div>
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Asignación Perimetral de Rol de Sistema</label>
+                        <select id="inp-role-id" style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px; background: white;">
+                            <option value="2">Levantador Físico / Operador de Inventario</option>
+                            <option value="1">Administrador General del Sistema</option>
+                            <option value="3">Registrador de Bienes Patrimoniales</option>
+                            <option value="4">Revisor Central de Activos</option>
+                            <option value="5">Resguardante / Jefe de Departamento</option>
+                        </select>
+                    </div>
+                    <button type="submit" id="btn-wizard-p2" style="padding:8px; background-color: #00796b; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px; align-self: flex-end;">Aprovisionar Acceso Digital</button>
+                    <div id="wizard-p2-error" style="font-size:11px; color: #c62828; font-weight:600; margin-top:4px;"></div>
                 </form>
             </div>
         `;
@@ -53,6 +79,7 @@ export class AsistenteAlta {
         this.eventoFormPersona = async (e) => {
             e.preventDefault();
             const errP1 = this.container.querySelector('#wizard-p1-error');
+            const btnP1 = this.container.querySelector('#btn-wizard-p1');
             if (errP1) errP1.textContent = '';
             
             const formData = new FormData(formPersona);
@@ -65,24 +92,28 @@ export class AsistenteAlta {
             };
 
             try {
+                if (btnP1) { btnP1.disabled = true; btnP1.textContent = 'Validando...'; }
+                
                 const persona = await adminService.crearPersona(payload);
                 this.avanzarFaseUsuario(persona);
             } catch (error) {
+                if (btnP1) { btnP1.disabled = false; btnP1.textContent = 'Validando e Indexar'; }
+                
                 if (error.response?.status === 409) {
-                    if (confirm("Identidad existente. ¿Recuperar registro demográfico para asignarle una cuenta digital?")) {
+                    if (confirm("La CURP ya se encuentra indexada en la base de datos demográfica. ¿Desea recuperar el registro existente para asignarle un nuevo perfil de autenticación institucional?")) {
                         try {
                             const catalogo = await adminService.listarPersonas(1, 0, true, targetCurp);
                             if (catalogo && catalogo.length > 0) {
                                 this.avanzarFaseUsuario(catalogo[0]);
                             } else if (errP1) {
-                                errP1.textContent = 'Conflicto: No se pudo mapear la persona existente.';
+                                errP1.textContent = 'Conflicto: No se logró mapear los datos del registro preexistente.';
                             }
                         } catch (fetchErr) {
-                            if (errP1) errP1.textContent = `Error en consulta: ${fetchErr.message}`;
+                            if (errP1) errP1.textContent = `Error de extracción: ${fetchErr.message}`;
                         }
                     }
                 } else if (errP1) {
-                    errP1.textContent = error.response?.data?.detail || error.message;
+                    errP1.textContent = error.response?.data?.detail || 'Error de validación estructural en el esquema Pydantic del BFF.';
                 }
             }
         };
@@ -90,6 +121,7 @@ export class AsistenteAlta {
         this.eventoFormUsuario = async (e) => {
             e.preventDefault();
             const errP2 = this.container.querySelector('#wizard-p2-error');
+            const btnP2 = this.container.querySelector('#btn-wizard-p2');
             if (errP2) errP2.textContent = '';
             
             const payloadUser = {
@@ -101,11 +133,16 @@ export class AsistenteAlta {
             };
 
             try {
+                if (btnP2) { btnP2.disabled = true; btnP2.textContent = 'Aprovisionando tokens...'; }
+                
                 await adminService.crearUsuario(payloadUser);
-                alert('Aprovisionamiento completado exitosamente.');
+                alert('La cuenta digital institucional ha sido aprovisionada y vinculada criptográficamente a la CURP provista.');
                 this.render();
             } catch (error) {
-                if (errP2) errP2.textContent = error.response?.data?.detail || error.message;
+                if (btnP2) { btnP2.disabled = false; btnP2.textContent = 'Aprovisionar Acceso Digital'; }
+                if (errP2) {
+                    errP2.textContent = error.response?.data?.detail || 'Incapacidad de resolver esquema seguro en ms-auth a través del BFF.';
+                }
             }
         };
 
@@ -122,21 +159,16 @@ export class AsistenteAlta {
         const s1Label = this.container.querySelector('#step-1-label');
         const s2Label = this.container.querySelector('#step-2-label');
 
-        if (txtPersona) txtPersona.textContent = `${persona.nombres} [${persona.curp}]`;
+        if (txtPersona) txtPersona.textContent = `${persona.apellidos}, ${persona.nombres} [${persona.curp}]`;
         if (fPersona) fPersona.style.display = 'none';
         if (fUsuario) fUsuario.style.display = 'flex';
         
-        if (s1Label) {
-            s1Label.style.color = 'var(--text-muted)';
-            s1Label.style.fontWeight = 'normal';
-        }
-        if (s2Label) {
-            s2Label.style.color = 'var(--text-main)';
-            s2Label.style.fontWeight = 'bold';
-        }
+        if (s1Label) { s1Label.style.color = '#757575'; s1Label.style.fontWeight = 'normal'; }
+        if (s2Label) { s2Label.style.color = '#00796b'; s2Label.style.fontWeight = 'bold'; }
     }
 
     unmount() {
+        if (!this.container) return;
         const formPersona = this.container.querySelector('#form-persona-fase');
         const formUsuario = this.container.querySelector('#form-usuario-fase');
 

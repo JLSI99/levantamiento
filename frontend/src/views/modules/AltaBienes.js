@@ -1,55 +1,99 @@
 import { bienesService } from '../../services/bienes.js';
-import { SelectorUbicacion } from '../../components/SelectorUbicaciones.js';
+import { SelectorUbicaciones } from '../../components/SelectorUbicaciones.js';
 
-/**
- * Componente funcional de negocio encargado de la indexación perimetral de activos fijos.
- */
 export class AltaBienes {
     constructor(containerId) {
         this.containerId = containerId;
         this.selectorUbicacion = null;
         this.onFormSubmitBound = null;
+        this.catalogoTiposFijos = [];
     }
 
-    render() {
+    async render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
         container.innerHTML = `
-            <div class="wizard-container" style="padding:20px; max-width:600px;">
-                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Alta e Indexación de Activos Fijos</h3>
-                <form id="form-alta-bien" style="display:flex; flex-direction:column; gap:12px; margin-top:15px;">
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex-grow:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600;">Código Patrimonial Único</label>
-                            <input type="text" id="bien-codigo" placeholder="Ej. ITCO-1024-NX" required style="width:100%; padding:6px; box-sizing:border-box;">
-                        </div>
-                        <div style="width:150px;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600;">Marca</label>
-                            <input type="text" id="bien-marca" placeholder="Ej. Dell, HP" required style="width:100%; padding:6px; box-sizing:border-box;">
-                        </div>
-                    </div>
-                    <div>
-                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600;">Descripción Detallada del Activo</label>
-                        <input type="text" id="bien-descripcion" placeholder="Características técnicas, número de serie, modelo del componente" required style="width:100%; padding:6px; box-sizing:border-box;">
-                    </div>
+            <div class="module-card" style="padding:20px; max-width:700px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; font-weight: 700;">
+                    Alta Central e Indexación de Activos Fijos
+                </h3>
+                <form id="form-alta-bien" style="display:flex; flex-direction:column; gap:14px; margin-top:15px;">
                     
-                    <div style="border:1px dashed var(--border-color); padding:15px; border-radius:4px; background-color:var(--bg-main);">
-                        <label style="display:block; font-size:11px; font-weight:bold; color:var(--primary); margin-bottom:10px; letter-spacing:0.5px;">DESTINO TOPOLÓGICO INICIAL</label>
-                        <div id="wrapper-selector-ubicacion"></div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Número de Serie de Fábrica</label>
+                            <input type="text" id="bien-serie" placeholder="Ej. MXL102495X" style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Modelo Comercial</label>
+                            <input type="text" id="bien-modelo" placeholder="Ej. OptiPlex 7090" style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Marca Proveedor</label>
+                            <input type="text" id="bien-marca" placeholder="Ej. Dell" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        </div>
                     </div>
 
-                    <button type="submit" id="btn-alta-bien-submit" class="btn-primary" style="padding:10px; align-self:flex-end; width:180px; font-weight:600;">Registrar Físicamente</button>
-                    <div id="alta-bien-error" class="text-error" style="font-size:12px; margin-top:5px; min-height:16px;"></div>
+                    <div style="display:flex; gap:10px;">
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Costo de Adquisición (M.N. con Decimales)</label>
+                            <input type="number" step="0.01" min="0.01" id="bien-costo" placeholder="0.00" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        </div>
+                        <div style="flex:1;">
+                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Fecha de Facturación/Adquisición</label>
+                            <input type="date" id="bien-fecha" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Descripción Detallada y Atributos Técnicos</label>
+                        <textarea id="bien-descripcion" rows="2" placeholder="Describa el bien instrumental de forma unívoca..." required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px; font-family:sans-serif; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Clasificación de Tipo de Activo Patrimonial</label>
+                        <select id="bien-tipo-id" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px; background: white;">
+                            <option value="">-- Consultando Categorías del BFF --</option>
+                        </select>
+                    </div>
+
+                    <div style="border:1px dashed #3f51b5; padding:15px; border-radius:4px; background-color:#f8f9fa;">
+                        <label style="display:block; font-size:11px; font-weight:bold; color:#1a237e; margin-bottom:8px; letter-spacing:0.5px;">DESTINO TOPOLÓGICO INICIAL DEL ACTIVO</label>
+                        <div id="wrapper-selector-ubicacion-alta"></div>
+                    </div>
+
+                    <button type="submit" id="btn-alta-bien-submit" style="padding:10px 20px; align-self:flex-end; font-weight:600; background-color: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size:12px;">Registrar e Indexar Activo</button>
+                    <div id="alta-bien-error" style="font-size:12px; min-height:16px; color: #c62828; font-weight: 600; text-align: right;"></div>
                 </form>
             </div>
         `;
 
-        // Instanciación del subcomponente jerárquico inyectado en el DOM dedicado
-        this.selectorUbicacion = new SelectorUbicacion('wrapper-selector-ubicacion');
+        this.selectorUbicacion = new SelectorUbicaciones('wrapper-selector-ubicacion-alta');
         this.selectorUbicacion.inicializar();
         
+        await this.cargarTiposDeBienes();
         this.vincularEventos();
+    }
+
+    async cargarTiposDeBienes() {
+        const selectTipo = document.getElementById('bien-tipo-id');
+        if (!selectTipo) return;
+
+        try {
+            const res = await bienesService.listarTipos(100, 0);
+            selectTipo.innerHTML = '<option value="">-- Seleccione una categoría de bien patrimonial --</option>';
+            
+            const lista = Array.isArray(res) ? res : (res?.data || []);
+            lista.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id_tipo;
+                opt.textContent = `${t.nombre} (Depreciación: ${t.tasa_depreciacion_anual}%)`;
+                selectTipo.appendChild(opt);
+            });
+        } catch (err) {
+            selectTipo.innerHTML = '<option value="">Error al conectar con la matriz de tipos de bienes.</option>';
+        }
     }
 
     vincularEventos() {
@@ -63,45 +107,43 @@ export class AltaBienes {
             const submitBtn = document.getElementById('btn-alta-bien-submit');
             if (errDiv) errDiv.textContent = '';
 
-            // Extracción de la data estructural del selector jerárquico
             const geoData = this.selectorUbicacion.obtenerValoresEstructurales();
+            const tipoIdSeleccionado = document.getElementById('bien-tipo-id').value;
             
-            // Validación estricta de asignación antes del envío
             if (!geoData.id_edificio || !geoData.id_aula || !geoData.id_departamento) {
-                if (errDiv) errDiv.textContent = 'Error: Debe definir la jerarquía completa del destino topológico (Edificio -> Aula -> Departamento).';
+                if (errDiv) errDiv.textContent = 'Error: Debe especificar la jerarquía física completa de resguardo (Edificio -> Aula -> Departamento).';
+                return;
+            }
+
+            if (!tipoIdSeleccionado) {
+                if (errDiv) errDiv.textContent = 'Error: Debe clasificar la naturaleza del activo.';
                 return;
             }
 
             const payload = {
-                codigo_inventario: document.getElementById('bien-codigo').value.trim().toUpperCase(),
-                descripcion: document.getElementById('bien-descripcion').value.trim(),
+                serie: document.getElementById('bien-serie').value.trim() || null,
+                modelo: document.getElementById('bien-modelo').value.trim() || null,
                 marca: document.getElementById('bien-marca').value.trim(),
+                descripcion: document.getElementById('bien-descripcion').value.trim(),
+                costo: parseFloat(document.getElementById('bien-costo').value),
+                fecha_adquisicion: document.getElementById('bien-fecha').value || null,
+                tipos_ids: [tipoIdSeleccionado],
                 id_edificio: geoData.id_edificio,
                 id_aula: geoData.id_aula,
                 id_departamento: geoData.id_departamento
             };
 
             try {
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.textContent = 'Indexando en BD...';
-                }
+                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Indexando en Repositorio Central...'; }
 
-                // Comunicación perimetral con el microservicio correspondiente vía el BFF
                 await bienesService.crear(payload);
-                
-                alert('Activo fijo registrado de manera exitosa e indexado estructuralmente en el inventario institucional.');
-                
-                // Limpieza e invalidación visual del formulario mediante re-renderizado
-                this.render();
+                alert('Activo instrumental registrado de forma exitosa en el inventario institucional del TECNM.');
+                await this.render();
                 
             } catch (error) {
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                    submitBtn.textContent = 'Registrar Físicamente';
-                }
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Registrar e Indexar Activo'; }
                 if (errDiv) {
-                    errDiv.textContent = error.response?.data?.detail || 'Error de consistencia o denegación de permisos en el payload enviado.';
+                    errDiv.textContent = error.response?.data?.detail || 'Incapacidad para indexar el activo fijo debido a violaciones de esquema en el BFF.';
                 }
             }
         };
@@ -114,7 +156,7 @@ export class AltaBienes {
         if (form && this.onFormSubmitBound) {
             form.removeEventListener('submit', this.onFormSubmitBound);
         }
-        if (this.selectorUbicacion && typeof this.selectorUbicacion.unmount === 'function') {
+        if (this.selectorUbicacion) {
             this.selectorUbicacion.unmount();
         }
     }
