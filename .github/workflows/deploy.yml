@@ -1,0 +1,20 @@
+name: Ecosistema Levantamiento de Bienes ITSC - CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Desplegar Ecosistema de Microservicios
+    runs-on: [self-hosted, servidor-universidad]
+
+    steps:
+      - name: Descargar Código Fuente del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Ejecutar Orquestador de Despliegue Local
+        run: |
+          chmod +x ./desplegar.sh
+          ./desplegar.sh
