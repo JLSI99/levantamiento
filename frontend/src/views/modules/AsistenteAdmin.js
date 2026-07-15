@@ -22,7 +22,6 @@ export class AsistenteAdmin {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Circuit Breaker RBAC: Validación en la puerta de entrada
         const usuario = this._obtenerUsuarioAutenticado();
         const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
 

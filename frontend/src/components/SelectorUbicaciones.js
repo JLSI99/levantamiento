@@ -1,154 +1,164 @@
-import { ubicacionesService } from '../services/ubicaciones.js';
+import { ubicacionesService } from '../services/ubicaciones.js'; // Corregido: Importación del servicio correcto
 
 export class SelectorUbicaciones {
-    constructor(containerId) {
-        this.containerId = containerId;
-        this.activeFetchId = 0;
-        this.estaDesmontado = false;
-        this.onCrearUbicacionInlineBound = null;
+    constructor(containerElement, onUbicacionSeleccionada) {
+        this.container = containerElement;
+        this.onSeleccion = onUbicacionSeleccionada;
+        this.edificios = [];
+        this.aulas = [];
+        this.departamentos = [];
         
-        this.selectEdificio = document.createElement('select');
-        this._aplicarEstiloBaseSelect(this.selectEdificio);
+        this.estadoSeleccion = {
+            id_edificio: null,
+            id_aula: null,
+            id_departamento: null
+        };
 
-        this.selectAula = document.createElement('select');
-        this._aplicarEstiloBaseSelect(this.selectAula);
-
-        this.selectDepartamento = document.createElement('select');
-        this._aplicarEstiloBaseSelect(this.selectDepartamento);
-    }
-
-    _aplicarEstiloBaseSelect(el) {
-        el.style.padding = '6px';
-        el.style.border = '1px solid #bdbdbd';
-        el.style.borderRadius = '4px';
-        el.style.background = 'white';
-        el.style.fontSize = '12px';
-        el.style.flex = '1';
-    }
-
-    _obtenerUsuarioAutenticado() {
-        try {
-            const sesionRaw = localStorage.getItem('usuario_sesion');
-            if (!sesionRaw) return null;
-            return JSON.parse(sesionRaw);
-        } catch (e) {
-            return null;
-        }
+        this.onEdificioChangeBound = null;
+        this.onAulaChangeBound = null;
+        this.onDeptoChangeBound = null;
     }
 
     async inicializar() {
-        const container = document.getElementById(this.containerId);
-        if (!container) return;
-        
-        this.activeFetchId++;
-        const currentFetchId = this.activeFetchId;
-        
-        container.innerHTML = '<span style="font-size:12px; color:#757575;">Cargando catálogo topológico del BFF...</span>';
-        
+        if (!this.container) return;
+        this.renderBase();
+        await this.cargarEdificios();
+        await this.cargarDepartamentos();
+        this.vincularEventos();
+    }
+
+    renderBase() {
+        this.container.innerHTML = `
+            <div style="display:flex; gap:10px; margin-bottom:10px;">
+                <div style="flex:1;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Edificio</label>
+                    <select id="sel-edificio" style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                        <option value="">Seleccione Edificio...</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Aula / Espacio</label>
+                    <select id="sel-aula" disabled style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                        <option value="">Seleccione Aula...</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Departamento Adscrito</label>
+                    <select id="sel-departamento" style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                        <option value="">Seleccione Departamento...</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+
+    async cargarEdificios() {
         try {
-            const catalogos = await ubicacionesService.obtenerCatalogosUnificados();
+            // Corregido: Uso de ubicacionesService
+            const respuesta = await ubicacionesService.obtenerEdificios();
+            this.edificios = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
             
-            if (this.estaDesmontado || currentFetchId !== this.activeFetchId) return;
+            const sel = this.container.querySelector('#sel-edificio');
+            if (!sel) return;
             
-            container.innerHTML = '';
-
-            this.selectEdificio.innerHTML = '<option value="">-- Seleccione Edificio --</option>';
-            if (catalogos && Array.isArray(catalogos.edificios)) {
-                catalogos.edificios.forEach(e => {
-                    const opt = document.createElement('option');
-                    opt.value = e.id_entidad;
-                    opt.textContent = e.nombre;
-                    this.selectEdificio.appendChild(opt);
-                });
-            }
-
-            this.selectAula.innerHTML = '<option value="">-- Seleccione Aula --</option>';
-            if (catalogos && Array.isArray(catalogos.aulas)) {
-                catalogos.aulas.forEach(a => {
-                    const opt = document.createElement('option');
-                    opt.value = a.id_entidad;
-                    opt.textContent = a.nombre;
-                    this.selectAula.appendChild(opt);
-                });
-            }
-
-            this.selectDepartamento.innerHTML = '<option value="">-- Seleccione Departamento --</option>';
-            if (catalogos && Array.isArray(catalogos.departamentos)) {
-                catalogos.departamentos.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d.id_entidad;
-                    opt.textContent = d.nombre;
-                    this.selectDepartamento.appendChild(opt);
-                });
-            }
-
-            const divContenedorEstructural = document.createElement('div');
-            divContenedorEstructural.style.display = 'flex';
-            divContenedorEstructural.style.flexDirection = 'column';
-            divContenedorEstructural.style.gap = '10px';
-            divContenedorEstructural.style.width = '100%';
-
-            const divFlexSelects = document.createElement('div');
-            divFlexSelects.style.display = 'flex';
-            divFlexSelects.style.gap = '10px';
-            divFlexSelects.style.width = '100%';
-            
-            divFlexSelects.appendChild(this.selectEdificio);
-            divFlexSelects.appendChild(this.selectAula);
-            divFlexSelects.appendChild(this.selectDepartamento);
-            
-            divContenedorEstructural.appendChild(divFlexSelects);
-
-            // Blindaje RBAC: Solo el Administrador ve el disparador del módulo de creación
-            const usuario = this._obtenerUsuarioAutenticado();
-            const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
-
-            if (esAdmin) {
-                const linkAdminUbicaciones = document.createElement('a');
-                linkAdminUbicaciones.href = '#/infraestructura/maestro';
-                linkAdminUbicaciones.id = 'lnk-crear-ubicacion-inline';
-                linkAdminUbicaciones.style.fontSize = '11px';
-                linkAdminUbicaciones.style.color = '#3f51b5';
-                linkAdminUbicaciones.style.textDecoration = 'none';
-                linkAdminUbicaciones.style.fontWeight = '700';
-                linkAdminUbicaciones.style.alignSelf = 'flex-start';
-                linkAdminUbicaciones.textContent = '+ Dar de Alta Nuevos Catálogos Físicos (Exclusivo Administrador)';
-                
-                this.onCrearUbicacionInlineBound = (e) => {
-                    e.preventDefault();
-                    alert("Redirección controlada al módulo maestro de infraestructura central para instanciar Edificios/Aulas.");
-                };
-                linkAdminUbicaciones.addEventListener('click', this.onCrearUbicacionInlineBound);
-                divContenedorEstructural.appendChild(linkAdminUbicaciones);
-            }
-            
-            container.appendChild(divContenedorEstructural);
-
-        } catch (error) {
-            if (!this.estaDesmontado && currentFetchId === this.activeFetchId) {
-                container.innerHTML = '<span style="color:#c62828; font-size:12px; font-weight:600;">Error crítico: No se pudo recuperar la topología de ubicaciones del BFF.</span>';
-                console.error('Fallo en la resolución del catálogo unificado:', error);
-            }
+            this.edificios.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id_edificio;
+                opt.textContent = e.nombre;
+                sel.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Error al poblar la matriz topológica de edificios:", err);
         }
     }
 
-    /**
-     * @returns {{id_edificio: (string|null), id_aula: (string|null), id_departamento: (string|null)}}
-     */
-    obtenerValoresEstructurales() {
-        return {
-            id_edificio: this.selectEdificio.value || null,
-            id_aula: this.selectAula.value || null,
-            id_departamento: this.selectDepartamento.value || null
+    async cargarDepartamentos() {
+        try {
+            // Corregido: Uso de ubicacionesService
+            const respuesta = await ubicacionesService.obtenerDepartamentos();
+            this.departamentos = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
+            
+            const sel = this.container.querySelector('#sel-departamento');
+            if (!sel) return;
+            
+            this.departamentos.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id_departamento;
+                opt.textContent = d.nombre;
+                sel.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Error al poblar departamentos institucionales:", err);
+        }
+    }
+
+    async manejarCambioEdificio(idEdificio) {
+        const selAula = this.container.querySelector('#sel-aula');
+        if (!selAula) return;
+
+        selAula.innerHTML = '<option value="">Seleccione Aula...</option>';
+        this.estadoSeleccion.id_edificio = idEdificio ? parseInt(idEdificio, 10) : null;
+        this.estadoSeleccion.id_aula = null;
+
+        if (!idEdificio) {
+            selAula.disabled = true;
+            this.notificarCambio();
+            return;
+        }
+
+        try {
+            selAula.disabled = true;
+            // Corregido: Uso de ubicacionesService
+            const respuesta = await ubicacionesService.obtenerAulasPorEdificio(idEdificio);
+            this.aulas = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
+            
+            this.aulas.forEach(a => {
+                const opt = document.createElement('option');
+                opt.value = a.id_aula;
+                opt.textContent = `${a.nombre} (${a.tipo})`;
+                selAula.appendChild(opt);
+            });
+            selAula.disabled = false;
+        } catch (err) {
+            console.error("Fallo estructural en carga perimetral de aulas:", err);
+        }
+        this.notificarCambio();
+    }
+
+    vincularEventos() {
+        const selEdificio = this.container.querySelector('#sel-edificio');
+        const selAula = this.container.querySelector('#sel-aula');
+        const selDepto = this.container.querySelector('#sel-departamento');
+
+        this.onEdificioChangeBound = (e) => this.manejarCambioEdificio(e.target.value);
+        this.onAulaChangeBound = (e) => {
+            this.estadoSeleccion.id_aula = e.target.value ? parseInt(e.target.value, 10) : null;
+            this.notificarCambio();
         };
+        this.onDeptoChangeBound = (e) => {
+            this.estadoSeleccion.id_departamento = e.target.value ? parseInt(e.target.value, 10) : null;
+            this.notificarCambio();
+        };
+
+        if (selEdificio) selEdificio.addEventListener('change', this.onEdificioChangeBound);
+        if (selAula) selAula.addEventListener('change', this.onAulaChangeBound);
+        if (selDepto) selDepto.addEventListener('change', this.onDeptoChangeBound);
+    }
+
+    notificarCambio() {
+        if (this.onSeleccion) {
+            this.onSeleccion({ ...this.estadoSeleccion });
+        }
     }
 
     unmount() {
-        this.estaDesmontado = true;
-        this.activeFetchId++; 
-        const linkBtn = document.getElementById('lnk-crear-ubicacion-inline');
-        if (linkBtn && this.onCrearUbicacionInlineBound) {
-            linkBtn.removeEventListener('click', this.onCrearUbicacionInlineBound);
-        }
+        if (!this.container) return;
+        const selEdificio = this.container.querySelector('#sel-edificio');
+        const selAula = this.container.querySelector('#sel-aula');
+        const selDepto = this.container.querySelector('#sel-departamento');
+
+        if (selEdificio && this.onEdificioChangeBound) selEdificio.removeEventListener('change', this.onEdificioChangeBound);
+        if (selAula && this.onAulaChangeBound) selAula.removeEventListener('change', this.onAulaChangeBound);
+        if (selDepto && this.onDeptoChangeBound) selDepto.removeEventListener('change', this.onDeptoChangeBound);
     }
 }

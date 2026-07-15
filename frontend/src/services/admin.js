@@ -1,6 +1,6 @@
 import bffClient from '../api/client.js';
-
 export const adminService = {
+
     async altaPersonalCentralizada(altaCompuestaData) {
         try {
             const response = await bffClient.post('/admin/alta-personal', altaCompuestaData);

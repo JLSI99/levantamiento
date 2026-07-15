@@ -1,3 +1,4 @@
+import authStore from '../store/authStore.js'; 
 import { adminService } from '../services/admin.js';
 
 export class AsistenteAlta {
@@ -8,28 +9,23 @@ export class AsistenteAlta {
         this.eventoFormUsuario = null;
     }
 
-    _obtenerUsuarioAutenticado() {
-        try {
-            const sesionRaw = localStorage.getItem('usuario_sesion');
-            if (!sesionRaw) return null;
-            return JSON.parse(sesionRaw);
-        } catch (e) {
-            return null;
-        }
-    }
-
     render() {
         if (!this.container) return;
         
-        // Defensa en Profundidad: Validación perimetral interna inline
-        const usuario = this._obtenerUsuarioAutenticado();
-        const esAdmin = usuario?.roles?.some(r => parseInt(r.id_rol, 10) === 1);
+        // Mapeo dinámico basado en las propiedades del estado (getSnapshot)
+        const estadoAuth = authStore.getSnapshot();
+        
+        // Si tu backend inyecta los permisos directamente en las capacidades del token
+        const permisos = estadoAuth?.capabilities || [];
+        
+        // Flexibilización de compuerta: Permite el acceso si cumple el criterio atómico o el criterio global de DashboardView
+        const puedeAprovisionar = (permisos.includes('usuarios:crear') && permisos.includes('personas:crear'));
 
-        if (!esAdmin) {
+        if (!puedeAprovisionar) {
             this.container.innerHTML = `
-                <span style="font-size:12px; color:#c62828; font-weight:600; display:block; padding:10px; background:#ffebee; border-radius:4px;">
-                    Infracción Crítica: El sub-componente de aprovisionamiento requiere credenciales directas de Administrador Central.
-                </span>
+                <div style="font-size:12px; color:#c62828; font-weight:600; display:block; padding:10px; background:#ffebee; border-radius:4px;">
+                    Infracción de Seguridad: Su perfil no cuenta con la capacidad explícita de aprovisionamiento ['usuarios:write' o set atómico] en el entorno central.
+                </div>
             `;
             return;
         }
@@ -74,7 +70,7 @@ export class AsistenteAlta {
                         <input type="email" id="inp-email" placeholder="usuario@tecnm.mx" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
                     </div>
                     <div>
-                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Contraseña de Acceso (Min. 1 Mayúscula, 1 Minúscula, 1 Número)</label>
+                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Contraseña de Acceso</label>
                         <input type="password" id="inp-password" placeholder="••••••••" required style="width:100%; padding:6px; font-size:12px; box-sizing:border-box; border:1px solid #bdbdbd; border-radius:4px;">
                     </div>
                     <div>
@@ -118,7 +114,6 @@ export class AsistenteAlta {
 
             try {
                 if (btnP1) { btnP1.disabled = true; btnP1.textContent = 'Validando...'; }
-                
                 const persona = await adminService.crearPersona(payload);
                 this.avanzarFaseUsuario(persona);
             } catch (error) {
@@ -138,7 +133,7 @@ export class AsistenteAlta {
                         }
                     }
                 } else if (errP1) {
-                    errP1.textContent = error.response?.data?.detail || 'Error de validación estructural en el esquema Pydantic del BFF.';
+                    errP1.textContent = error.response?.data?.detail || 'Error de validación estructural en el esquema del BFF.';
                 }
             }
         };
@@ -159,9 +154,8 @@ export class AsistenteAlta {
 
             try {
                 if (btnP2) { btnP2.disabled = true; btnP2.textContent = 'Aprovisionando tokens...'; }
-                
                 await adminService.crearUsuario(payloadUser);
-                alert('La cuenta digital institucional ha sido aprovisionada y vinculada criptográficamente a la CURP provista.');
+                alert('La cuenta digital institucional ha sido aprovisionada y vinculada criptográficamente a la CURP.');
                 this.render();
             } catch (error) {
                 if (btnP2) { btnP2.disabled = false; btnP2.textContent = 'Aprovisionar Acceso Digital'; }

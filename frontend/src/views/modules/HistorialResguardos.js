@@ -1,3 +1,4 @@
+import authStore from '../../store/authStore.js';
 import { resguardosService } from '../../services/resguardos.js';
 
 export class HistorialResguardos {
@@ -7,64 +8,48 @@ export class HistorialResguardos {
         this.tokenConcurrenciaId = 0;
         this.onFiltroInputBound = null;
         this.onAccionesClickBound = null;
-        this.rolOperativo = null;
-    }
-
-    _obtenerUsuarioAutenticado() {
-        try {
-            const sesionRaw = localStorage.getItem('usuario_sesion');
-            if (!sesionRaw) return null;
-            return JSON.parse(sesionRaw);
-        } catch (e) {
-            console.error("Error al decodificar la sesión activa del operador:", e);
-            return null;
-        }
+        this.capacidadGlobal = false;
     }
 
     async render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        const usuario = this._obtenerUsuarioAutenticado();
-        if (!usuario || !usuario.roles || usuario.roles.length === 0) {
+        // Recuperación unificada del estado de sesión mediante el Snapshot
+        const state = authStore.getSnapshot();
+        if (!state || !state.isAuthenticated || !state.user) {
             this._renderizarBloqueo403(container, "Identidad no verificada. Inicie sesión para establecer canal patrimonial seguro.");
             return;
         }
 
-        // Mapeo exhaustivo de id_rol
-        const idsRoles = usuario.roles.map(r => parseInt(r.id_rol, 10));
+        // Mapeo dinámico basado en las capacidades unificadas del frontend (CapBAC)
+        const permisos = state.capabilities || [];
         
-        if (idsRoles.includes(1)) {
-            this.rolOperativo = 'ADMIN';
-        } else if (idsRoles.includes(2)) {
-            this.rolOperativo = 'LEVANTADOR';
-        } else if (idsRoles.includes(4)) {
-            this.rolOperativo = 'REVISOR';
-        } else if (idsRoles.includes(5)) {
-            this.rolOperativo = 'RESGUARDANTE';
-        } else {
-            this.rolOperativo = 'INVALIDO'; // Rol 3 (Registrador) no tiene acceso a resguardos
-        }
+        // Identificar si tiene capacidades globales/fiscalizadoras o individuales/resguardantes
+        // Homologado con 'resguardos:read_personal' que pide DashboardView.js
+        const puedeListarTodo = permisos.includes('resguardos:leer') || permisos.includes('resguardos:crear');
+        const puedeListarPropios = permisos.includes('resguardos:leer');
+        const puedeLiberar = permisos.includes('resguardos:liberar') || permisos.includes('resguardos:crear');
 
-        if (this.rolOperativo === 'INVALIDO') {
-            this._renderizarBloqueo403(container, "Acceso Denegado: Su rol (Registrador) está restringido exclusivamente al CRUD e indexación de bienes físicos base.");
+        if (!puedeListarTodo && !puedeListarPropios) {
+            this._renderizarBloqueo403(container, "Acceso Denegado: Su perfil no cuenta con capacidades explícitas de lectura en la matriz de resguardos patrimoniales.");
             return;
         }
 
-        const esAdminOLevantador = (this.rolOperativo === 'ADMIN' || this.rolOperativo === 'LEVANTADOR');
+        this.capacidadGlobal = puedeListarTodo;
 
         container.innerHTML = `
             <div class="module-card" style="padding:20px; background:white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                 <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; font-weight:700;" id="titulo-modulo-resguardos">
-                    ${esAdminOLevantador ? 'Panel Maestro de Custodia e Inventario Institucional' : 'Mis Resguardos y Asignaciones Vigentes'}
+                    ${this.capacidadGlobal ? 'Panel Maestro de Custodia e Inventario Institucional' : 'Mis Resguardos y Asignaciones Vigentes'}
                 </h3>
                 <p style="font-size:12px; color:#546e7a; margin:8px 0 15px 0; font-weight: 500;">
-                    ${esAdminOLevantador ? 'Consola global de fiscalización, liberación y timbrado de actas de resguardo de activos fijos del instituto.' : 'Listado oficial de activos fijos del instituto asignados bajo su responsabilidad legal y resguardo patrimonial directo.'}
+                    ${this.capacidadGlobal ? 'Consola global de fiscalización, liberación y timbrado de actas de resguardo de activos fijos del instituto.' : 'Listado oficial de activos fijos del instituto asignados bajo su responsabilidad legal y resguardo patrimonial directo.'}
                 </p>
                 
-                ${esAdminOLevantador ? `
+                ${this.capacidadGlobal ? `
                 <div style="margin-bottom: 15px; display: flex; gap: 10px;" id="controles-globales-resguardos">
-                    <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar unívocamente por CURP del Responsable..." style="flex: 1; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                    <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar unívocamente por CURP o Nombre del Responsable..." style="flex: 1; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
                 </div>
                 ` : ''}
 
@@ -73,17 +58,17 @@ export class HistorialResguardos {
                         <thead>
                             <tr style="background-color:#f5f5f5; border-bottom: 1px solid #e0e0e0;">
                                 <th style="padding:10px; color: #424242; font-weight:700;">Identificador Asignación</th>
-                                ${esAdminOLevantador ? '<th style="padding:10px; color: #424242; font-weight:700;">Custodio / Responsable</th>' : ''}
+                                ${this.capacidadGlobal ? '<th style="padding:10px; color: #424242; font-weight:700;">Custodio / Responsable</th>' : ''}
                                 <th style="padding:10px; color: #424242; font-weight:700;">Descripción del Bien Fijo</th>
                                 <th style="padding:10px; color: #424242; font-weight:700;">Ubicación Topológica (Edificio - Aula - Depto)</th>
                                 <th style="padding:10px; color: #424242; font-weight:700;">Fecha Asignación</th>
                                 <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Vigencia Légitima</th>
-                                ${esAdminOLevantador ? '<th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Operaciones de Control</th>' : ''}
+                                ${puedeLiberar ? '<th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Operaciones de Control</th>' : ''}
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td colspan="${esAdminOLevantador ? '7' : '5'}" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
+                                <td colspan="${this.capacidadGlobal ? '7' : (puedeLiberar ? '6' : '5')}" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -92,9 +77,7 @@ export class HistorialResguardos {
         `;
 
         await this.cargarTabla();
-        if (esAdminOLevantador) {
-            this.vincularEventos();
-        }
+        this.vincularEventos(puedeLiberar);
     }
 
     async cargarTabla(filtroCurp = '') {
@@ -105,16 +88,17 @@ export class HistorialResguardos {
 
         this.tokenConcurrenciaId++;
         const currentTokenId = this.tokenConcurrenciaId;
-        const esAdminOLevantador = (this.rolOperativo === 'ADMIN' || this.rolOperativo === 'LEVANTADOR');
-        const columnasTotales = esAdminOLevantador ? 7 : 5;
+        
+        const state = authStore.getSnapshot();
+        const permisos = state.capabilities || [];
+        const puedeLiberar = permisos.includes('resguardos:crear') || permisos.includes('resguardos:write');
+        const columnasTotales = this.capacidadGlobal ? 7 : (puedeLiberar ? 6 : 5);
 
         try {
             let respuestaBFF;
-            if (esAdminOLevantador) {
-                // Invoca el endpoint maestro institucional para administradores y levantadores
-                respuestaBFF = await resguardosService.listarTodosLosResguardos(100, 0);
+            if (this.capacidadGlobal) {
+                respuestaBFF = await resguardosService.listarTodosLosResguardosInstitucionales({ limit: 100, offset: 0});
             } else {
-                // Aislamiento perimetral automático para resguardantes y revisores
                 respuestaBFF = await resguardosService.listarMisResguardos(50, 0);
             }
             
@@ -124,8 +108,7 @@ export class HistorialResguardos {
 
             let asignaciones = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
 
-            // Filtro local estricto sobre memoria volátil si se provee CURP en consola maestra
-            if (esAdminOLevantador && filtroCurp.trim() !== '') {
+            if (this.capacidadGlobal && filtroCurp.trim() !== '') {
                 const query = filtroCurp.toUpperCase().trim();
                 asignaciones = asignaciones.filter(item => 
                     item.persona?.curp?.toUpperCase().includes(query) ||
@@ -148,7 +131,7 @@ export class HistorialResguardos {
                 tr.style.borderBottom = '1px solid #e0e0e0';
                 tr.innerHTML = `
                     <td style="padding:10px; font-family:monospace; color:#1a237e; font-size:11px;">${this._escapeHtml(item.id_asignacion)}</td>
-                    ${esAdminOLevantador ? `<td style="padding:10px; font-weight:500; color:#37474f;">${this._escapeHtml(custodioNombre)}</td>` : ''}
+                    ${this.capacidadGlobal ? '<td style="padding:10px; font-weight:500; color:#37474f;">' + this._escapeHtml(custodioNombre) + '</td>' : ''}
                     <td style="padding:10px; font-weight:600; color: #212121;">${this._escapeHtml(bienDesc)}</td>
                     <td style="padding:10px; color: #37474f;">${this._escapeHtml(ubicacionFisica)}</td>
                     <td style="padding:10px; color: #616161;">${this._escapeHtml(fechaParseada)}</td>
@@ -157,7 +140,7 @@ export class HistorialResguardos {
                             Activo (${item.dias_vigencia} días)
                         </span>
                     </td>
-                    ${esAdminOLevantador ? `
+                    ${puedeLiberar ? `
                     <td style="padding:10px; text-align:center;">
                         <button class="btn-liberar-resguardo" data-id="${item.id_asignacion}" style="background-color:#e65100; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px; font-weight:600;">Liberar Bien</button>
                     </td>
@@ -172,9 +155,9 @@ export class HistorialResguardos {
         }
     }
 
-    vincularEventos() {
+    vincularEventos(puedeLiberar) {
         const filtroInput = document.getElementById('filtro-busqueda-curp');
-        if (filtroInput) {
+        if (filtroInput && this.capacidadGlobal) {
             this.onFiltroInputBound = (e) => {
                 this.cargarTabla(e.target.value);
             };
@@ -182,13 +165,13 @@ export class HistorialResguardos {
         }
 
         const tabla = document.getElementById('tabla-resguardos-personales');
-        if (tabla) {
+        if (tabla && puedeLiberar) {
             this.onAccionesClickBound = async (e) => {
                 if (e.target.classList.contains('btn-liberar-resguardo')) {
                     const idAsignacion = e.target.getAttribute('data-id');
                     if (confirm('¿Confirma la liberación legal del activo patrimonial? El bien retornará al estado disponible para reasignación.')) {
                         try {
-                            await resguardosService.liberarResguardo(idAsignacion);
+                            await resguardosService.concluirResguardoOrdinario(idAsignacion);
                             alert('El acta de resguardo ha sido dada de baja lógica de manera exitosa.');
                             this.cargarTabla(filtroInput ? filtroInput.value : '');
                         } catch (err) {

@@ -1,188 +1,165 @@
-import { bienesService } from '../../services/bienes.js';
+import authStore from '../../store/authStore.js';
+import { bienesService } from '../../services/bienes.js'; 
 import { SelectorUbicaciones } from '../../components/SelectorUbicaciones.js';
 
 export class AltaBienes {
     constructor(containerId) {
         this.containerId = containerId;
-        this.selectorUbicacion = null;
-        this.onFormSubmitBound = null;
-        this.catalogoTiposFijos = [];
-    }
-
-    _obtenerUsuarioAutenticado() {
-        try {
-            const sesionRaw = localStorage.getItem('usuario_sesion');
-            if (!sesionRaw) return null;
-            return JSON.parse(sesionRaw);
-        } catch (e) {
-            return null;
-        }
+        this.selectorUbicaciones = null;
+        this.ubicacionActual = null;
+        this.eventoFormSubmit = null;
     }
 
     async render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Circuit Breaker RBAC: Solo el Administrador (1) o el Registrador (3) pueden crear bienes
-        const usuario = this._obtenerUsuarioAutenticado();
-        const idsRoles = usuario?.roles ? usuario.roles.map(r => parseInt(r.id_rol, 10)) : [];
-        const tienePermiso = idsRoles.includes(1) || idsRoles.includes(3);
+        // 1. Obtención del estado global de autenticación desde el Store
+        const estadoAuth = authStore.getSnapshot();
+        const usuario = estadoAuth?.user;
+        const capabilities = estadoAuth?.capabilities || [];
+        const permisos = usuario?.permisos || [];
 
-        if (!tienePermiso) {
+        // 2. Verificación cruzada: Rol de Administrador implícito
+        const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
+        
+        // 3. Evaluación perimetral por capacidades (Unificando formatos ES / EN)
+        const puedeRegistrar = esAdmin || 
+                               permisos.includes('bienes:crear') || 
+                               capabilities.includes('bienes:create') || 
+                               capabilities.includes('bienes:crear');
+
+        if (!puedeRegistrar) {
             container.innerHTML = `
-                <div style="padding:30px; background:#ffebee; border:1px solid #ffcdd2; border-radius:6px; color:#b71c1c; font-family:sans-serif;">
-                    <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase;">Acceso Restringido (403 Forbidden)</h4>
-                    <p style="margin:0; font-size:12px; line-height:1.5;">Su perfil operativo no cuenta con facultades de indexación patrimonial. El registro de bienes instrumentales queda limitado a los roles de Registrador de Bienes y Administrador General.</p>
+                <div class="forbidden-container" style="padding: 20px; background: #ffebee; border: 1px solid #c62828; border-radius: 4px; margin-top: 20px; font-family: sans-serif;">
+                    <h4 style="color:#c62828; margin: 0 0 10px 0; font-weight: 700;">ACCESO DENEGADO (403 FORBIDDEN)</h4>
+                    <p style="font-size: 13px; color: #37474f; margin: 0;">
+                        Su token institucional no cuenta con la capacidad ['bienes:crear'] necesaria para indexar activos patrimoniales.
+                    </p>
                 </div>
             `;
             return;
         }
 
+        // 4. Inyección estructural de la interfaz del formulario
         container.innerHTML = `
-            <div class="module-card" style="padding:20px; max-width:700px; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; font-weight: 700;">
-                    Alta Central e Indexación de Activos Fijos
+            <div class="module-card">
+                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px; font-weight:700;">
+                    Indexación de Nuevos Bienes Patrimoniales (Alta de Activos)
                 </h3>
-                <form id="form-alta-bien" style="display:flex; flex-direction:column; gap:14px; margin-top:15px;">
-                    
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Número de Serie de Fábrica</label>
-                            <input type="text" id="bien-serie" placeholder="Ej. MXL102495X" style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                <p style="font-size:12px; color:#546e7a; margin:8px 0 15px 0; font-weight: 500;">
+                    Módulo operativo para el registro físico y catalogación estructural de activos fijos del Instituto Tecnológico de México.
+                </p>
+
+                <form id="form-alta-bien">
+                    <div class="form-group-row">
+                        <div style="flex:2;">
+                            <label>Descripción Completa del Activo</label>
+                            <input type="text" name="descripcion" placeholder="Ej. Monitor Dell UltraSharp 27" required>
                         </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Modelo Comercial</label>
-                            <input type="text" id="bien-modelo" placeholder="Ej. OptiPlex 7090" style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Marca Proveedor</label>
-                            <input type="text" id="bien-marca" placeholder="Ej. Dell" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        <div>
+                            <label>Número de Serie de Fábrica</label>
+                            <input type="text" name="numero_serie" class="input-monospace" placeholder="Ej. CN-0XGV70-..." required>
                         </div>
                     </div>
 
-                    <div style="display:flex; gap:10px;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Costo de Adquisición (M.N. con Decimales)</label>
-                            <input type="number" step="0.01" min="0.01" id="bien-costo" placeholder="0.00" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                    <div class="form-group-row">
+                        <div>
+                            <label>Marca</label>
+                            <input type="text" name="marca" placeholder="Dell">
                         </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Fecha de Facturación/Adquisición</label>
-                            <input type="date" id="bien-fecha" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px;">
+                        <div>
+                            <label>Modelo</label>
+                            <input type="text" name="modelo" placeholder="U2723QE">
+                        </div>
+                        <div>
+                            <label>Estado Físico Inicial</label>
+                            <select name="estado">
+                                <option value="Excelente">Excelente / Nuevo</option>
+                                <option value="Bueno" selected>Bueno / Funcional</option>
+                                <option value="Regular">Regular / Desgaste</option>
+                                <option value="Malo">Malo / Requiere Mantenimiento</option>
+                            </select>
                         </div>
                     </div>
 
-                    <div>
-                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Descripción Detallada y Atributos Técnicos</label>
-                        <textarea id="bien-descripcion" rows="2" placeholder="Describa el bien instrumental de forma unívoca..." required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px; font-family:sans-serif; resize: vertical;"></textarea>
-                    </div>
-                    
-                    <div>
-                        <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color: #424242;">Clasificación de Tipo de Activo Patrimonial</label>
-                        <select id="bien-tipo-id" required style="width:100%; padding:6px; box-sizing:border-box; border: 1px solid #bdbdbd; border-radius: 4px; font-size:12px; background: white;">
-                            <option value="">-- Consultando Categorías del BFF --</option>
-                        </select>
+                    <div class="form-divider-section">
+                        <span>Destino Topológico e Institucional</span>
+                        <div id="contenedor-selector-ubicacion-alta"></div>
                     </div>
 
-                    <div style="border:1px dashed #3f51b5; padding:15px; border-radius:4px; background-color:#f8f9fa;">
-                        <label style="display:block; font-size:11px; font-weight:bold; color:#1a237e; margin-bottom:8px; letter-spacing:0.5px;">DESTINO TOPOLÓGICO INICIAL DEL ACTIVO</label>
-                        <div id="wrapper-selector-ubicacion-alta"></div>
-                    </div>
-
-                    <button type="submit" id="btn-alta-bien-submit" style="padding:10px 20px; align-self:flex-end; font-weight:600; background-color: #1a237e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size:12px;">Registrar e Indexar Activo</button>
-                    <div id="alta-bien-error" style="font-size:12px; min-height:16px; color: #c62828; font-weight: 600; text-align: right;"></div>
+                    <button type="submit" id="btn-submit-alta" class="btn-primary" style="margin-top:10px;">
+                        Dar de Alta en Catálogo Patrimonial
+                    </button>
+                    <div id="alta-error-feedback" class="text-error" style="text-align:right;"></div>
                 </form>
             </div>
         `;
 
-        this.selectorUbicacion = new SelectorUbicaciones('wrapper-selector-ubicacion-alta');
-        this.selectorUbicacion.inicializar();
+        // 5. Inicialización acoplada del componente hijo para la selección geográfica/aulas
+        const subContainer = container.querySelector('#contenedor-selector-ubicacion-alta');
+        this.selectorUbicaciones = new SelectorUbicaciones(subContainer, (geoData) => {
+            this.ubicacionActual = geoData;
+        });
+        await this.selectorUbicaciones.inicializar();
         
-        await this.cargarTiposDeBienes();
         this.vincularEventos();
-    }
-
-    async cargarTiposDeBienes() {
-        const selectTipo = document.getElementById('bien-tipo-id');
-        if (!selectTipo) return;
-
-        try {
-            const res = await bienesService.listarTipos(100, 0);
-            selectTipo.innerHTML = '<option value="">-- Seleccione una categoría de bien patrimonial --</option>';
-            
-            const lista = Array.isArray(res) ? res : (res?.data || []);
-            lista.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.id_tipo;
-                opt.textContent = `${t.nombre} (Depreciación: ${t.tasa_depreciacion_anual}%)`;
-                selectTipo.appendChild(opt);
-            });
-        } catch (err) {
-            selectTipo.innerHTML = '<option value="">Error al conectar con la matriz de tipos de bienes.</option>';
-        }
     }
 
     vincularEventos() {
         const form = document.getElementById('form-alta-bien');
         if (!form) return;
 
-        this.onFormSubmitBound = async (e) => {
+        this.eventoFormSubmit = async (e) => {
             e.preventDefault();
-            
-            const errDiv = document.getElementById('alta-bien-error');
-            const submitBtn = document.getElementById('btn-alta-bien-submit');
-            if (errDiv) errDiv.textContent = '';
+            const feedback = document.getElementById('alta-error-feedback');
+            const btn = document.getElementById('btn-submit-alta');
+            if (feedback) feedback.textContent = '';
 
-            const geoData = this.selectorUbicacion.obtenerValoresEstructurales();
-            const tipoIdSeleccionado = document.getElementById('bien-tipo-id').value;
-            
-            if (!geoData.id_edificio || !geoData.id_aula || !geoData.id_departamento) {
-                if (errDiv) errDiv.textContent = 'Error: Debe especificar la jerarquía física completa de resguardo (Edificio -> Aula -> Departamento).';
+            if (!this.ubicacionActual || !this.ubicacionActual.id_edificio || !this.ubicacionActual.id_aula || !this.ubicacionActual.id_departamento) {
+                if (feedback) feedback.textContent = "Error: Es mandatorio mapear el destino topológico completo (Edificio, Aula y Departamento).";
                 return;
             }
 
-            if (!tipoIdSeleccionado) {
-                if (errDiv) errDiv.textContent = 'Error: Debe clasificar la naturaleza del activo.';
-                return;
-            }
-
+            const formData = new FormData(form);
             const payload = {
-                serie: document.getElementById('bien-serie').value.trim() || null,
-                modelo: document.getElementById('bien-modelo').value.trim() || null,
-                marca: document.getElementById('bien-marca').value.trim(),
-                descripcion: document.getElementById('bien-descripcion').value.trim(),
-                costo: parseFloat(document.getElementById('bien-costo').value),
-                fecha_adquisicion: document.getElementById('bien-fecha').value || null,
-                tipos_ids: [tipoIdSeleccionado],
-                id_edificio: geoData.id_edificio,
-                id_aula: geoData.id_aula,
-                id_departamento: geoData.id_departamento
+                descripcion: formData.get('descripcion').trim(),
+                numero_serie: formData.get('numero_serie').trim(),
+                marca: formData.get('marca').trim() || null,
+                modelo: formData.get('modelo').trim() || null,
+                estado: formData.get('estado'),
+                id_edificio: this.ubicacionActual.id_edificio,
+                id_aula: this.ubicacionActual.id_aula,
+                id_departamento: this.ubicacionActual.id_departamento
             };
 
             try {
-                if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Indexando en Repositorio Central...'; }
-
-                await bienesService.crear(payload);
-                alert('Activo instrumental registrado de forma exitosa en el inventario institucional del TECNM. Flujo de catalogación cerrado.');
-                await this.render();
-                
-            } catch (error) {
-                if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Registrar e Indexar Activo'; }
-                if (errDiv) {
-                    errDiv.textContent = error.response?.data?.detail || 'Incapacidad para indexar el activo fijo debido a violaciones de esquema en el BFF.';
+                if (btn) { btn.disabled = true; btn.textContent = 'Indexando Activo...'; }
+                await bienesService.crearNuevoBien(payload); 
+                alert('El activo ha sido indexado exitosamente en la matriz de control patrimonial.');
+                form.reset();
+                if (this.selectorUbicaciones) {
+                    await this.selectorUbicaciones.inicializar();
                 }
+            } catch (err) {
+                if (feedback) {
+                    feedback.textContent = err.response?.data?.detail || "Fallo de validación estructural en la pasarela del BFF.";
+                }
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Dar de Alta en Catálogo Patrimonial'; }
             }
         };
 
-        form.addEventListener('submit', this.onFormSubmitBound);
+        form.addEventListener('submit', this.eventoFormSubmit);
     }
 
     unmount() {
         const form = document.getElementById('form-alta-bien');
-        if (form && this.onFormSubmitBound) {
-            form.removeEventListener('submit', this.onFormSubmitBound);
+        if (form && this.eventoFormSubmit) {
+            form.removeEventListener('submit', this.eventoFormSubmit);
         }
-        if (this.selectorUbicacion) {
-            this.selectorUbicacion.unmount();
+        if (this.selectorUbicaciones) {
+            this.selectorUbicaciones.unmount();
         }
     }
 }

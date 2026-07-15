@@ -25,9 +25,6 @@ const processQueue = (error, token = null) => {
     failedQueue = [];
 };
 
-// =========================================================================
-// INTERCEPTOR DE PETICIONES (Inyección de Estado de Sesión)
-// =========================================================================
 bffClient.interceptors.request.use(
     (config) => {
         const state = authStore.getSnapshot();
@@ -40,18 +37,13 @@ bffClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// =========================================================================
-// INTERCEPTOR DE RESPUESTAS (Ciclo de Vida de Refresco de Token / Concurrencia)
-// =========================================================================
 bffClient.interceptors.response.use(
     (response) => response,
     async (error) => {
         const originalRequest = error.config;
 
-        // Validar el código de error 401 HTTP sin caer en loops infinitos de reintentos
         if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
             
-            // Si ya existe una petición de refresco en vuelo, encolar los demás requests concurrentes
             if (isRefreshing) {
                 return new Promise((resolve, reject) => {
                     failedQueue.push({ resolve, reject });
@@ -73,7 +65,6 @@ bffClient.interceptors.response.use(
                     throw new Error('Invariante de sesión roto: No existe un token de refresco local.');
                 }
 
-                // Sincronización de Red: Apuntar a la variable dinámica con puerto 8081
                 const res = await axios.post(`${BASE_URL_BFF}/auth/refresh`, {
                     refresh_token: state.refreshToken
                 }, {
@@ -83,10 +74,8 @@ bffClient.interceptors.response.use(
 
                 const { access_token, refresh_token } = res.data;
                 
-                // Actualizar la máquina de estados e invalidar instantáneas previas
                 authStore.updateTokens(access_token, refresh_token);
                 
-                // Resolver de forma masiva la cola de promesas en espera con el nuevo JWT
                 processQueue(null, access_token);
                 
                 originalRequest.headers = originalRequest.headers || {};

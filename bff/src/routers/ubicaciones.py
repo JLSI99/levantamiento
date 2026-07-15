@@ -31,7 +31,7 @@ def extraer_detalle_error(response: httpx.Response) -> str:
 @router.get("/catalogos", response_model=schemas.CatalogosUbicacionesOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_todos_los_catalogos_form(
     request: Request,
-    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer")) 
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:leer")) 
 ):
 
     client: httpx.AsyncClient = request.app.state.http_client
