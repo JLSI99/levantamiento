@@ -14,16 +14,13 @@ export class AltaBienes {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // 1. Obtención del estado global de autenticación desde el Store
         const estadoAuth = authStore.getSnapshot();
         const usuario = estadoAuth?.user;
         const capabilities = estadoAuth?.capabilities || [];
         const permisos = usuario?.permisos || [];
 
-        // 2. Verificación cruzada: Rol de Administrador implícito
         const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
         
-        // 3. Evaluación perimetral por capacidades (Unificando formatos ES / EN)
         const puedeRegistrar = esAdmin || 
                                permisos.includes('bienes:crear') || 
                                capabilities.includes('bienes:create') || 
@@ -41,7 +38,6 @@ export class AltaBienes {
             return;
         }
 
-        // 4. Inyección estructural de la interfaz del formulario
         container.innerHTML = `
             <div class="module-card">
                 <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px; font-weight:700;">
@@ -96,7 +92,6 @@ export class AltaBienes {
             </div>
         `;
 
-        // 5. Inicialización acoplada del componente hijo para la selección geográfica/aulas
         const subContainer = container.querySelector('#contenedor-selector-ubicacion-alta');
         this.selectorUbicaciones = new SelectorUbicaciones(subContainer, (geoData) => {
             this.ubicacionActual = geoData;

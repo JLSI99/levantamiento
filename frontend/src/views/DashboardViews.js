@@ -16,8 +16,6 @@ export class DashboardView {
         const root = document.getElementById(this.containerId);
         if (!root) return;
 
-        // Ya no necesitamos normalizar ni mockear nada. 
-        // Usamos el estado real del store tal cual viene del BFF.
         const snapshot = authStore.getSnapshot();
 
         root.innerHTML = `
@@ -55,7 +53,6 @@ export class DashboardView {
         const nav = document.getElementById('sidebar-nav');
         if (!nav) return;
         
-        // CORRECCIÓN CLAVE: Usamos los strings EXACTOS que configuraste en tu backend Python (PERMISOS_BASE)
         const linksConfiguration = [
             { id: 'mis-resguardos', label: 'Mis Resguardos', caps: ['resguardos:leer'], view: HistorialResguardos },
             { id: 'alta-bienes', label: 'Inventariar Activo', caps: ['bienes:crear'], view: AltaBienes },
@@ -73,7 +70,6 @@ export class DashboardView {
                 this.cargarModulo(config.view, config.label);
             };
 
-            // Pasamos solo los dos parámetros que requiere la firma (caps y el elemento HTML)
             const guardedBtn = guardElement(config.caps, btn);
             
             if (guardedBtn) {
@@ -100,7 +96,6 @@ export class DashboardView {
         let initialTitle = '';
         let targetLinkId = '';
 
-        // Comprobamos acceso contra los strings reales del backend
         if (checkAccess('bienes:crear', snapshot)) {
             initialView = AltaBienes;
             initialTitle = 'Alta de Activos Fijos';
@@ -118,7 +113,6 @@ export class DashboardView {
         if (initialView) {
             this.cargarModulo(initialView, initialTitle);
             
-            // Damos un micro-tick para asegurar que el MutationObserver de CanRender haya inyectado el botón
             setTimeout(() => {
                 const activeBtn = document.getElementById(targetLinkId);
                 if (activeBtn) {

@@ -15,18 +15,14 @@ export class HistorialResguardos {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Recuperación unificada del estado de sesión mediante el Snapshot
         const state = authStore.getSnapshot();
         if (!state || !state.isAuthenticated || !state.user) {
             this._renderizarBloqueo403(container, "Identidad no verificada. Inicie sesión para establecer canal patrimonial seguro.");
             return;
         }
 
-        // Mapeo dinámico basado en las capacidades unificadas del frontend (CapBAC)
         const permisos = state.capabilities || [];
         
-        // Identificar si tiene capacidades globales/fiscalizadoras o individuales/resguardantes
-        // Homologado con 'resguardos:read_personal' que pide DashboardView.js
         const puedeListarTodo = permisos.includes('resguardos:leer') || permisos.includes('resguardos:crear');
         const puedeListarPropios = permisos.includes('resguardos:leer');
         const puedeLiberar = permisos.includes('resguardos:liberar') || permisos.includes('resguardos:crear');
