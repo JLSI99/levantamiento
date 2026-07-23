@@ -1,7 +1,7 @@
 import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.8/+esm';
 import authStore from '../store/authStore.js';
 
-const BASE_URL_BFF = 'http://localhost:8081/api/v1';
+const BASE_URL_BFF = '/api/v1';
 
 const bffClient = axios.create({
     baseURL: BASE_URL_BFF,

@@ -13,7 +13,6 @@ from src.routers import auth, bienes, resguardos, admin, ubicaciones
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-
     logger.info("Inicializando el Pool de conexiones asíncronas hacia los microservicios...")
     
     limits = httpx.Limits(
@@ -21,11 +20,11 @@ async def lifespan(app: FastAPI):
         max_connections=int(os.getenv("HTTP_POOL_MAX_CONNECTIONS", "200"))
     )
     
-    timeout_val = float(os.getenv("TIMEOUT_MICROSERVICIOS", "2.0"))
+    timeout_val = float(os.getenv("TIMEOUT_MICROSERVICIOS", "5.0")) # Incrementado levemente para mitigar fluctuaciones de red
     timeout_config = httpx.Timeout(
         timeout=timeout_val,   
         connect=2.0,           
-        read=5.0,             
+        read=7.0,             
         write=2.0              
     )
 
@@ -49,6 +48,7 @@ app = FastAPI(
     docs_url="/docs" if ENV != "production" else None, 
     redoc_url=None
 )
+
 # --------------------------------------------------------------------------
 # MANEJADORES GLOBALES DE EXCEPCIONES DE RED (PERÍMETRO DE RESILIENCIA)
 # --------------------------------------------------------------------------
@@ -75,6 +75,7 @@ async def bff_network_exception_handler(request: Request, exc: httpx.NetworkErro
             "path": request.url.path
         }
     )
+
 # --------------------------------------------------------------------------
 # CONFIGURACIÓN DEL CONTROL DE ACCESO INTER-ORIGEN (CORS)
 # --------------------------------------------------------------------------
@@ -83,6 +84,8 @@ origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if origins_env:
     origenes_permitidos = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
 else:
+    # INVARIANTE: Con el Proxy Inverso implementado, el Frontend y el BFF comparten origen en Producción.
+    # Se mantienen las entradas locales únicamente para compatibilidad hacia atrás en desarrollo local.
     origenes_permitidos = [
         "http://localhost:8080",   
         "http://127.0.0.1:8080",  
@@ -96,8 +99,9 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["Content-Disposition"] # Necesario si descargas reportes o resguardos en PDF/Excel
+    expose_headers=["Content-Disposition"]
 )
+
 # --------------------------------------------------------------------------
 # REGISTRO DE ENRUTADORES CON PREFIJOS SEMÁNTICOS Y VERSIONAMIENTO
 # --------------------------------------------------------------------------
@@ -108,7 +112,6 @@ app.include_router(bienes.router, prefix=f"{API_PREFIX}/bienes", tags=["Gestión
 app.include_router(resguardos.router, prefix=f"{API_PREFIX}/resguardos", tags=["Control de Resguardos"])
 app.include_router(ubicaciones.router, prefix=f"{API_PREFIX}/ubicaciones", tags=["Infraestructura y Ubicaciones"])
 app.include_router(admin.router, prefix=f"{API_PREFIX}/admin", tags=["Administración del Sistema"])
-
 
 @app.get("/", tags=["Health Check"])
 async def root():
