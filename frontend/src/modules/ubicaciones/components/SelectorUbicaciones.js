@@ -1,4 +1,4 @@
-import { ubicacionesService } from '../services/ubicaciones.js'; // Corregido: Importación del servicio correcto
+import { ubicacionesService } from '../services/ubicaciones.js'; 
 
 export class SelectorUbicaciones {
     constructor(containerElement, onUbicacionSeleccionada) {
@@ -29,22 +29,22 @@ export class SelectorUbicaciones {
 
     renderBase() {
         this.container.innerHTML = `
-            <div style="display:flex; gap:10px; margin-bottom:10px;">
+            <div style="display:flex; gap:10px; margin-bottom:10px; width: 100%;">
                 <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Edificio</label>
-                    <select id="sel-edificio" style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Edificio *</label>
+                    <select id="sel-edificio" required style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
                         <option value="">Seleccione Edificio...</option>
                     </select>
                 </div>
                 <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Aula / Espacio</label>
-                    <select id="sel-aula" disabled style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Aula / Espacio *</label>
+                    <select id="sel-aula" required disabled style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
                         <option value="">Seleccione Aula...</option>
                     </select>
                 </div>
                 <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Departamento Adscrito</label>
-                    <select id="sel-departamento" style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Departamento Adscrito *</label>
+                    <select id="sel-departamento" required style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
                         <option value="">Seleccione Departamento...</option>
                     </select>
                 </div>
@@ -54,7 +54,6 @@ export class SelectorUbicaciones {
 
     async cargarEdificios() {
         try {
-            // Corregido: Uso de ubicacionesService
             const respuesta = await ubicacionesService.obtenerEdificios();
             this.edificios = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
             
@@ -63,7 +62,7 @@ export class SelectorUbicaciones {
             
             this.edificios.forEach(e => {
                 const opt = document.createElement('option');
-                opt.value = e.id_edificio;
+                opt.value = e.id_edificio || e.id_entidad; 
                 opt.textContent = e.nombre;
                 sel.appendChild(opt);
             });
@@ -74,7 +73,6 @@ export class SelectorUbicaciones {
 
     async cargarDepartamentos() {
         try {
-            // Corregido: Uso de ubicacionesService
             const respuesta = await ubicacionesService.obtenerDepartamentos();
             this.departamentos = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
             
@@ -83,7 +81,7 @@ export class SelectorUbicaciones {
             
             this.departamentos.forEach(d => {
                 const opt = document.createElement('option');
-                opt.value = d.id_departamento;
+                opt.value = d.id_departamento || d.id_entidad;
                 opt.textContent = d.nombre;
                 sel.appendChild(opt);
             });
@@ -97,7 +95,7 @@ export class SelectorUbicaciones {
         if (!selAula) return;
 
         selAula.innerHTML = '<option value="">Seleccione Aula...</option>';
-        this.estadoSeleccion.id_edificio = idEdificio ? parseInt(idEdificio, 10) : null;
+        this.estadoSeleccion.id_edificio = idEdificio || null;
         this.estadoSeleccion.id_aula = null;
 
         if (!idEdificio) {
@@ -108,14 +106,13 @@ export class SelectorUbicaciones {
 
         try {
             selAula.disabled = true;
-            // Corregido: Uso de ubicacionesService
             const respuesta = await ubicacionesService.obtenerAulasPorEdificio(idEdificio);
             this.aulas = Array.isArray(respuesta) ? respuesta : (respuesta?.data || []);
             
             this.aulas.forEach(a => {
                 const opt = document.createElement('option');
-                opt.value = a.id_aula;
-                opt.textContent = `${a.nombre} (${a.tipo})`;
+                opt.value = a.id_aula || a.id_entidad;
+                opt.textContent = a.nombre;
                 selAula.appendChild(opt);
             });
             selAula.disabled = false;
@@ -132,11 +129,11 @@ export class SelectorUbicaciones {
 
         this.onEdificioChangeBound = (e) => this.manejarCambioEdificio(e.target.value);
         this.onAulaChangeBound = (e) => {
-            this.estadoSeleccion.id_aula = e.target.value ? parseInt(e.target.value, 10) : null;
+            this.estadoSeleccion.id_aula = e.target.value || null;
             this.notificarCambio();
         };
         this.onDeptoChangeBound = (e) => {
-            this.estadoSeleccion.id_departamento = e.target.value ? parseInt(e.target.value, 10) : null;
+            this.estadoSeleccion.id_departamento = e.target.value || null;
             this.notificarCambio();
         };
 

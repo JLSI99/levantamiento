@@ -1,5 +1,5 @@
 import axios from 'https://cdn.jsdelivr.net/npm/axios@1.6.8/+esm';
-import authStore from '../store/authStore.js';
+import authStore from '../core/store/authStore.js';
 
 const BASE_URL_BFF = '/api/v1';
 
