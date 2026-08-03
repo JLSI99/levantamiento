@@ -13,11 +13,9 @@ export class AdministracionOrquestador {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // 1. Validar Capacidades (Seguridad centralizada)
         const estadoAuth = authStore.getSnapshot();
         const permisos = estadoAuth?.capabilities || [];
         
-        // Verifica si puede ver al menos uno de los módulos
         const puedeVerPersonas = permisos.includes('personas:leer');
         const puedeVerUsuarios = permisos.includes('usuarios:leer');
 
@@ -26,10 +24,8 @@ export class AdministracionOrquestador {
             return;
         }
 
-        // 2. Renderizar el Layout (Contenedores y Pestañas)
         this._renderLayout(container, puedeVerPersonas, puedeVerUsuarios);
 
-        // 3. Instanciar e inicializar los CRUDs hijos en sus contenedores
         if (puedeVerPersonas) {
             this.crudPersonas = new CrudPersonas('container-crud-personas', permisos);
             this.crudPersonas.render();
@@ -73,7 +69,6 @@ export class AdministracionOrquestador {
 
         botones.forEach(btn => {
             btn.addEventListener('click', (e) => {
-                // Quitar active de todos
                 botones.forEach(b => {
                     b.style.borderBottom = '3px solid transparent';
                     b.style.color = '#757575';
@@ -81,7 +76,6 @@ export class AdministracionOrquestador {
                 });
                 contenidos.forEach(c => c.style.display = 'none');
 
-                // Activar el clickeado
                 const targetId = e.target.getAttribute('data-target');
                 e.target.style.borderBottom = '3px solid #1a237e';
                 e.target.style.color = '#1a237e';
