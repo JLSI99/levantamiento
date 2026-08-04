@@ -1,9 +1,10 @@
 import authStore from '../store/authStore.js';
 import { authService } from '../services/auth.js';
-import { AsistenteAdmin } from './modules/AsistenteAdmin.js';
-import { AltaBienes } from './modules/AltaBienes.js';
-import { HistorialResguardos } from './modules/HistorialResguardos.js';
-import { guardElement, checkAccess } from '../components/CanRender.js';
+import { CrudUsuariosPersonas } from './usuariosPersonas/crudUsuariosPersonas.js';
+import { CrudUbicaciones } from './ubicaciones/crudUbicaciones.js';
+import { CrudBienes } from './bienes/crudBienes.js';
+import { CrudResguardos } from './resguardos/crudResguardos.js';
+import { guardElement, checkAccess } from '../core/security/CanRender.js';
 
 export class DashboardView {
     constructor(containerId) {
@@ -54,10 +55,27 @@ export class DashboardView {
         if (!nav) return;
         
         const linksConfiguration = [
-            { id: 'mis-resguardos', label: 'Mis Resguardos', caps: ['resguardos:leer'], view: HistorialResguardos },
-            { id: 'alta-bienes', label: 'Inventariar Activo', caps: ['bienes:crear'], view: AltaBienes },
-            { id: 'admin-panel', label: 'Consola de Control', caps: ['usuarios:crear'], view: AsistenteAdmin }
-        ];
+
+    {
+        id: "usuarios", label: "Usuarios", caps: ["usuarios:leer"], view: CrudUsuariosPersonas
+    },
+    {
+        id: "personas", label: "Personas", caps: ["personas:leer"], view: CrudUsuariosPersonas
+    },
+    {
+        id: "ubicaciones", label: "Ubicaciones", caps: ["ubicaciones:leer"], view: CrudUbicaciones
+    },
+    {
+        id: "bienes",
+        label: "Bienes",
+        caps: ["bienes:leer"],
+        view: CrudBienes
+    },
+    {
+        id: "resguardos", label: "Resguardos", caps: ["resguardos:leer"], view: CrudResguardos
+    }
+
+];
 
         linksConfiguration.forEach(config => {
             const btn = document.createElement('button');
@@ -92,46 +110,76 @@ export class DashboardView {
     }
 
     enrutarModuloInicial(snapshot) {
-        let initialView = null;
-        let initialTitle = '';
-        let targetLinkId = '';
 
-        if (checkAccess('bienes:crear', snapshot)) {
-            initialView = AltaBienes;
-            initialTitle = 'Alta de Activos Fijos';
-            targetLinkId = 'nav-link-alta-bienes';
-        } else if (checkAccess('resguardos:leer', snapshot)) {
-            initialView = HistorialResguardos;
-            initialTitle = 'Historial de Resguardos';
-            targetLinkId = 'nav-link-mis-resguardos';
-        } else if (checkAccess('usuarios:crear', snapshot)) {
-            initialView = AsistenteAdmin;
-            initialTitle = 'Consola de Control Operativo';
-            targetLinkId = 'nav-link-admin-panel';
-        }
+    let initialView = null;
+    let initialTitle = '';
+    let targetLinkId = '';
 
-        if (initialView) {
-            this.cargarModulo(initialView, initialTitle);
-            
-            setTimeout(() => {
-                const activeBtn = document.getElementById(targetLinkId);
-                if (activeBtn) {
-                    this.seleccionarBotonMenu(activeBtn);
-                }
-            }, 50);
-        } else {
-            const content = document.getElementById('workspace-content');
-            if (content) {
-                content.innerHTML = `
-                    <div style="background: white; padding: 20px; border-radius: 6px; border: 1px solid var(--border-color, #e2e8f0);">
-                        <p style="font-size:13px; color:var(--text-muted, #718096); margin:0;">
-                            <strong>Espacio de trabajo restringido:</strong> Su cuenta autenticada no tiene asignadas las capacidades funcionales requeridas en este nodo.
-                        </p>
-                    </div>
-                `;
-            }
-        }
+    if (checkAccess('usuarios:leer', snapshot)) {
+
+        initialView = CrudUsuariosPersonas;
+        initialTitle = 'Usuarios';
+        targetLinkId = 'nav-link-usuarios';
+
+    } else if (checkAccess('personas:leer', snapshot)) {
+
+        initialView = CrudUsuariosPersonas;
+        initialTitle = 'Personas';
+        targetLinkId = 'nav-link-personas';
+
+    } else if (checkAccess('ubicaciones:leer', snapshot)) {
+
+        initialView = CrudUbicaciones;
+        initialTitle = 'Ubicaciones';
+        targetLinkId = 'nav-link-ubicaciones';
+
+    } else if (checkAccess('bienes:leer', snapshot)) {
+
+        initialView = CrudBienes;
+        initialTitle = 'Bienes';
+        targetLinkId = 'nav-link-bienes';
+
+    } else if (checkAccess('resguardos:leer', snapshot)) {
+
+        initialView = CrudResguardos;
+        initialTitle = 'Resguardos';
+        targetLinkId = 'nav-link-resguardos';
+
     }
+
+    if (initialView) {
+
+        this.cargarModulo(initialView, initialTitle);
+
+        setTimeout(() => {
+
+            const activeBtn = document.getElementById(targetLinkId);
+
+            if (activeBtn) {
+                this.seleccionarBotonMenu(activeBtn);
+            }
+
+        }, 50);
+
+    } else {
+
+        const content = document.getElementById('workspace-content');
+
+        if (content) {
+
+            content.innerHTML = `
+                <div style="background:white;padding:20px;border-radius:6px;border:1px solid var(--border-color,#e2e8f0);">
+                    <p style="margin:0;">
+                        Su cuenta no tiene permisos para acceder a ningún módulo.
+                    </p>
+                </div>
+            `;
+
+        }
+
+    }
+
+}
 
     cargarModulo(ViewClass, title) {
         if (this.activeModule && typeof this.activeModule.unmount === 'function') {
