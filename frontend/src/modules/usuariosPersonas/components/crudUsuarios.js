@@ -6,6 +6,7 @@ export class CrudUsuarios {
         this.permisos = permisos || [];
         this.puedeCrear = this.permisos.includes('usuarios:crear');
         this.puedeSuspender = this.permisos.includes('usuarios:borrar'); 
+        this._abortController = new AbortController();
     }
 
     render() {
@@ -76,6 +77,8 @@ export class CrudUsuarios {
     }
 
     bindEvents() {
+        const signal = this._abortController.signal;
+
         if (this.puedeCrear) {
             const form = document.getElementById('form-usuario');
             if (form) {
@@ -96,7 +99,7 @@ export class CrudUsuarios {
                     } catch (error) {
                         alert('Error al crear usuario: ' + (error.response?.data?.detail || error.message));
                     }
-                });
+                }, { signal });
             }
         }
 
@@ -114,7 +117,7 @@ export class CrudUsuarios {
                         }
                     }
                 }
-            });
+            }, { signal });
         }
     }
 
@@ -152,5 +155,11 @@ export class CrudUsuarios {
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="5" style="color:red;">Error al cargar datos</td></tr>';
         }
+    }
+
+    unmount() {
+        this._abortController.abort();
+        const container = document.getElementById(this.containerId);
+        if (container) container.innerHTML = '';
     }
 }
