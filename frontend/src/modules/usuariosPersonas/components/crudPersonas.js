@@ -5,7 +5,7 @@ export class CrudPersonas {
         this.containerId = containerId;
         this.permisos = permisos || [];
         this.puedeCrear = this.permisos.includes('personas:crear');
-        this._abortController = new AbortController(); // Para limpiar event listeners
+        this._abortController = new AbortController();
     }
 
     render() {
@@ -80,7 +80,7 @@ export class CrudPersonas {
                 } catch (error) {
                     alert('Error al registrar persona: ' + (error.response?.data?.detail || error.message));
                 }
-            }, { signal: this._abortController.signal }); // Vinculación al controlador de aborto
+            }, { signal: this._abortController.signal });
         }
     }
 
@@ -102,7 +102,6 @@ export class CrudPersonas {
     }
 
     unmount() {
-        // Abortar listeners colgados y vaciar el contenedor del DOM
         this._abortController.abort();
         const container = document.getElementById(this.containerId);
         if (container) container.innerHTML = '';
