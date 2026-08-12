@@ -16,8 +16,8 @@ export class AdministracionOrquestador {
         const estadoAuth = authStore.getSnapshot();
         const permisos = estadoAuth?.capabilities || [];
         
-        const puedeVerPersonas = permisos.includes('personas:leer');
-        const puedeVerUsuarios = permisos.includes('usuarios:leer');
+        const puedeVerPersonas = permisos.includes('personas:crear');
+        const puedeVerUsuarios = permisos.includes('usuarios:crear');
 
         if (!puedeVerPersonas && !puedeVerUsuarios) {
             this._renderAccesoDenegado(container);
