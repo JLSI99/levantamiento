@@ -6,6 +6,7 @@ export class CrudPersonas {
         this.permisos = permisos || [];
         this.puedeCrear = this.permisos.includes('personas:crear');
         this.puedeEditar = this.permisos.includes('personas:actualizar') || this.permisos.includes('personas:editar');
+        this.puedeEliminar = this.permisos.includes('personas:eliminar') || this.permisos.includes('personas:borrar');
         
         // Estado de Edición y Caché Local
         this._editingId = null;
@@ -74,7 +75,6 @@ export class CrudPersonas {
         const tbody = document.getElementById('tbody-personas');
         const btnCancelar = document.getElementById('btn-cancelar-persona');
 
-        // 1. Manejo del Submit (Crear o Actualizar)
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
@@ -101,22 +101,42 @@ export class CrudPersonas {
             }, { signal });
         }
 
-        // 2. Delegación de Eventos en la Tabla (Click en Editar)
         if (tbody) {
-            tbody.addEventListener('click', (e) => {
+            tbody.addEventListener('click', async (e) => {
                 const btnEditar = e.target.closest('.btn-editar-persona');
+                const btnEliminar = e.target.closest('.btn-eliminar-persona');
+
                 if (btnEditar) {
                     const idPersona = btnEditar.getAttribute('data-id');
                     this.activarModoEdicion(idPersona);
+                } else if (btnEliminar && this.puedeEliminar) {
+                    const idPersona = btnEliminar.getAttribute('data-id');
+                    await this.eliminarPersona(idPersona);
                 }
             }, { signal });
         }
 
-        // 3. Botón Cancelar Edición
         if (btnCancelar) {
             btnCancelar.addEventListener('click', () => {
                 this.desactivarModoEdicion();
             }, { signal });
+        }
+    }
+
+    async eliminarPersona(idPersona) {
+        const persona = this._personasCache.get(idPersona);
+        const confirmacion = confirm(`¿Está seguro de eliminar el registro demográfico de ${persona ? persona.nombres : 'esta persona'}?\n\nEsta acción fallará si el registro posee cuentas o resguardos activos vinculados.`);
+        
+        if (!confirmacion) return;
+
+        try {
+            // Corrección de contrato: Se invoca darBajaPersona en lugar de eliminarPersona
+            await adminService.darBajaPersona(idPersona);
+            alert('Registro demográfico eliminado correctamente.');
+            this.cargarDatos();
+        } catch (error) {
+            const detalle = error.response?.data?.detail || error.message;
+            alert(`No se puede eliminar la persona: ${detalle}`);
         }
     }
 
@@ -126,16 +146,14 @@ export class CrudPersonas {
 
         this._editingId = idPersona;
 
-        // Hidratación de Formulario
         document.getElementById('input-curp').value = persona.curp;
         document.getElementById('input-nombres').value = persona.nombres;
         document.getElementById('input-apellidos').value = persona.apellidos;
 
-        // Cambios en la Interfaz
         document.getElementById('form-persona-titulo').textContent = 'Editar Persona';
         const btnSubmit = document.getElementById('btn-submit-persona');
         btnSubmit.textContent = 'Actualizar Persona';
-        btnSubmit.style.background = '#e65100'; // Color de advertencia/edición
+        btnSubmit.style.background = '#e65100';
         document.getElementById('btn-cancelar-persona').style.display = 'block';
     }
 
@@ -161,7 +179,6 @@ export class CrudPersonas {
             const resp = await adminService.listarPersonas(50, 0, false);
             const personas = Array.isArray(resp) ? resp : (resp?.data || []);
             
-            // Actualizar caché
             this._personasCache.clear();
             personas.forEach(p => this._personasCache.set(p.id_persona, p));
 
@@ -175,12 +192,20 @@ export class CrudPersonas {
                     <td style="padding:8px; font-family:monospace;">${p.curp}</td>
                     <td style="padding:8px;">${p.apellidos}, ${p.nombres}</td>
                     <td style="padding:8px; text-align:center;">
-                        ${this.puedeEditar ? `
-                            <button class="btn-editar-persona" data-id="${p.id_persona}" 
-                                style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
-                                Editar
-                            </button>
-                        ` : ''}
+                        <div style="display:flex; gap:4px; justify-content:center;">
+                            ${this.puedeEditar ? `
+                                <button class="btn-editar-persona" data-id="${p.id_persona}" 
+                                    style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    Editar
+                                </button>
+                            ` : ''}
+                            ${this.puedeEliminar ? `
+                                <button class="btn-eliminar-persona" data-id="${p.id_persona}" 
+                                    style="background:#d32f2f; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    Eliminar
+                                </button>
+                            ` : ''}
+                        </div>
                     </td>
                 </tr>
             `).join('');
