@@ -3,7 +3,7 @@ services:
     image: grafana/loki:latest
     container_name: loki_logger
     ports:
-      - "${LOKI_PORT:-3100}:3100"
+      - "198.168.254.166:${LOKI_PORT:-3100}:3100"
     volumes:
       - ./loki-config.yaml:/etc/loki/local-config.yaml
     command: -config.file=/etc/loki/local-config.yaml
@@ -29,7 +29,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana_dashboard
     ports:
-      - "${GRAFANA_PORT:-3000}:3000"
+      - "198.168.254.166:${GRAFANA_PORT:-3000}:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}

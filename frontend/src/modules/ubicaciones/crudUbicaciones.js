@@ -1,4 +1,3 @@
-// src/components/CrudUbicaciones.js
 import { ubicacionesService } from '../services/ubicaciones.js';
 
 export class CrudUbicaciones {
@@ -6,27 +5,22 @@ export class CrudUbicaciones {
         this.containerId = containerId;
         this.permisos = permisos || [];
 
-        // CapBAC: Capabilities de Infraestructura Física
         this.puedeCrearUbi = this.permisos.includes('ubicaciones:crear');
         this.puedeEditarUbi = this.permisos.includes('ubicaciones:editar');
         this.puedeBorrarUbi = this.permisos.includes('ubicaciones:borrar');
 
-        // CapBAC: Capabilities de Organigrama
         this.puedeCrearDepto = this.permisos.includes('departamentos:crear');
         this.puedeEditarDepto = this.permisos.includes('departamentos:editar');
         this.puedeBorrarDepto = this.permisos.includes('departamentos:borrar');
 
-        // Estado de Edición
         this._editingEdificioId = null;
         this._editingAulaId = null;
         this._editingDeptoId = null;
         this._selectedEdificioForAulas = null;
 
-        // Caché Local de Datos
         this._edificiosCache = new Map();
         this._departamentosCache = new Map();
 
-        // Limpieza de Memoria y Control de Aborto
         this._abortController = new AbortController();
     }
 
@@ -165,7 +159,6 @@ export class CrudUbicaciones {
     bindEvents() {
         const signal = this._abortController.signal;
 
-        // 1. Control de Navegación por Pestañas
         const btnTabInfra = document.getElementById('tab-btn-infra');
         const btnTabDeptos = document.getElementById('tab-btn-deptos');
         const secInfra = document.getElementById('section-infraestructura');
@@ -191,7 +184,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 2. Submit: Formulario de Edificio
         const formEdificio = document.getElementById('form-edificio');
         if (formEdificio) {
             formEdificio.addEventListener('submit', async (e) => {
@@ -218,7 +210,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 3. Submit: Formulario de Aula
         const formAula = document.getElementById('form-aula');
         if (formAula) {
             formAula.addEventListener('submit', async (e) => {
@@ -247,7 +238,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 4. Submit: Formulario de Departamento
         const formDepto = document.getElementById('form-departamento');
         if (formDepto) {
             formDepto.addEventListener('submit', async (e) => {
@@ -274,7 +264,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 5. Delegación de Eventos en Tabla de Edificios/Aulas
         const tbodyEdf = document.getElementById('tbody-edificios');
         if (tbodyEdf) {
             tbodyEdf.addEventListener('click', async (e) => {
@@ -315,7 +304,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 6. Delegación de Eventos en Tabla de Departamentos
         const tbodyDepto = document.getElementById('tbody-departamentos');
         if (tbodyDepto) {
             tbodyDepto.addEventListener('click', async (e) => {
@@ -338,7 +326,6 @@ export class CrudUbicaciones {
             }, { signal });
         }
 
-        // 7. Eventos Cancelar Edición
         document.getElementById('btn-cancelar-edificio')?.addEventListener('click', () => this.desactivarEdicionEdificio(), { signal });
         document.getElementById('btn-cancelar-aula')?.addEventListener('click', () => this.desactivarEdicionAula(), { signal });
         document.getElementById('btn-cancelar-depto')?.addEventListener('click', () => this.desactivarEdicionDepto(), { signal });
@@ -381,7 +368,7 @@ export class CrudUbicaciones {
         const selEdificio = document.getElementById('select-aula-edificio');
         if (selEdificio) {
             selEdificio.value = idEdificio;
-            selEdificio.disabled = true; // Invariante: No se reasigna el edificio padre en edición rápida
+            selEdificio.disabled = true;
         }
 
         document.getElementById('form-aula-titulo').textContent = 'Editar Nombre de Aula';
@@ -455,7 +442,6 @@ export class CrudUbicaciones {
             this._edificiosCache.clear();
             edificios.forEach(e => this._edificiosCache.set(e.id_edificio, e));
 
-            // Actualizar Selector en el Sub-Formulario de Aulas
             if (selectEdificioAula) {
                 const valActual = selectEdificioAula.value;
                 selectEdificioAula.innerHTML = '<option value="">Seleccione Edificio Destino...</option>' +
