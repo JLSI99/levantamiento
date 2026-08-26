@@ -29,7 +29,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana_dashboard
     ports:
-      - "198.168.254.166:${GRAFANA_PORT:-3000}:3000"
+      - "00${GRAFANA_PORT:-3000}:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}

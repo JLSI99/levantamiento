@@ -330,7 +330,6 @@ export class CrudUbicaciones {
         document.getElementById('btn-cancelar-aula')?.addEventListener('click', () => this.desactivarEdicionAula(), { signal });
         document.getElementById('btn-cancelar-depto')?.addEventListener('click', () => this.desactivarEdicionDepto(), { signal });
     }
-
     // =========================================================================
     // HIDRATACIÓN DE MODO EDICIÓN Y ESTADOS DE FORMULARIO
     // =========================================================================
@@ -419,7 +418,6 @@ export class CrudUbicaciones {
         }
         document.getElementById('btn-cancelar-depto').style.display = 'none';
     }
-
     // =========================================================================
     // CARGA Y POBLAMIENTO ASÍNCRONO DE TABLAS Y OPCIONES
     // =========================================================================
