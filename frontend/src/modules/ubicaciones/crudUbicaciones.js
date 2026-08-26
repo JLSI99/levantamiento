@@ -1,11 +1,11 @@
+import authStore from '../../core/store/authStore.js';
 import { CrudEdificios } from './components/crudEdificios.js';
 import { CrudAulas } from './components/crudAulas.js';
 import { CrudDepartamentos } from './components/crudDepartamentos.js';
 
 export class CrudUbicaciones {
-    constructor(containerId, permisos) {
+    constructor(containerId) {
         this.containerId = containerId;
-        this.permisos = permisos || [];
         this._abortController = new AbortController();
 
         // Instancias de los sub-módulos
@@ -18,7 +18,33 @@ export class CrudUbicaciones {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Estructura base con contenedores vacíos para inyectar los sub-módulos
+        // 1. Obtener estado de autenticación y capacidades desde el authStore
+        const estadoAuth = authStore.getSnapshot();
+        const usuario = estadoAuth?.user;
+        const capabilities = estadoAuth?.capabilities || [];
+        const permisosRaw = usuario?.permisos || [];
+        const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
+
+        // Mapeo unificado de permisos para el módulo de infraestructura/organigrama
+        const permisos = {
+            crear: esAdmin || permisosRaw.includes('ubicaciones:crear') || capabilities.includes('ubicaciones:create'),
+            editar: esAdmin || permisosRaw.includes('ubicaciones:editar') || capabilities.includes('ubicaciones:update'),
+            borrar: esAdmin || permisosRaw.includes('ubicaciones:borrar') || capabilities.includes('ubicaciones:delete'),
+            leer: esAdmin || permisosRaw.includes('ubicaciones:leer') || capabilities.includes('ubicaciones:read')
+        };
+
+        // Si no tiene ningún permiso ni es admin, bloqueamos el acceso (403)
+        if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {
+            container.innerHTML = `
+                <div class="forbidden-container" style="padding: 20px; background: #ffebee; border: 1px solid #c62828; border-radius: 4px; margin-top: 20px; font-family: sans-serif;">
+                    <h4 style="color:#c62828; margin: 0 0 10px 0; font-weight: 700;">ACCESO DENEGADO (403 FORBIDDEN)</h4>
+                    <p style="font-size: 13px; color: #37474f; margin: 0;">Su token institucional no cuenta con la capacidad necesaria para gestionar la infraestructura o el organigrama.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // 2. Estructura HTML base del Orquestador
         container.innerHTML = `
             <div style="width: 100%; font-family: system-ui, -apple-system, sans-serif;">
                 <!-- Control de Pestañas -->
@@ -34,27 +60,20 @@ export class CrudUbicaciones {
                 <!-- SECCIÓN 1: INFRAESTRUCTURA FÍSICA -->
                 <div id="section-infraestructura" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                     <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background: #ffffff;">
-                        <!-- Contenedor inyectable para el formulario de Edificios -->
                         <div id="container-form-edificios"></div>
-                        
                         <hr style="border:0; border-top:1px solid #e0e0e0; margin:20px 0;">
-                        
-                        <!-- Contenedor inyectable para el formulario de Aulas -->
                         <div id="container-form-aulas"></div>
                     </div>
-
-                    <!-- Contenedor inyectable para la tabla de Edificios/Aulas -->
                     <div id="container-tabla-infra"></div>
                 </div>
 
                 <!-- SECCIÓN 2: ORGANIGRAMA DE DEPARTAMENTOS -->
-                <!-- Contenedor inyectable para todo el módulo de departamentos -->
                 <div id="section-departamentos" style="display: none; grid-template-columns: 1fr 2fr; gap: 20px;"></div>
             </div>
         `;
 
         this.bindEvents();
-        this.initModules();
+        this.initModules(permisos);
     }
 
     bindEvents() {
@@ -85,31 +104,34 @@ export class CrudUbicaciones {
         }
     }
 
-    initModules() {
-        // 1. Instanciamos el módulo de Aulas
-        // Le pasamos un callback para que avise cuando un aula se guardó y así recargar la tabla
-        this.modAulas = new CrudAulas('container-form-aulas', this.permisos, () => {
-            this.modEdificios.cargarDatos(); // Actualiza la tabla de edificios
+    initModules(permisos) {
+        // 1. Instanciamos Aulas pasando los permisos calculados
+        this.modAulas = new CrudAulas('container-form-aulas', permisos, () => {
+            this.modEdificios.cargarDatos();
         });
 
-        // 2. Instanciamos el módulo de Edificios
-        // Le pasamos callbacks para conectar con el módulo de Aulas
+        // 2. Instanciamos Edificios pasando los permisos calculados
         this.modEdificios = new CrudEdificios(
             'container-form-edificios', 
             'container-tabla-infra', 
-            this.permisos,
-            // Callback cuando se cargan edificios (para actualizar el `<select>` del form de aulas)
+            permisos,
             (edificios) => this.modAulas.actualizarOpcionesEdificios(edificios),
-            // Callback cuando se da clic en "Editar Aula" en la tabla
             (idAula, idEdificio, nombre) => this.modAulas.activarEdicion(idAula, idEdificio, nombre)
         );
 
-        // 3. Instanciamos el módulo de Departamentos (Totalmente independiente)
-        this.modDepartamentos = new CrudDepartamentos('section-departamentos', this.permisos);
+        // 3. Instanciamos Departamentos pasando los permisos calculados
+        this.modDepartamentos = new CrudDepartamentos('section-departamentos', permisos);
 
         // Renderizamos e inicializamos datos
         this.modEdificios.render();
         this.modAulas.render();
         this.modDepartamentos.render();
+    }
+
+    unmount() {
+        this._abortController.abort();
+        this.modEdificios?.unmount?.();
+        this.modAulas?.unmount?.();
+        this.modDepartamentos?.unmount?.();
     }
 }

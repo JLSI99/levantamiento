@@ -1,9 +1,9 @@
-import authStore from '../store/authStore.js';
+import authStore from '../core/store/authStore.js';
 import { authService } from '../services/auth.js';
 import { CrudUsuariosPersonas } from './usuariosPersonas/crudUsuariosPersonas.js';
 import { CrudUbicaciones } from './ubicaciones/crudUbicaciones.js';
 import { CrudBienes } from './bienes/crudBienes.js';
-import { CrudResguardos } from './resguardos/crudResguardos.js';
+import { HistorialResguardos } from './resguardos/crudResguardos.js';
 import { guardElement, checkAccess } from '../core/security/CanRender.js';
 
 export class DashboardView {
@@ -65,7 +65,7 @@ export class DashboardView {
                 id: "bienes", label: "Bienes", caps: ["bienes:leer"], view: CrudBienes
             },
             {
-                id: "resguardos", label: "Resguardos", caps: ["resguardos:leer"], view: CrudResguardos
+                id: "resguardos", label: "Resguardos", caps: ["resguardos:leer"], view: HistorialResguardos
             }
         ];
 
@@ -119,7 +119,7 @@ export class DashboardView {
             initialTitle = 'Bienes';
             targetLinkId = 'nav-link-bienes';
         } else if (checkAccess('resguardos:leer', snapshot)) {
-            initialView = CrudResguardos;
+            initialView = HistorialResguardos;
             initialTitle = 'Resguardos';
             targetLinkId = 'nav-link-resguardos';
         }
