@@ -30,7 +30,7 @@ export class HistorialResguardos {
         
         const puedeListarTodo = permisos.includes('resguardos:leer') || permisos.includes('resguardos:crear');
         const puedeListarPropios = permisos.includes('resguardos:leer');
-        const puedeModificar = permisos.includes('resguardos:liberar') || permisos.includes('resguardos:crear') || permisos.includes('resguardos:write');
+        const puedeModificar = permisos.includes('resguardos:editar') || permisos.includes('resguardos:crear');
 
         if (!puedeListarTodo && !puedeListarPropios) {
             this._renderizarBloqueo403(container, "Acceso Denegado: Su perfil no cuenta con capacidades explícitas de lectura en la matriz de resguardos patrimoniales.");
