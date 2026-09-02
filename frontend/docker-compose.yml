@@ -8,7 +8,7 @@ services:
       - "8080:80"
     volumes:
       - ./index.html:/usr/share/nginx/html/index.html:ro
-      - ./nginx.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ./nginx.conf:/etc/nginx/templates/nginx.conf:ro
       - ./css:/usr/share/nginx/html/css:ro
       - ./src:/usr/share/nginx/html/src:ro
     environment:

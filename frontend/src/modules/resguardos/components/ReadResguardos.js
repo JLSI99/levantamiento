@@ -17,7 +17,7 @@ export class ReadResguardos {
         this.container = container;
         this.capacidadGlobal = capacidadGlobal;
         this.puedeModificar = puedeModificar;
-        this.callbacks = callbacks; // { onEdit, onRelease, onDelete }
+        this.callbacks = callbacks;
 
         this.container.innerHTML = this._obtenerPlantillaLectura();
         this._vincularEventos();
@@ -28,7 +28,7 @@ export class ReadResguardos {
     _obtenerPlantillaLectura() {
         return `
             ${this.capacidadGlobal ? `
-            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
+            <div style="margin-bottom: 15px; display: flxex; gap: 10px;">
                 <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar unívocamente por CURP o Nombre del Responsable..." style="flex: 1; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
             </div>` : ''}
             <div style="overflow-x:auto; border: 1px solid #e0e0e0; border-radius:4px;">

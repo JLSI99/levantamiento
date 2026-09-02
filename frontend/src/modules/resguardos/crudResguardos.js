@@ -10,16 +10,13 @@ export class HistorialResguardos {
         this.containerId = containerId;
         this.estaDesmontado = false;
         
-        // Estado Global
         this.capacidadGlobal = false;
         this.puedeModificar = false;
         this.ubicacionActual = null;
         
-        // Estado de Edición
         this.modoEdicion = false;
         this.idAsignacionEnEdicion = null;
         
-        // Módulos CRUD
         this.createModule = new CreateResguardo();
         this.readModule = new ReadResguardos();
         this.updateModule = new UpdateResguardo();
@@ -31,7 +28,6 @@ export class HistorialResguardos {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // 1. Verificación de Autenticación y Permisos
         const state = authStore.getSnapshot();
         if (!state || !state.isAuthenticated || !state.user) {
             this._renderizarMensaje(container, "Identidad no verificada. Inicie sesión para establecer canal patrimonial seguro.", true);
@@ -40,7 +36,7 @@ export class HistorialResguardos {
 
         const permisos = state.capabilities || [];
         this.capacidadGlobal = permisos.includes('resguardos:leer') || permisos.includes('resguardos:crear');
-        const puedeListarPropios = permisos.includes('resguardos:leer');
+        const puedeListarPropios = permisos.includes('MisResguardos:leer');
         this.puedeModificar = permisos.includes('resguardos:editar') || permisos.includes('resguardos:crear');
 
         if (!this.capacidadGlobal && !puedeListarPropios) {
@@ -48,10 +44,8 @@ export class HistorialResguardos {
             return;
         }
 
-        // 2. Renderizado de la estructura principal (Layout)
         container.innerHTML = this._obtenerPlantillaPrincipal();
 
-        // 3. Inicializar Formulario (Create / Update)
         if (this.capacidadGlobal && this.puedeModificar) {
             const formContainer = container.querySelector('#resguardos-form-container');
             formContainer.innerHTML = this.createModule.obtenerPlantillaFormulario();
@@ -67,7 +61,6 @@ export class HistorialResguardos {
             this._vincularEventosFormulario(formContainer);
         }
 
-        // 4. Inicializar Tabla (Read y triggers para D)
         const tableContainer = container.querySelector('#resguardos-table-container');
         await this.readModule.inicializar(tableContainer, this.capacidadGlobal, this.puedeModificar, {
             onEdit: (item) => this._prepararEdicion(item),

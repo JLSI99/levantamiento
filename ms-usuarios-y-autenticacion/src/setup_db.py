@@ -47,7 +47,8 @@ PERMISOS_BASE = [
     (23, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
     (24, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
     (25, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
-    (26, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento")
+    (26, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento"),
+    (27, "MisResguardos:leer", "Consultar el histórico y las actas de resguardo vigentes")
 ]
 
 MATRIZ_ACCESO = {
@@ -55,7 +56,7 @@ MATRIZ_ACCESO = {
     2: [8, 12, 15, 16, 17, 18, 20, 24], 
     3: [11, 12, 13, 14],
     4: [12],    
-    5: [8, 12, 16, 20,24]             
+    5: [8, 12, 27, 20,24]             
 }
 
 USUARIOS_SEMILLA = [
