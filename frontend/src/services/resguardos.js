@@ -9,9 +9,12 @@ export const resguardosService = {
     },
 
     async listarTodosLosResguardosInstitucionales(filtros = {}) {
-        const { limit = 10, offset = 0, soloVigentes = true, incluirBorrados = false, curp = null } = filtros;
+        const { limit = 100, offset = 0, soloVigentes = true, incluirBorrados = false, curp = null } = filtros;
         const params = { limit, offset, solo_vigentes: soloVigentes, incluir_borrados: incluirBorrados };
-        if (curp) params['curp'] = curp.trim().toUpperCase();
+        
+        if (curp && curp.trim() !== '') {
+            params['curp'] = curp.trim().toUpperCase();
+        }
 
         const response = await bffClient.get('/resguardos', { params });
         return response.data;

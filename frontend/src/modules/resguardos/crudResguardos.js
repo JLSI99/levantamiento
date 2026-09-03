@@ -35,8 +35,10 @@ export class HistorialResguardos {
         }
 
         const permisos = state.capabilities || [];
-        this.capacidadGlobal = permisos.includes('resguardos:leer') || permisos.includes('resguardos:crear');
+        
+        this.capacidadGlobal = permisos.includes('resguardos:leer');
         const puedeListarPropios = permisos.includes('MisResguardos:leer');
+        
         this.puedeModificar = permisos.includes('resguardos:editar') || permisos.includes('resguardos:crear');
 
         if (!this.capacidadGlobal && !puedeListarPropios) {
@@ -66,11 +68,11 @@ export class HistorialResguardos {
             onEdit: (item) => this._prepararEdicion(item),
             onRelease: async (id) => {
                 const exito = await this.deleteModule.liberar(id);
-                if (exito) this.readModule.cargarTabla();
+                if (exito) await this.readModule.cargarTabla(); 
             },
             onDelete: async (id) => {
                 const exito = await this.deleteModule.eliminar(id);
-                if (exito) this.readModule.cargarTabla();
+                if (exito) await this.readModule.cargarTabla();
             }
         });
     }
@@ -99,7 +101,9 @@ export class HistorialResguardos {
             await this._handleSubmit(form);
         });
 
-        btnCancelar.addEventListener('click', () => this._cancelarEdicion());
+        if(btnCancelar) {
+            btnCancelar.addEventListener('click', () => this._cancelarEdicion());
+        }
     }
 
     async _handleSubmit(form) {
@@ -114,7 +118,7 @@ export class HistorialResguardos {
         const formData = new FormData(form);
         const payload = {
             id_bien: formData.get('id_bien').trim(),
-            curp: formData.get('curp').trim().toUpperCase(),
+            curp: formData.get('curp') ? formData.get('curp').trim().toUpperCase() : null, // Permitir nulo si es resguardo propio
             id_edificio: this.ubicacionActual.id_edificio,
             id_aula: this.ubicacionActual.id_aula,
             id_departamento: this.ubicacionActual.id_departamento
@@ -132,7 +136,7 @@ export class HistorialResguardos {
                 form.reset();
                 if (this.selectorUbicaciones) await this.selectorUbicaciones.inicializar();
             }
-            this.readModule.cargarTabla();
+            await this.readModule.cargarTabla();
         } catch (err) {
             if (feedback) feedback.textContent = err.response?.data?.detail || "Fallo estructural al procesar la asignación.";
         } finally {
@@ -147,6 +151,7 @@ export class HistorialResguardos {
         this.modoEdicion = true;
         this.idAsignacionEnEdicion = item.id_asignacion;
         this.updateModule.prepararFormulario(item);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     _cancelarEdicion() {
