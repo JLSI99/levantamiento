@@ -1,4 +1,4 @@
-import { ubicacionesService } from '../services/ubicaciones.js'; 
+import { ubicacionesService } from '/src/services/ubicaciones.js'; 
 
 export class SelectorUbicaciones {
     constructor(containerElement, onUbicacionSeleccionada) {

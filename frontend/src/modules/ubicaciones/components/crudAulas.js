@@ -1,4 +1,4 @@
-import { ubicacionesService } from '../../../services/ubicaciones.js';
+import { ubicacionesService } from '/src/services/ubicaciones.js';
 
 export class CrudAulas {
     constructor(formContainerId, permisos) {
@@ -12,7 +12,6 @@ export class CrudAulas {
         this._editingAulaId = null;
         this._abortController = new AbortController();
 
-        // Callback para avisar al orquestador que se modificó un aula y recargue la tabla
         this.onAulaChanged = null;
     }
 

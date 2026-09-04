@@ -1,14 +1,13 @@
-import authStore from '../../core/store/authStore.js';
-import { CrudEdificios } from './components/crudEdificios.js';
-import { CrudAulas } from './components/crudAulas.js';
-import { CrudDepartamentos } from './components/crudDepartamentos.js';
+import authStore from '/src/core/store/authStore.js';
+import { CrudEdificios } from '/src/modules/ubicaciones/components/crudEdificios.js';
+import { CrudAulas } from '/src/modules/ubicaciones/components/crudAulas.js';
+import { CrudDepartamentos } from '/src/modules/ubicaciones/components/crudDepartamentos.js';
 
 export class CrudUbicaciones {
     constructor(containerId) {
         this.containerId = containerId;
         this._abortController = new AbortController();
 
-        // Instancias de los sub-módulos
         this.modEdificios = null;
         this.modAulas = null;
         this.modDepartamentos = null;
@@ -18,14 +17,12 @@ export class CrudUbicaciones {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // 1. Obtener estado de autenticación y capacidades desde el authStore
         const estadoAuth = authStore.getSnapshot();
         const usuario = estadoAuth?.user;
         const capabilities = estadoAuth?.capabilities || [];
         const permisosRaw = usuario?.permisos || [];
         const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
 
-        // Mapeo unificado de permisos para el módulo de infraestructura/organigrama
         const permisos = {
             crear: esAdmin || permisosRaw.includes('ubicaciones:crear') || capabilities.includes('ubicaciones:create'),
             editar: esAdmin || permisosRaw.includes('ubicaciones:editar') || capabilities.includes('ubicaciones:update'),
@@ -33,7 +30,6 @@ export class CrudUbicaciones {
             leer: esAdmin || permisosRaw.includes('ubicaciones:leer') || capabilities.includes('ubicaciones:read')
         };
 
-        // Si no tiene ningún permiso ni es admin, bloqueamos el acceso (403)
         if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {
             container.innerHTML = `
                 <div class="forbidden-container" style="padding: 20px; background: #ffebee; border: 1px solid #c62828; border-radius: 4px; margin-top: 20px; font-family: sans-serif;">
@@ -44,7 +40,6 @@ export class CrudUbicaciones {
             return;
         }
 
-        // 2. Estructura HTML base del Orquestador
         container.innerHTML = `
             <div style="width: 100%; font-family: system-ui, -apple-system, sans-serif;">
                 <!-- Control de Pestañas -->
@@ -105,12 +100,10 @@ export class CrudUbicaciones {
     }
 
     initModules(permisos) {
-        // 1. Instanciamos Aulas pasando los permisos calculados
         this.modAulas = new CrudAulas('container-form-aulas', permisos, () => {
             this.modEdificios.cargarDatos();
         });
 
-        // 2. Instanciamos Edificios pasando los permisos calculados
         this.modEdificios = new CrudEdificios(
             'container-form-edificios', 
             'container-tabla-infra', 
@@ -119,10 +112,8 @@ export class CrudUbicaciones {
             (idAula, idEdificio, nombre) => this.modAulas.activarEdicion(idAula, idEdificio, nombre)
         );
 
-        // 3. Instanciamos Departamentos pasando los permisos calculados
         this.modDepartamentos = new CrudDepartamentos('section-departamentos', permisos);
 
-        // Renderizamos e inicializamos datos
         this.modEdificios.render();
         this.modAulas.render();
         this.modDepartamentos.render();

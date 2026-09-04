@@ -1,9 +1,9 @@
-import authStore from '../../core/store/authStore.js';
-import { CreateResguardo } from './components/CreateResguardo.js';
-import { ReadResguardos } from './components/ReadResguardos.js';
-import { UpdateResguardo } from './components/UpdateResguardo.js';
-import { DeleteResguardo } from './components/DeleteResguardo.js';
-import { SelectorUbicaciones } from '../ubicaciones/components/SelectorUbicaciones.js';
+import authStore from '/src/core/store/authStore.js';
+import { CreateResguardo } from '/src/modules/resguardos/components/CreateResguardo.js';
+import { ReadResguardos } from '/src/modules/resguardos/components/ReadResguardos.js';
+import { UpdateResguardo } from '/src/modules/resguardos/components/UpdateResguardo.js';
+import { DeleteResguardo } from '/src/modules/resguardos/components/DeleteResguardo.js';
+import { SelectorUbicaciones } from '/src/modules/ubicaciones/components/SelectorUbicaciones.js';
 
 export class HistorialResguardos {
     constructor(containerId) {

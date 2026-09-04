@@ -1,4 +1,4 @@
-import { adminService } from '../services/admin.js';
+import { adminService } from '/src/services/admin.js';
 
 export class CrudUsuarios {
     constructor(containerId, permisos) {

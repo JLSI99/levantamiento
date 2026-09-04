@@ -1,4 +1,4 @@
-import { resguardosService } from '../../../services/resguardos.js';
+import { resguardosService } from '/src/services/resguardos.js';
 
 export class DeleteResguardo {
     async liberar(idAsignacion) {

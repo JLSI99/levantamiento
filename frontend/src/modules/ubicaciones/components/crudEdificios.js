@@ -1,4 +1,4 @@
-import { ubicacionesService } from '../../../services/ubicaciones.js';
+import { ubicacionesService } from '/src/services/ubicaciones.js';
 
 export class CrudEdificios {
     constructor(formContainerId, tableContainerId, permisos) {

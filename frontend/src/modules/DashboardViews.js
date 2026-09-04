@@ -1,10 +1,10 @@
-import authStore from '../core/store/authStore.js';
-import { authService } from '../services/auth.js';
-import { CrudUsuariosPersonas } from './usuariosPersonas/crudUsuariosPersonas.js';
-import { CrudUbicaciones } from './ubicaciones/crudUbicaciones.js';
-import { CrudBienes } from './bienes/crudBienes.js';
-import { HistorialResguardos } from './resguardos/crudResguardos.js';
-import { guardElement, checkAccess } from '../core/security/CanRender.js';
+import authStore from '/src/core/store/authStore.js';
+import { authService } from '/src/services/auth.js';
+import { CrudUsuariosPersonas } from '/src/modules/usuariosPersonas/crudUsuariosPersonas.js';
+import { CrudUbicaciones } from '/src/modules/ubicaciones/crudUbicaciones.js';
+import { CrudBienes } from '/src/modules/bienes/crudBienes.js';
+import { HistorialResguardos } from '/src/modules/resguardos/crudResguardos.js';
+import { guardElement, checkAccess } from '/src/core/security/CanRender.js';
 
 export class DashboardView {
     constructor(containerId) {

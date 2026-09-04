@@ -1,4 +1,4 @@
-import { bienesService } from '../../../services/bienes.js';
+import { bienesService } from '/src/services/bienes.js';
 
 export class CrudTiposBien {
     constructor(formContainerId, tableContainerId, permisos) {

@@ -1,6 +1,6 @@
-import authStore from '../../store/authStore.js';
-import { CrudTiposBien } from './components/crudTiposBien.js';
-import { CrudActivos } from './components/crudActivos.js';
+import authStore from '/src/core/store/authStore.js';
+import { CrudTiposBien } from '/src/modules/bienes/components/crudTiposBien.js';
+import { CrudActivos } from '/src/modules/bienes/components/crudActivos.js';
 
 export class CrudBienes {
     constructor(containerId) {

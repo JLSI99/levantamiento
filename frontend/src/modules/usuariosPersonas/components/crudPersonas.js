@@ -1,4 +1,4 @@
-import { adminService } from '../services/admin.js';
+import { adminService } from '/src/services/admin.js';
 
 export class CrudPersonas {
     constructor(containerId, permisos) {
@@ -8,7 +8,6 @@ export class CrudPersonas {
         this.puedeEditar = this.permisos.includes('personas:actualizar') || this.permisos.includes('personas:editar');
         this.puedeEliminar = this.permisos.includes('personas:eliminar') || this.permisos.includes('personas:borrar');
         
-        // Estado de Edición y Caché Local
         this._editingId = null;
         this._personasCache = new Map();
         this._abortController = new AbortController();
@@ -130,7 +129,6 @@ export class CrudPersonas {
         if (!confirmacion) return;
 
         try {
-            // Corrección de contrato: Se invoca darBajaPersona en lugar de eliminarPersona
             await adminService.darBajaPersona(idPersona);
             alert('Registro demográfico eliminado correctamente.');
             this.cargarDatos();

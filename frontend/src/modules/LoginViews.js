@@ -1,5 +1,5 @@
-import { authService } from '../services/auth.js';
-import authStore from '../store/authStore.js';
+import { authService } from '/src/services/auth.js';
+import authStore from '/src/core/store/authStore.js';
 
 export class LoginView {
     constructor(containerId) {

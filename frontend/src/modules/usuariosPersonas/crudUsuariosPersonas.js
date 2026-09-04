@@ -1,6 +1,6 @@
-import authStore from '../store/authStore.js';
-import { CrudPersonas } from '../../components/CrudPersonas.js';
-import { CrudUsuarios } from '../../components/CrudUsuarios.js';
+import authStore from 'src/core/store/authStore.js';
+import { CrudPersonas } from '/src/modules/usuariosPersonas/components/CrudPersonas.js';
+import { CrudUsuarios } from '/src/modules/usuariosPersonas/components/CrudUsuarios.js';
 
 export class AdministracionOrquestador {
     constructor(containerId) {

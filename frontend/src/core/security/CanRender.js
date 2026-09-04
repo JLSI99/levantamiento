@@ -1,4 +1,4 @@
-import authStore from '../store/authStore.js';
+import authStore from '/src/core/store/authStore.js';
 
 /**
  * @param {Object} state

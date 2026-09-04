@@ -1,6 +1,6 @@
-import authStore from './store/authStore.js';
-import { LoginView } from './views/LoginViews.js';
-import { DashboardView } from './views/DashboardViews.js';
+import authStore from '/src/core/store/authStore.js';
+import { LoginView } from '/src/modules/LoginViews.js';
+import { DashboardView } from '/src/modules/DashboardViews.js';
 
 class AppKernel {
     constructor() {
