@@ -24,10 +24,10 @@ export class CrudUbicaciones {
         const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
 
         const permisos = {
-            crear: esAdmin || permisosRaw.includes('ubicaciones:crear') || capabilities.includes('ubicaciones:create'),
-            editar: esAdmin || permisosRaw.includes('ubicaciones:editar') || capabilities.includes('ubicaciones:update'),
-            borrar: esAdmin || permisosRaw.includes('ubicaciones:borrar') || capabilities.includes('ubicaciones:delete'),
-            leer: esAdmin || permisosRaw.includes('ubicaciones:leer') || capabilities.includes('ubicaciones:read')
+            crear: esAdmin || permisosRaw.includes('ubicaciones:crear') || capabilities.includes('ubicaciones:crear'),
+            editar: esAdmin || permisosRaw.includes('ubicaciones:editar') || capabilities.includes('ubicaciones:editar'),
+            borrar: esAdmin || permisosRaw.includes('ubicaciones:borrar') || capabilities.includes('ubicaciones:borrar'),
+            leer: esAdmin || permisosRaw.includes('ubicaciones:leer') || capabilities.includes('ubicaciones:leer')
         };
 
         if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {

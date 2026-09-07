@@ -21,9 +21,9 @@ export class CrudBienes {
 
         // Mapeo unificado de permisos
         const permisos = {
-            crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:create'),
-            editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:update'),
-            borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:delete')
+            crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:crear'),
+            editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:editar'),
+            borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:borrar')
         };
 
         // Si no tiene permisos de lectura ni escritura, bloqueamos el acceso

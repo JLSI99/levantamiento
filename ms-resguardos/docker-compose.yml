@@ -3,7 +3,7 @@ services:
     build: 
       context: ./
       dockerfile: dockerfile
-    container_name: ms_resguardo_api
+    container_name: ms_resguardos_api
     env_file: 
       - .env_code
     environment:
