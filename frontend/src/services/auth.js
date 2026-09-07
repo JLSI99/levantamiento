@@ -1,4 +1,4 @@
-import bffClient from '../api/client.js';
+import bffClient from 'src/core/api/client.js';
 
 export const authService = {
     async login(username, password) {

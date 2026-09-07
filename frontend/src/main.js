@@ -9,6 +9,9 @@ class AppKernel {
     }
 
     inicializar() {
+        const initialState = authStore.getState ? authStore.getState() : { isAuthenticated: false };
+        this.evaluarEstrategiaRuta(initialState);
+
         this.unsubscribeStore = authStore.subscribe((state) => {
             this.evaluarEstrategiaRuta(state);
         });
@@ -16,24 +19,33 @@ class AppKernel {
 
     evaluarEstrategiaRuta(sessionState) {
         const appContainer = document.getElementById('app');
-        if (!appContainer) return;
+        if (!appContainer) {
+            console.error("[AppKernel] Invariante violado: DOM target '#app' no encontrado.");
+            return;
+        }
 
         if (this.currentViewState && typeof this.currentViewState.unmount === 'function') {
             try {
                 this.currentViewState.unmount();
             } catch (error) {
-                console.error("Fallo crítico al ejecutar el desmontaje de la vista activa:", error);
+                console.error("[AppKernel] Fallo crítico al desmontar la vista activa:", error);
             }
         }
 
         appContainer.innerHTML = '';
 
-        if (sessionState.isAuthenticated) {
-            this.currentViewState = new DashboardView('app');
+        try {
+            if (sessionState && sessionState.isAuthenticated) {
+                this.currentViewState = new DashboardView('app');
+            } else {
+                this.currentViewState = new LoginView('app');
+            }
+            
             this.currentViewState.render();
-        } else {
-            this.currentViewState = new LoginView('app');
-            this.currentViewState.render();
+            
+        } catch (error) {
+            console.error("[AppKernel] Fallo en el pipeline de renderizado (Mounting):", error);
+            appContainer.innerHTML = `<div style="color:red; padding: 20px;">Error fatal de renderizado. Revisa la consola.</div>`;
         }
     }
 
@@ -42,10 +54,12 @@ class AppKernel {
         if (this.currentViewState && typeof this.currentViewState.unmount === 'function') {
             this.currentViewState.unmount();
         }
+        this.currentViewState = null;
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     const kernel = new AppKernel();
     kernel.inicializar();
+
 });

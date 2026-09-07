@@ -1,4 +1,4 @@
-import bffClient from '../api/client.js';
+import bffClient from '/src/core/api/client.js';
 
 export const resguardosService = {
     async listarMisResguardos(limit = 10, offset = 0) {
