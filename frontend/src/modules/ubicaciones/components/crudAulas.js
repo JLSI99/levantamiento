@@ -3,11 +3,12 @@ import { ubicacionesService } from '/src/services/ubicaciones.js';
 export class CrudAulas {
     constructor(formContainerId, permisos) {
         this.formContainerId = formContainerId;
-        this.permisos = permisos || [];
-
-        this.puedeCrearUbi = this.permisos.includes('ubicaciones:crear');
-        this.puedeEditarUbi = this.permisos.includes('ubicaciones:editar');
-        this.puedeBorrarUbi = this.permisos.includes('ubicaciones:borrar');
+        
+        // Estandarizamos la lectura de permisos igual que en Edificios y Departamentos
+        this.permisos = permisos || {};
+        this.puedeCrearUbi = this.permisos.crear || false;
+        this.puedeEditarUbi = this.permisos.editar || false;
+        this.puedeBorrarUbi = this.permisos.borrar || false;
 
         this._editingAulaId = null;
         this._abortController = new AbortController();

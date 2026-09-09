@@ -4,17 +4,18 @@ export class CrudEdificios {
     constructor(formContainerId, tableContainerId, permisos) {
         this.formContainerId = formContainerId;
         this.tableContainerId = tableContainerId;
-        this.permisos = permisos || [];
+        // Cambiamos el fallback a un objeto vacío
+        this.permisos = permisos || {};
 
-        this.puedeCrearUbi = this.permisos.includes('ubicaciones:crear');
-        this.puedeEditarUbi = this.permisos.includes('ubicaciones:editar');
-        this.puedeBorrarUbi = this.permisos.includes('ubicaciones:borrar');
+        // Ahora leemos directamente las propiedades booleanas del objeto
+        this.puedeCrearUbi = this.permisos.crear || false;
+        this.puedeEditarUbi = this.permisos.editar || false;
+        this.puedeBorrarUbi = this.permisos.borrar || false;
 
         this._editingEdificioId = null;
         this._edificiosCache = new Map();
         this._abortController = new AbortController();
 
-        // Callbacks expuestos para el orquestador
         this.onEdificiosLoaded = null;
         this.onEditAulaRequest = null;
         this.onDeleteAulaRequest = null;
@@ -25,7 +26,6 @@ export class CrudEdificios {
         const tableContainer = document.getElementById(this.tableContainerId);
         if (!formContainer || !tableContainer) return;
 
-        // Render Formulario Edificios
         formContainer.innerHTML = `
             <h4 id="form-edificio-titulo" style="margin-top:0; color:#424242;">Registrar Edificio</h4>
             ${(this.puedeCrearUbi || this.puedeEditarUbi) ? `
@@ -46,7 +46,6 @@ export class CrudEdificios {
             ` : '<div style="color:#757575; font-style:italic;">Sin permisos para gestionar edificios.</div>'}
         `;
 
-        // Render Tabla Edificios
         tableContainer.innerHTML = `
             <h4 style="margin-top:0; color:#424242;">Catálogo de Infraestructura Físico-Topológica</h4>
             <table style="width:100%; border-collapse:collapse; font-size:12px; background:white;">

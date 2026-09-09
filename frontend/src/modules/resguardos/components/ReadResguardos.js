@@ -166,7 +166,8 @@ export class ReadResguardos {
         if (tabla) tabla.removeEventListener('click', this.handleEventosTabla);
     }
 
-    handleBusqueda(e) {
+    // ¡Corregido! Se agregó el guion bajo a _handleBusqueda para que coincida con el constructor
+    _handleBusqueda(e) {
         this.cargarTabla(e.target.value);
     }
 
@@ -176,7 +177,6 @@ export class ReadResguardos {
         if (!idStr) return;
 
         if (target.classList.contains('btn-editar-resguardo')) {
-        
             const item = this.asignacionesMemoria.get(idStr);
             if (item) this.callbacks.onEdit(item);
         } 

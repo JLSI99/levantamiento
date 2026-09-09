@@ -3,7 +3,7 @@ import bffClient from '/src/core/api/client.js';
 export const bienesService = {
     async listarTiposBien(limit = 10, offset = 0, incluirInactivos = false) {
         try {
-            const response = await bffClient.get('/bienes/tipos-bien', {
+            const response = await bffClient.get('/bienes/tipos-bien/', {
                 params: { limit, offset, incluir_inactivos: incluirInactivos }
             });
             return response.data;
@@ -55,7 +55,7 @@ export const bienesService = {
 
     async listarBienes(limit = 10, offset = 0, incluirInactivos = false) {
         try {
-            const response = await bffClient.get('/bienes', {
+            const response = await bffClient.get('/bienes/', {
                 params: { limit, offset, incluir_inactivos: incluirInactivos }
             });
             return response.data;
@@ -77,7 +77,7 @@ export const bienesService = {
 
     async crearNuevoBien(bienData) {
         try {
-            const response = await bffClient.post('/bienes', bienData);
+            const response = await bffClient.post('/bienes/', bienData);
             return response.data;
         } catch (error) {
             console.error('Error al dar de alta el activo en la base de inventario:', error);

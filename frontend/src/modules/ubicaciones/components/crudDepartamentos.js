@@ -3,11 +3,11 @@ import { ubicacionesService } from '/src/services/ubicaciones.js';
 export class CrudDepartamentos {
     constructor(containerId, permisos) {
         this.containerId = containerId;
-        this.permisos = permisos || [];
+        this.permisos = permisos || {};
 
-        this.puedeCrearDepto = this.permisos.includes('departamentos:crear');
-        this.puedeEditarDepto = this.permisos.includes('departamentos:editar');
-        this.puedeBorrarDepto = this.permisos.includes('departamentos:borrar');
+        this.puedeCrearDepto = this.permisos.crear || false;
+        this.puedeEditarDepto = this.permisos.editar || false;
+        this.puedeBorrarDepto = this.permisos.borrar || false;
 
         this._editingDeptoId = null;
         this._departamentosCache = new Map();
