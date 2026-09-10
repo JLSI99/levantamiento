@@ -4,13 +4,59 @@ import { CrudUsuariosPersonas } from '/src/modules/usuariosPersonas/crudUsuarios
 import { CrudUbicaciones } from '/src/modules/ubicaciones/crudUbicaciones.js';
 import { CrudBienes } from '/src/modules/bienes/crudBienes.js';
 import { HistorialResguardos } from '/src/modules/resguardos/crudResguardos.js';
-import { guardElement, checkAccess } from '/src/core/security/CanRender.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
+
+// 1. Declaración de Rutas Centralizada
+const ROUTE_REGISTRY = [
+    {
+        id: "usuarios_personas",
+        label: "Usuarios / Personas",
+        caps: ["usuarios:crear", "personas:crear"],
+        matchPolicy: "ALL", // Requiere ambas capacidades (Solo Admin)
+        view: CrudUsuariosPersonas
+    },
+    {
+        id: "ubicaciones",
+        label: "Ubicaciones",
+        caps: ["ubicaciones:crear"],
+        matchPolicy: "ANY", // Solo Admin tiene ubicaciones:crear
+        view: CrudUbicaciones
+    },
+    {
+        id: "bienes",
+        label: "Bienes",
+        // CORRECCIÓN: Agregamos bienes:leer para que el Revisor también vea el menú
+        caps: ["bienes:crear", "bienes:leer"],
+        matchPolicy: "ANY", 
+        view: CrudBienes
+    },
+    {
+        id: "resguardos",
+        label: "Resguardos/Custodio",
+        caps: ["resguardos:crear", "MisResguardos:leer"],
+        matchPolicy: "ANY", // Admin/Levantador entran por crear, Resguardante entra por MisResguardos
+        view: HistorialResguardos
+    }
+];
 
 export class DashboardView {
     constructor(containerId) {
         this.containerId = containerId;
         this.activeModule = null;
         this.onLogoutBound = null;
+    }
+
+    /**
+     * Valida si el snapshot satisface las capacidades requeridas por la ruta.
+     */
+    tieneAccesoARuta(routeConfig, snapshot) {
+        if (!routeConfig.caps || routeConfig.caps.length === 0) return true;
+
+        if (routeConfig.matchPolicy === "ALL") {
+            return routeConfig.caps.every(cap => checkAccess(cap, snapshot));
+        }
+        // Fallback por defecto: policy "ANY"
+        return routeConfig.caps.some(cap => checkAccess(cap, snapshot));
     }
 
     render() {
@@ -45,31 +91,19 @@ export class DashboardView {
             userProfile.textContent = snapshot.user?.username || 'Operador No Identificado';
         }
 
-        this.generarMenuSeguro();
+        const rutasPermitidas = ROUTE_REGISTRY.filter(route => this.tieneAccesoARuta(route, snapshot));
+
+        this.generarMenuSeguro(rutasPermitidas);
         this.vincularGlobales();
-        this.enrutarModuloInicial(snapshot);
+        this.enrutarModuloInicial(rutasPermitidas);
     }
 
-    generarMenuSeguro() {
+    generarMenuSeguro(rutasPermitidas) {
         const nav = document.getElementById('sidebar-nav');
         if (!nav) return;
-        
-        const linksConfiguration = [
-            {
-                id: "usuarios_personas", label: "Usuarios y Personas", caps: ["usuarios:leer", "personas:leer"], view: CrudUsuariosPersonas
-            },
-            {
-                id: "ubicaciones", label: "Ubicaciones", caps: ["ubicaciones:leer"], view: CrudUbicaciones
-            },
-            {
-                id: "bienes", label: "Bienes", caps: ["bienes:leer"], view: CrudBienes
-            },
-            {
-                id: "resguardos", label: "Resguardos", caps: ["resguardos:leer"], view: HistorialResguardos
-            }
-        ];
+        nav.innerHTML = ''; 
 
-        linksConfiguration.forEach(config => {
+        rutasPermitidas.forEach(config => {
             const btn = document.createElement('button');
             btn.id = `nav-link-${config.id}`;
             btn.textContent = config.label;
@@ -80,12 +114,31 @@ export class DashboardView {
                 this.cargarModulo(config.view, config.label);
             };
 
-            const guardedBtn = guardElement(config.caps, btn);
-            
-            if (guardedBtn) {
-                nav.appendChild(guardedBtn);
-            }
+            nav.appendChild(btn);
         });
+    }
+
+    enrutarModuloInicial(rutasPermitidas) {
+        if (rutasPermitidas.length > 0) {
+            const primeraRuta = rutasPermitidas[0];
+            this.cargarModulo(primeraRuta.view, primeraRuta.label);
+
+            const activeBtn = document.getElementById(`nav-link-${primeraRuta.id}`);
+            if (activeBtn) {
+                this.seleccionarBotonMenu(activeBtn);
+            }
+        } else {
+            const content = document.getElementById('workspace-content');
+            if (content) {
+                content.innerHTML = `
+                    <div style="background:white;padding:20px;border-radius:6px;border:1px solid var(--border-color,#e2e8f0);">
+                        <p style="margin:0;">
+                            Su cuenta no tiene permisos para acceder a ningún módulo.
+                        </p>
+                    </div>
+                `;
+            }
+        }
     }
 
     seleccionarBotonMenu(targetButton) {
@@ -101,59 +154,12 @@ export class DashboardView {
         }
     }
 
-    enrutarModuloInicial(snapshot) {
-        let initialView = null;
-        let initialTitle = '';
-        let targetLinkId = '';
-
-        if (checkAccess('usuarios:leer', snapshot) && checkAccess('personas:leer', snapshot)) {
-            initialView = CrudUsuariosPersonas;
-            initialTitle = 'Usuarios / Personas';
-            targetLinkId = 'nav-link-usuarios_personas';
-        } else if (checkAccess('ubicaciones:leer', snapshot)) {
-            initialView = CrudUbicaciones;
-            initialTitle = 'Ubicaciones';
-            targetLinkId = 'nav-link-ubicaciones';
-        } else if (checkAccess('bienes:leer', snapshot)) {
-            initialView = CrudBienes;
-            initialTitle = 'Bienes';
-            targetLinkId = 'nav-link-bienes';
-        } else if (checkAccess('resguardos:leer', snapshot)) {
-            initialView = HistorialResguardos;
-            initialTitle = 'Resguardos';
-            targetLinkId = 'nav-link-resguardos';
-        }
-
-        if (initialView) {
-            this.cargarModulo(initialView, initialTitle);
-
-            setTimeout(() => {
-                const activeBtn = document.getElementById(targetLinkId);
-                if (activeBtn) {
-                    this.seleccionarBotonMenu(activeBtn);
-                }
-            }, 50);
-
-        } else {
-            const content = document.getElementById('workspace-content');
-            if (content) {
-                content.innerHTML = `
-                    <div style="background:white;padding:20px;border-radius:6px;border:1px solid var(--border-color,#e2e8f0);">
-                        <p style="margin:0;">
-                            Su cuenta no tiene permisos para acceder a ningún módulo.
-                        </p>
-                    </div>
-                `;
-            }
-        }
-    }
-
     cargarModulo(ViewClass, title) {
         if (this.activeModule && typeof this.activeModule.unmount === 'function') {
             try {
                 this.activeModule.unmount();
             } catch (err) {
-                console.error("Error al de-indexar el módulo secundario:", err);
+                console.error("Error al desmontar el módulo secundario:", err);
             }
         }
 
