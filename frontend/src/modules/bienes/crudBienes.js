@@ -23,7 +23,8 @@ export class CrudBienes {
         const permisos = {
             crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:crear'),
             editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:editar'),
-            borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:borrar')
+            borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:borrar'),
+            borrar: esAdmin || permisosRaw.includes('bienes:leer') || capabilities.includes('bienes:leer')
         };
 
         // Si no tiene permisos de lectura ni escritura, bloqueamos el acceso

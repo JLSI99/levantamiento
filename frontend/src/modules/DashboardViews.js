@@ -6,7 +6,6 @@ import { CrudBienes } from '/src/modules/bienes/crudBienes.js';
 import { HistorialResguardos } from '/src/modules/resguardos/crudResguardos.js';
 import { checkAccess } from '/src/core/security/CanRender.js';
 
-// 1. Declaración de Rutas Centralizada
 const ROUTE_REGISTRY = [
     {
         id: "usuarios_personas",
@@ -25,7 +24,6 @@ const ROUTE_REGISTRY = [
     {
         id: "bienes",
         label: "Bienes",
-        // CORRECCIÓN: Agregamos bienes:leer para que el Revisor también vea el menú
         caps: ["bienes:crear", "bienes:leer"],
         matchPolicy: "ANY", 
         view: CrudBienes
