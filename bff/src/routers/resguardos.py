@@ -161,7 +161,7 @@ async def listar_mis_resguardos(
     request: Request,
     limit: int = Query(10, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:leer"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("MisResguardos:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
@@ -176,7 +176,7 @@ async def listar_mis_resguardos(
 
     params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False, "curp": curp}
     try:
-        resguardos_resp = await client.get(MS_RESGUARDOS_ENDPOINT, params=params, headers=headers)
+        resguardos_resp = await client.get(f"{MS_RESGUARDOS_ENDPOINT}/mis-resguardos", params=params, headers=headers)
         if resguardos_resp.status_code != 200:
             raise HTTPException(status_code=resguardos_resp.status_code, detail="Error al recuperar asignaciones personales del microservicio.")
     except httpx.RequestError as exc:
@@ -283,7 +283,7 @@ async def modificar_asignacion_resguardo(
 async def concluir_resguardo_ordinario(
     request: Request,
     id_asignacion: UUID,
-    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:crear"))
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("resguardos:editar"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token

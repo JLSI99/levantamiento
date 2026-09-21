@@ -110,6 +110,44 @@ async def listar_resguardos(
         "data": resguardos
     }
 
+# MICROSERVICIO: Agregar este endpoint específico para resguardos propios
+@router.get(
+    "/mis-resguardos", 
+    response_model=schemas.AsignacionPaginatedOut
+)
+@limiter.limit("30/minute")
+async def listar_mis_resguardos_ms(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    solo_vigentes: bool = Query(True),
+    incluir_borrados: bool = Query(False),
+    # Exigimos el permiso de usuario normal
+    token_payload: dict = Depends(require_capability("MisResguardos:leer")) 
+):
+    # Extraemos la curp directamente del token en el microservicio por seguridad
+    curp = token_payload.get("curp") or token_payload.get("username")
+    
+    query_count = select(func.count(models.Asignacion.id_asignacion)).where(models.Asignacion.curp == curp)
+    query_data = select(models.Asignacion).where(models.Asignacion.curp == curp)
+
+    if solo_vigentes:
+        query_count = query_count.where(models.Asignacion.fecha_fin.is_(None))
+        query_data = query_data.where(models.Asignacion.fecha_fin.is_(None))
+        
+    if not incluir_borrados:
+        query_count = query_count.where(models.Asignacion.esta_activo == True)
+        query_data = query_data.where(models.Asignacion.esta_activo == True)
+
+    total = await db.scalar(query_count)
+    query_data = query_data.order_by(models.Asignacion.fecha_inicio.desc()).offset(offset).limit(limit)
+    
+    result = await db.execute(query_data)
+    resguardos = result.scalars().all()
+    
+    return {"total": total, "limit": limit, "offset": offset, "data": resguardos}
+
 @router.get(
     "/{id_asignacion}", 
     response_model=schemas.AsignacionOut
@@ -266,3 +304,4 @@ async def borrar_resguardo(
             detail="Error interno al procesar la baja lógica del resguardo."
         )
     return
+
