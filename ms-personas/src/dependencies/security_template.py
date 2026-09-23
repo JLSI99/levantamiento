@@ -15,6 +15,7 @@ class ValidadorSeguridad:
         self.tipo_token_estricto = tipo_token_estricto
 
     async def validate_jwt_token(self, credentials: HTTPAuthorizationCredentials = Depends(security_scheme)) -> dict:
+
         token = credentials.credentials
         if self.tipo_token_estricto:
             payload = decode_token(token, expected_type=self.tipo_token_estricto)

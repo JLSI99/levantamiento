@@ -22,41 +22,43 @@ PERMISOS_BASE = [
     (2, "usuarios:leer", "Visualización y paginación del catálogo de usuarios del sistema"),
     (3, "usuarios:editar", "Modificar propiedades de configuración de un usuario existente"),
     (4, "usuarios:borrar", "Inactivación o borrado lógico de cuentas de usuario"),
-    (5, "roles:leer", "Consultar el catálogo global de roles institucionales"),
-    (6, "roles:editar", "Modificar la matriz relacional de asignación de capacidades a roles"),
-    # Dominio de Personas: ms-personas
-    (7, "personas:crear", "Permite registrar formalmente a una persona en el padrón institucional"),
-    (8, "personas:leer", "Consultar y listar el padrón general de personas registradas"),
-    (9, "personas:editar", "Actualizar la metadata civil o laboral de una persona"),
-    (10, "personas:borrar", "Baja lógica de una persona dentro del padrón activo"),
+    (5, "roles:crear", "Consultar el catálogo global de roles institucionales"),
+    (6, "roles:leer", "Consultar el catálogo global de roles institucionales"),
+    (7, "roles:editar", "Modificar la matriz relacional de asignación de capacidades a roles"),
+    (8, "roles:borrar", "Consultar el catálogo global de roles institucionales"),
+    # Dominio de Personas: ms-personasgits
+    (9, "personas:crear", "Permite registrar formalmente a una persona en el padrón institucional"),
+    (10, "personas:leer", "Consultar y listar el padrón general de personas registradas"),
+    (11, "personas:editar", "Actualizar la metadata civil o laboral de una persona"),
+    (12, "personas:borrar", "Baja lógica de una persona dentro del padrón activo"),
     # Dominio de Activos: ms-bienes
-    (11, "bienes:crear", "Registrar un nuevo bien mueble o activo en el inventario institucional"),
-    (12, "bienes:leer", "Consultar las fichas técnicas y estados de los bienes patrimoniales"),
-    (13, "bienes:editar", "Modificar valores, depreciaciones o características de un activo"),
-    (14, "bienes:borrar", "Dar de baja física y contable un activo por obsolescencia o siniestro"),
+    (13, "bienes:crear", "Registrar un nuevo bien mueble o activo en el inventario institucional"),
+    (14, "bienes:leer", "Consultar las fichas técnicas y estados de los bienes patrimoniales"),
+    (15, "bienes:editar", "Modificar valores, depreciaciones o características de un activo"),
+    (16, "bienes:borrar", "Dar de baja física y contable un activo por obsolescencia o siniestro"),
     # Dominio de Custodia: ms-resguardos
-    (15, "resguardos:crear", "Asignar jurídicamente la custodia de un bien a un resguardante"),
-    (16, "resguardos:leer", "Consultar el histórico y las actas de resguardo vigentes"),
-    (17, "resguardos:editar", "Modificar términos, observaciones o firmas de un acta de resguardo"),
-    (18, "resguardos:borrar", "Liberar a un resguardante de la custodia de un bien (retorno o transferencia)"),
+    (17, "resguardos:crear", "Asignar jurídicamente la custodia de un bien a un resguardante"),
+    (18, "resguardos:leer", "Consultar el histórico y las actas de resguardo vigentes"),
+    (19, "resguardos:editar", "Modificar términos, observaciones o firmas de un acta de resguardo"),
+    (20, "resguardos:borrar", "Liberar a un resguardante de la custodia de un bien (retorno o transferencia)"),
+    (21, "MisResguardos:leer", "Consultar el histórico y las actas de resguardo vigentes")
     # Dominio de Ubicaciones: ms-ubicaciones
-    (19, "ubicaciones:crear", "Dar de alta nuevos campus, edificios, almacenes o zonas físicas"),
-    (20, "ubicaciones:leer", "Consultar el catálogo geográfico y estructural de inmuebles"),
-    (21, "ubicaciones:editar", "Modificar delimitaciones o nomenclaturas de espacios físicos"),
-    (22, "ubicaciones:borrar", "Dar de baja zonas físicas o áreas de resguardo en desuso"),
-    (23, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
-    (24, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
-    (25, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
-    (26, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento"),
-    (27, "MisResguardos:leer", "Consultar el histórico y las actas de resguardo vigentes")
+    (22, "ubicaciones:crear", "Dar de alta nuevos campus, edificios, almacenes o zonas físicas"),
+    (23, "ubicaciones:leer", "Consultar el catálogo geográfico y estructural de inmuebles"),
+    (24, "ubicaciones:editar", "Modificar delimitaciones o nomenclaturas de espacios físicos"),
+    (25, "ubicaciones:borrar", "Dar de baja zonas físicas o áreas de resguardo en desuso"),
+    (26, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
+    (27, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
+    (28, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
+    (29, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento")
 ]
 
 MATRIZ_ACCESO = {
-    1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26], 
-    2: [8, 12, 15, 16, 17, 18, 20, 24], 
-    3: [11, 12, 13, 14],
-    4: [12],    
-    5: [8, 12, 27, 20,24]             
+    1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,27,28,29], 
+    2: [10,14,17,18,19,20,23,27], 
+    3: [13,14,15,16],
+    4: [14],    
+    5: [14,21,23,27]             
 }
 
 USUARIOS_SEMILLA = [

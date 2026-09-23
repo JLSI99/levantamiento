@@ -11,14 +11,14 @@ const ROUTE_REGISTRY = [
         id: "usuarios_personas",
         label: "Usuarios / Personas",
         caps: ["usuarios:crear", "personas:crear"],
-        matchPolicy: "ALL", // Requiere ambas capacidades (Solo Admin)
+        matchPolicy: "ALL",
         view: CrudUsuariosPersonas
     },
     {
         id: "ubicaciones",
         label: "Ubicaciones",
         caps: ["ubicaciones:crear"],
-        matchPolicy: "ANY", // Solo Admin tiene ubicaciones:crear
+        matchPolicy: "ANY",
         view: CrudUbicaciones
     },
     {
@@ -32,7 +32,7 @@ const ROUTE_REGISTRY = [
         id: "resguardos",
         label: "Resguardos/Custodio",
         caps: ["resguardos:crear", "MisResguardos:leer"],
-        matchPolicy: "ANY", // Admin/Levantador entran por crear, Resguardante entra por MisResguardos
+        matchPolicy: "ANY",
         view: HistorialResguardos
     }
 ];
@@ -44,16 +44,13 @@ export class DashboardView {
         this.onLogoutBound = null;
     }
 
-    /**
-     * Valida si el snapshot satisface las capacidades requeridas por la ruta.
-     */
     tieneAccesoARuta(routeConfig, snapshot) {
         if (!routeConfig.caps || routeConfig.caps.length === 0) return true;
 
         if (routeConfig.matchPolicy === "ALL") {
             return routeConfig.caps.every(cap => checkAccess(cap, snapshot));
         }
-        // Fallback por defecto: policy "ANY"
+       
         return routeConfig.caps.some(cap => checkAccess(cap, snapshot));
     }
 
