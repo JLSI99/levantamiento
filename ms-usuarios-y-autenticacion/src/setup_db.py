@@ -41,7 +41,7 @@ PERMISOS_BASE = [
     (18, "resguardos:leer", "Consultar el histórico y las actas de resguardo vigentes"),
     (19, "resguardos:editar", "Modificar términos, observaciones o firmas de un acta de resguardo"),
     (20, "resguardos:borrar", "Liberar a un resguardante de la custodia de un bien (retorno o transferencia)"),
-    (21, "MisResguardos:leer", "Consultar el histórico y las actas de resguardo vigentes")
+    (21, "MisResguardos:leer", "Consultar el histórico y las actas de resguardo vigentes"),
     # Dominio de Ubicaciones: ms-ubicaciones
     (22, "ubicaciones:crear", "Dar de alta nuevos campus, edificios, almacenes o zonas físicas"),
     (23, "ubicaciones:leer", "Consultar el catálogo geográfico y estructural de inmuebles"),
