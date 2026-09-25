@@ -12,14 +12,12 @@ export class CrudBienes {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // 1. Obtener estado de autenticación y permisos
         const estadoAuth = authStore.getSnapshot();
         const usuario = estadoAuth?.user;
         const capabilities = estadoAuth?.capabilities || [];
         const permisosRaw = usuario?.permisos || [];
         const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
 
-        // Mapeo unificado de permisos
         const permisos = {
             crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:crear'),
             editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:editar'),
@@ -27,7 +25,6 @@ export class CrudBienes {
             borrar: esAdmin || permisosRaw.includes('bienes:leer') || capabilities.includes('bienes:leer')
         };
 
-        // Si no tiene permisos de lectura ni escritura, bloqueamos el acceso
         if (!permisos.crear && !permisos.editar && !permisos.borrar && !esAdmin && !permisosRaw.includes('bienes:leer')) {
             container.innerHTML = `
                 <div class="forbidden-container" style="padding: 20px; background: #ffebee; border: 1px solid #c62828; border-radius: 4px; margin-top: 20px; font-family: sans-serif;">
@@ -38,7 +35,6 @@ export class CrudBienes {
             return;
         }
 
-        // 2. Estructura HTML base del Orquestador
         container.innerHTML = `
             <div style="width: 100%; font-family: system-ui, -apple-system, sans-serif;">
                 <!-- Control de Pestañas -->
@@ -98,21 +94,18 @@ export class CrudBienes {
     }
 
     initModules(permisos) {
-        // Inicializamos submódulos
         this.crudTiposBien = new CrudTiposBien('wrapper-form-tipos', 'wrapper-tabla-tipos', permisos);
         this.crudActivos = new CrudActivos('wrapper-form-activos', 'wrapper-tabla-activos', permisos);
 
-        // ORQUESTACIÓN: Cuando cambian los Tipos de Bien, recargar el <select> de los Bienes
         this.crudTiposBien.onTiposLoaded = (tipos) => {
             this.crudActivos.actualizarSelectTipos(tipos);
         };
         
         this.crudTiposBien.onTiposChanged = () => {
-            this.crudTiposBien.cargarDatos(); // Recargar la tabla de tipos
-            this.crudActivos.cargarDatos(); // Recargar la tabla de bienes (para reflejar cambios de nombre)
+            this.crudTiposBien.cargarDatos(); 
+            this.crudActivos.cargarDatos(); 
         };
 
-        // Render inicial
         this.crudTiposBien.render();
         this.crudActivos.render();
     }

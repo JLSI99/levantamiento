@@ -104,7 +104,6 @@ export class CrudActivos {
                 e.preventDefault();
                 const formData = new FormData(form);
                 
-                // Obtener todos los UUIDs seleccionados en el select multiple (requerimiento de List[UUID])
                 const selectElement = document.getElementById('select-act-tipos');
                 const tiposIds = Array.from(selectElement.selectedOptions).map(opt => opt.value);
 
@@ -162,12 +161,10 @@ export class CrudActivos {
         const select = document.getElementById('select-act-tipos');
         if (!select) return;
         
-        // Guardamos la selección actual si hay una
         const seleccionesPrevias = Array.from(select.selectedOptions).map(o => o.value);
         
         select.innerHTML = tipos.map(t => `<option value="${t.id_tipo}">${t.nombre}</option>`).join('');
         
-        // Restaurar selecciones previas si aún existen
         Array.from(select.options).forEach(opt => {
             if (seleccionesPrevias.includes(opt.value)) opt.selected = true;
         });
