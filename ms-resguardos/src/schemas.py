@@ -15,7 +15,6 @@ class AsignacionBase(BaseModel):
     @classmethod
     def validar_formato_curp(cls, v: str) -> str:
         v = v.upper().strip()
-        # Expresión regular estándar para la estructura del CURP en México
         pattern = r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$"
         if not re.match(pattern, v):
             raise ValueError("El formato del CURP es inválido.")
