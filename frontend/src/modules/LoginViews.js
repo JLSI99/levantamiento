@@ -59,15 +59,22 @@ export class LoginView {
 
                 const tokenData = await authService.login(userInp, passInp);
                 
-                authStore.setSession(tokenData.access_token, tokenData.refresh_token, null, []);
+                authStore.setSession(
+                    tokenData.access_token, 
+                    tokenData.refresh_token, 
+                    null, 
+                    [], 
+                    []
+                );
 
                 const contextMe = await authService.obtenerContextoMe();
                 
                 authStore.setSession(
                     tokenData.access_token,
                     tokenData.refresh_token,
-                    contextMe.usuario,
-                    contextMe.capabilities
+                    contextMe.usuario || contextMe.user || null,
+                    contextMe.capabilities || contextMe.caps || [],
+                    contextMe.roles || (contextMe.usuario?.roles) || []
                 );
 
             } catch (error) {

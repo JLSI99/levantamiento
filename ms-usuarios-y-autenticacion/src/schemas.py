@@ -5,7 +5,6 @@ from typing import Optional, List
 from datetime import datetime
 
 PATRON_CURP_OFICIAL = r"(?i)^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
-
 # ------------------------------------------------------------------------------
 # 1. SUBSISTEMA DE CAPACIDADES Y PERMISOS (CBAC)
 # ------------------------------------------------------------------------------
@@ -23,7 +22,6 @@ class PermisoCreate(BaseModel):
 class PermisoUpdate(BaseModel):
     nombre: Optional[str] = Field(None, min_length=3, max_length=150)
     descripcion: Optional[str] = Field(None, max_length=255)
-
 # ------------------------------------------------------------------------------
 # 2. SUBSISTEMA DE ROLES
 # ------------------------------------------------------------------------------
@@ -44,7 +42,6 @@ class RolUpdate(BaseModel):
 
 class RolPermisosUpdate(BaseModel):
     permisos_ids: List[int] = Field(..., description="Sobrescribe el mapa de capacidades asignadas al rol")
-
 # ------------------------------------------------------------------------------
 # 3. SUBSISTEMA DE USUARIOS E IDENTIDADES
 # ------------------------------------------------------------------------------
