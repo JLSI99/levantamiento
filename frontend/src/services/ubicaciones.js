@@ -18,6 +18,7 @@ export const ubicacionesService = {
         const catalogos = await this.obtenerCatalogosUnificados();
         return catalogos.departamentos || catalogos.data?.departamentos || [];
     },
+
     // ==========================================
     // EDIFICIOS
     // ==========================================
@@ -42,12 +43,19 @@ export const ubicacionesService = {
         const response = await bffClient.delete(`/ubicaciones/edificios/${idEdificio}`);
         return response.data;
     },
+
     // ==========================================
     // AULAS / ESPACIOS
     // ==========================================
     async obtenerAulasPorEdificio(idEdificio) {
-        const response = await bffClient.get(`/ubicaciones/edificios/${idEdificio}/aulas`);
-        return response.data;
+       
+        const response = await bffClient.get(`/ubicaciones/edificios/${idEdificio}`);
+        const edificioData = response.data;
+        
+        if (Array.isArray(edificioData?.aulas)) {
+            return edificioData.aulas.filter(aula => aula.is_active !== false);
+        }
+        return [];
     },
 
     async crearAula(idEdificio, data) {
@@ -64,6 +72,7 @@ export const ubicacionesService = {
         const response = await bffClient.delete(`/ubicaciones/aulas/${idAula}`);
         return response.data;
     },
+
     // ==========================================
     // DEPARTAMENTOS
     // ==========================================
