@@ -92,7 +92,7 @@ export class HistorialResguardos {
         `;
     }
 
-    _vincularEventosFormulario(formContainer) {
+    _vincularEventosFormulario(formContainer) { 
         const form = formContainer.querySelector('#form-crear-resguardo');
         const btnCancelar = formContainer.querySelector('#btn-cancelar-edicion');
         

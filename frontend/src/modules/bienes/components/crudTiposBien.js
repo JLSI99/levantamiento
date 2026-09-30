@@ -10,7 +10,6 @@ export class CrudTiposBien {
         this._cache = new Map();
         this._abortController = new AbortController();
 
-        // Eventos públicos
         this.onTiposLoaded = null;
         this.onTiposChanged = null;
     }
@@ -158,7 +157,6 @@ export class CrudTiposBien {
             this._cache.clear();
             data.forEach(d => this._cache.set(d.id_tipo, d));
 
-            // Avisamos al orquestador que ya tenemos los tipos para poblar el <select> del otro form
             if (this.onTiposLoaded) this.onTiposLoaded(data);
 
             if (data.length === 0) {

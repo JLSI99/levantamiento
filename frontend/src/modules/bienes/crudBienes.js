@@ -22,10 +22,10 @@ export class CrudBienes {
             crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:crear'),
             editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:editar'),
             borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:borrar'),
-            borrar: esAdmin || permisosRaw.includes('bienes:leer') || capabilities.includes('bienes:leer')
+            leer: esAdmin || permisosRaw.includes('bienes:leer') || capabilities.includes('bienes:leer')
         };
 
-        if (!permisos.crear && !permisos.editar && !permisos.borrar && !esAdmin && !permisosRaw.includes('bienes:leer')) {
+        if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {
             container.innerHTML = `
                 <div class="forbidden-container" style="padding: 20px; background: #ffebee; border: 1px solid #c62828; border-radius: 4px; margin-top: 20px; font-family: sans-serif;">
                     <h4 style="color:#c62828; margin: 0 0 10px 0; font-weight: 700;">ACCESO DENEGADO (403 FORBIDDEN)</h4>
@@ -47,13 +47,11 @@ export class CrudBienes {
                     </button>
                 </div>
 
-                <!-- SECCIÓN 1: BIENES / ACTIVOS -->
                 <div id="section-activos" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                     <div id="wrapper-form-activos"></div>
                     <div id="wrapper-tabla-activos"></div>
                 </div>
 
-                <!-- SECCIÓN 2: TIPOS DE BIEN -->
                 <div id="section-tipos" style="display: none; grid-template-columns: 1fr 2fr; gap: 20px;">
                     <div id="wrapper-form-tipos"></div>
                     <div id="wrapper-tabla-tipos"></div>

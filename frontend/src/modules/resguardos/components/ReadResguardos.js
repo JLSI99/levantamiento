@@ -166,7 +166,6 @@ export class ReadResguardos {
         if (tabla) tabla.removeEventListener('click', this.handleEventosTabla);
     }
 
-    // ¡Corregido! Se agregó el guion bajo a _handleBusqueda para que coincida con el constructor
     _handleBusqueda(e) {
         this.cargarTabla(e.target.value);
     }
