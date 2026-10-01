@@ -11,8 +11,8 @@ export class ReadResguardos {
         this.estaDesmontado = false;
         
         this.asignacionesMemoria = new Map();
-        
         this.paginacion = { limit: 100, offset: 0 };
+        this._html5QrCodeScanner = null;
 
         this.handleEventosTabla = this._handleEventosTabla.bind(this);
         this.handleBusqueda = this._handleBusqueda.bind(this);
@@ -34,10 +34,15 @@ export class ReadResguardos {
 
     _obtenerPlantillaLectura() {
         return `
-            ${this.capacidadGlobal ? `
-            <div style="margin-bottom: 15px; display: flex; gap: 10px;">
-                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar unívocamente por CURP o Nombre del Responsable..." style="flex: 1; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
-            </div>` : ''}
+            <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, ID Bien, Serie o Descripción..." style="flex: 1; min-width: 220px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                ${this.puedeModificar ? `
+                    <button type="button" id="btn-qr-devolucion-rapida" style="background-color: #0288d1; color: white; border: none; padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+                        📷 Devolución / Escanear QR
+                    </button>
+                ` : ''}
+            </div>
+
             <div style="overflow-x:auto; border: 1px solid #e0e0e0; border-radius:4px;">
                 <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;" id="tabla-resguardos-personales">
                     <thead>
@@ -58,10 +63,41 @@ export class ReadResguardos {
                     </tbody>
                 </table>
             </div>
+
+            <!-- Modal Escáner QR Devolución -->
+            <div id="modal-scanner-devolucion" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
+                <div style="background:white; padding:20px; border-radius:8px; max-width:420px; width:90%; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                    <h4 style="margin-top:0; color:#0288d1; font-size:14px; font-weight:700;">Escanear QR de Bien para Devolución Rápida</h4>
+                    <p style="font-size:11px; color:#555; margin-bottom:10px;">Coloque el código QR del activo devuelto frente a la cámara.</p>
+                    <div id="reader-qr-devolucion" style="width:100%; min-height:250px; background:#000; margin:10px 0; border-radius:4px;"></div>
+                    <button type="button" id="btn-cerrar-scanner-devolucion" style="background:#c62828; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
+                        Cancelar Escaneo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Acción Devolución Rápida -->
+            <div id="modal-accion-devolucion" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
+                <div style="background:white; padding:20px; border-radius:8px; max-width:480px; width:92%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+                    <h4 style="margin-top:0; color:#00796b; font-size:15px; font-weight:700; border-bottom:1px solid #e0e0e0; padding-bottom:8px;">📦 Resguardo Encontrado - Recepción de Activo</h4>
+                    <div id="modal-devolucion-contenido" style="margin:15px 0; font-size:12px; color:#37474f; line-height:1.6;"></div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:20px; border-top:1px solid #e0e0e0; padding-top:12px;">
+                        <button type="button" id="btn-cerrar-modal-devolucion" style="background:#757575; color:white; border:none; padding:7px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
+                            Cerrar
+                        </button>
+                        <button type="button" id="btn-editar-desde-devolucion" style="background:#1976d2; color:white; border:none; padding:7px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
+                            ✏️ Reasignar / Editar
+                        </button>
+                        <button type="button" id="btn-confirmar-devolucion-rapida" style="background:#2e7d32; color:white; border:none; padding:7px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
+                            ✓ Concluir y Devolver
+                        </button>
+                    </div>
+                </div>
+            </div>
         `;
     }
 
-    async cargarTabla(filtroCurp = '') {
+    async cargarTabla(filtroBusqueda = '') {
         const tbody = this.container.querySelector('#tabla-resguardos-personales tbody');
         if (!tbody) return;
 
@@ -84,12 +120,22 @@ export class ReadResguardos {
 
             let asignaciones = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
 
-            if (this.capacidadGlobal && filtroCurp.trim() !== '') {
-                const query = filtroCurp.toUpperCase().trim();
+            if (filtroBusqueda.trim() !== '') {
+                const query = filtroBusqueda.toUpperCase().trim();
                 asignaciones = asignaciones.filter(item => {
-                    const curp = item.persona?.curp?.toUpperCase() || '';
+                    const idAsignacion = String(item.id_asignacion || '').toUpperCase();
+                    const idBien = String(item.bien?.id_bien || '').toUpperCase();
+                    const bienSerie = String(item.bien?.serie || '').toUpperCase();
+                    const bienDesc = String(item.bien?.descripcion || '').toUpperCase();
+                    const curp = String(item.persona?.curp || '').toUpperCase();
                     const nombreCompleto = `${item.persona?.nombres || ''} ${item.persona?.apellidos || ''}`.toUpperCase();
-                    return curp.includes(query) || nombreCompleto.includes(query);
+                    
+                    return idAsignacion.includes(query) || 
+                           idBien.includes(query) || 
+                           bienSerie.includes(query) || 
+                           bienDesc.includes(query) || 
+                           curp.includes(query) || 
+                           nombreCompleto.includes(query);
                 });
             }
 
@@ -114,7 +160,7 @@ export class ReadResguardos {
     _generarFilaTabla(item) {
         const idStr = String(item.id_asignacion);
         const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
-        const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} - Aula: ${item.ubicacion.aula} (${item.ubicacion.departamento})` : 'Ubicación no asignada';
+        const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula} (${item.ubicacion.departamento})` : 'Ubicación no asignada';
         
         const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
         const custodioNombre = item.persona ? `${item.persona.apellidos}, ${item.persona.nombres} [${item.persona.curp}]` : 'No asignado';
@@ -153,6 +199,16 @@ export class ReadResguardos {
             filtroInput.addEventListener('input', this.handleBusqueda);
         }
 
+        const btnQr = this.container.querySelector('#btn-qr-devolucion-rapida');
+        if (btnQr) {
+            btnQr.addEventListener('click', () => this.iniciarEscanerCamara());
+        }
+
+        const btnCerrarScanner = this.container.querySelector('#btn-cerrar-scanner-devolucion');
+        if (btnCerrarScanner) {
+            btnCerrarScanner.addEventListener('click', () => this.detenerEscanerCamara());
+        }
+
         const tabla = this.container.querySelector('#tabla-resguardos-personales');
         if (tabla && this.puedeModificar) tabla.addEventListener('click', this.handleEventosTabla);
     }
@@ -168,6 +224,125 @@ export class ReadResguardos {
 
     _handleBusqueda(e) {
         this.cargarTabla(e.target.value);
+    }
+
+    iniciarEscanerCamara() {
+        if (!window.Html5Qrcode) {
+            alert('Librería de escáner QR no disponible.');
+            return;
+        }
+
+        const modalScanner = this.container.querySelector('#modal-scanner-devolucion');
+        if (modalScanner) modalScanner.style.display = 'flex';
+
+        this._html5QrCodeScanner = new window.Html5Qrcode("reader-qr-devolucion");
+        this._html5QrCodeScanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            (decodedText) => {
+                this.detenerEscanerCamara();
+                this.procesarCodigoEscaneado(decodedText);
+            },
+            () => {}
+        ).catch(err => {
+            alert('No se pudo acceder a la cámara: ' + err);
+            this.detenerEscanerCamara();
+        });
+    }
+
+    detenerEscanerCamara() {
+        const modalScanner = this.container?.querySelector('#modal-scanner-devolucion');
+        if (this._html5QrCodeScanner) {
+            this._html5QrCodeScanner.stop().then(() => {
+                this._html5QrCodeScanner = null;
+                if (modalScanner) modalScanner.style.display = 'none';
+            }).catch(() => {
+                if (modalScanner) modalScanner.style.display = 'none';
+            });
+        } else if (modalScanner) {
+            modalScanner.style.display = 'none';
+        }
+    }
+
+    procesarCodigoEscaneado(codigo) {
+        const query = codigo.trim().toUpperCase();
+        let match = null;
+
+        for (const [id, item] of this.asignacionesMemoria.entries()) {
+            const idAsignacion = String(item.id_asignacion || '').toUpperCase();
+            const idBien = String(item.bien?.id_bien || '').toUpperCase();
+            const bienSerie = String(item.bien?.serie || '').toUpperCase();
+
+            if (idAsignacion === query || idBien === query || bienSerie === query) {
+                match = item;
+                break;
+            }
+        }
+
+        if (match) {
+            this.mostrarModalDevolucion(match);
+        } else {
+            const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
+            if (filtroInput) filtroInput.value = codigo;
+            this.cargarTabla(codigo);
+            alert(`Filtro aplicado para el código escaneado: "${codigo}".`);
+        }
+    }
+
+    mostrarModalDevolucion(item) {
+        const modalAccion = this.container.querySelector('#modal-accion-devolucion');
+        const contenedorContenido = this.container.querySelector('#modal-devolucion-contenido');
+        if (!modalAccion || !contenedorContenido) return;
+
+        const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}, Serie: ${item.bien.serie || 'N/A'}]` : 'Sin datos de bien';
+        const custodio = item.persona ? `${item.persona.nombres} ${item.persona.apellidos} (${item.persona.curp})` : 'Sin asignar';
+        const ubicacion = item.ubicacion ? `Edificio: ${item.ubicacion.edificio}, Aula: ${item.ubicacion.aula}, Depto: ${item.ubicacion.departamento}` : 'Sin ubicación';
+        const fecha = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'N/A';
+
+        contenedorContenido.innerHTML = `
+            <div style="background:#f5f5f5; padding:12px; border-radius:4px; margin-bottom:10px;">
+                <p style="margin:0 0 6px 0;"><strong>ID Asignación:</strong> <span style="font-family:monospace; color:#1a237e;">${this._escapeHtml(String(item.id_asignacion))}</span></p>
+                <p style="margin:0 0 6px 0;"><strong>Activo / Bien:</strong> ${this._escapeHtml(bienDesc)}</p>
+                <p style="margin:0 0 6px 0;"><strong>Custodio Actual:</strong> ${this._escapeHtml(custodio)}</p>
+                <p style="margin:0 0 6px 0;"><strong>Ubicación Topológica:</strong> ${this._escapeHtml(ubicacion)}</p>
+                <p style="margin:0;"><strong>Fecha Asignación:</strong> ${this._escapeHtml(fecha)} (${item.dias_vigencia || 0} días vigente)</p>
+            </div>
+            <p style="margin:0; font-size:11px; color:#2e7d32; font-weight:600;">
+                ¿Desea concluir formalmente este resguardo por devolución física de activo al almacén o reasignarlo?
+            </p>
+        `;
+
+        const btnConfirmar = this.container.querySelector('#btn-confirmar-devolucion-rapida');
+        const btnEditar = this.container.querySelector('#btn-editar-desde-devolucion');
+        const btnCerrar = this.container.querySelector('#btn-cerrar-modal-devolucion');
+
+        const nuevoBtnConfirmar = btnConfirmar.cloneNode(true);
+        const nuevoBtnEditar = btnEditar.cloneNode(true);
+        const nuevoBtnCerrar = btnCerrar.cloneNode(true);
+
+        btnConfirmar.parentNode.replaceChild(nuevoBtnConfirmar, btnConfirmar);
+        btnEditar.parentNode.replaceChild(nuevoBtnEditar, btnEditar);
+        btnCerrar.parentNode.replaceChild(nuevoBtnCerrar, btnCerrar);
+
+        nuevoBtnConfirmar.addEventListener('click', async () => {
+            modalAccion.style.display = 'none';
+            if (this.callbacks.onRelease) {
+                await this.callbacks.onRelease(String(item.id_asignacion));
+            }
+        });
+
+        nuevoBtnEditar.addEventListener('click', () => {
+            modalAccion.style.display = 'none';
+            if (this.callbacks.onEdit) {
+                this.callbacks.onEdit(item);
+            }
+        });
+
+        nuevoBtnCerrar.addEventListener('click', () => {
+            modalAccion.style.display = 'none';
+        });
+
+        modalAccion.style.display = 'flex';
     }
 
     _handleEventosTabla(e) {
@@ -200,6 +375,7 @@ export class ReadResguardos {
     unmount() {
         this.estaDesmontado = true;
         this.tokenConcurrenciaId++;
+        this.detenerEscanerCamara();
         this._limpiarEventos();
         this.asignacionesMemoria.clear();
         this.container = null;

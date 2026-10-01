@@ -52,6 +52,8 @@ export class HistorialResguardos {
             const formContainer = container.querySelector('#resguardos-form-container');
             formContainer.innerHTML = this.createModule.obtenerPlantillaFormulario();
             
+            this.createModule.bindEvents(formContainer);
+
             const subContainer = formContainer.querySelector('#contenedor-selector-ubicacion-resguardo');
             if (subContainer) {
                 this.selectorUbicaciones = new SelectorUbicaciones(subContainer, (geoData) => {
@@ -67,7 +69,7 @@ export class HistorialResguardos {
         await this.readModule.inicializar(tableContainer, this.capacidadGlobal, this.puedeModificar, {
             onEdit: (item) => this._prepararEdicion(item),
             onRelease: async (id) => {
-                const exito = await this.deleteModule.liberar(id);
+                const exito = await this.updateModule.concluirDevolucion(id);
                 if (exito) await this.readModule.cargarTabla(); 
             },
             onDelete: async (id) => {
@@ -79,7 +81,7 @@ export class HistorialResguardos {
 
     _obtenerPlantillaPrincipal() {
         const titulo = this.capacidadGlobal ? 'Panel Maestro de Custodia e Inventario Institucional' : 'Mis Resguardos y Asignaciones Vigentes';
-        const subtitulo = this.capacidadGlobal ? 'Consola global de fiscalización, liberación, y timbrado de actas de resguardo.' : 'Listado oficial de activos asignados bajo su responsabilidad legal.';
+        const subtitulo = this.capacidadGlobal ? 'Consola global de fiscalización, liberación, devolución y timbrado de actas de resguardo.' : 'Listado oficial de activos asignados bajo su responsabilidad legal.';
 
         return `
             <div class="module-card" style="padding:20px; background:white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
@@ -101,7 +103,7 @@ export class HistorialResguardos {
             await this._handleSubmit(form);
         });
 
-        if(btnCancelar) {
+        if (btnCancelar) {
             btnCancelar.addEventListener('click', () => this._cancelarEdicion());
         }
     }
@@ -118,7 +120,7 @@ export class HistorialResguardos {
         const formData = new FormData(form);
         const payload = {
             id_bien: formData.get('id_bien').trim(),
-            curp: formData.get('curp') ? formData.get('curp').trim().toUpperCase() : null, // Permitir nulo si es resguardo propio
+            curp: formData.get('curp') ? formData.get('curp').trim().toUpperCase() : null,
             id_edificio: this.ubicacionActual.id_edificio,
             id_aula: this.ubicacionActual.id_aula,
             id_departamento: this.ubicacionActual.id_departamento
@@ -134,6 +136,7 @@ export class HistorialResguardos {
             } else {
                 await this.createModule.crear(payload);
                 form.reset();
+                this.createModule.limpiarPreviewBien(form.parentNode);
                 if (this.selectorUbicaciones) await this.selectorUbicaciones.inicializar();
             }
             await this.readModule.cargarTabla();
@@ -177,6 +180,7 @@ export class HistorialResguardos {
 
     unmount() {
         this.estaDesmontado = true;
+        if (this.createModule) this.createModule.unmount(document.getElementById(this.containerId));
         if (this.readModule) this.readModule.unmount();
         if (this.selectorUbicaciones) this.selectorUbicaciones.unmount();
     }
