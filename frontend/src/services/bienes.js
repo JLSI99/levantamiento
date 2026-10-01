@@ -53,7 +53,7 @@ export const bienesService = {
         }
     },
 
-    async listarBienes(limit = 10, offset = 0, incluirInactivos = false) {
+    async listarBienes(limit = 100, offset = 0, incluirInactivos = false) {
         try {
             const response = await bffClient.get('/bienes/', {
                 params: { limit, offset, incluir_inactivos: incluirInactivos }
@@ -73,6 +73,10 @@ export const bienesService = {
             console.error(`Error al consultar detalle del bien instrumental [ID: ${idBien}]:`, error);
             throw error;
         }
+    },
+
+    async obtenerBienPorQr(idBien) {
+        return await this.obtenerBienPorId(idBien);
     },
 
     async crearNuevoBien(bienData) {

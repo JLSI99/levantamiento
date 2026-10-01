@@ -20,7 +20,7 @@ async def lifespan(app: FastAPI):
         max_connections=int(os.getenv("HTTP_POOL_MAX_CONNECTIONS", "200"))
     )
     
-    timeout_val = float(os.getenv("TIMEOUT_MICROSERVICIOS", "5.0")) # Incrementado levemente para mitigar fluctuaciones de red
+    timeout_val = float(os.getenv("TIMEOUT_MICROSERVICIOS", "5.0")) 
     timeout_config = httpx.Timeout(
         timeout=timeout_val,   
         connect=2.0,           
@@ -49,9 +49,6 @@ app = FastAPI(
     redoc_url=None
 )
 
-# --------------------------------------------------------------------------
-# MANEJADORES GLOBALES DE EXCEPCIONES DE RED (PERÍMETRO DE RESILIENCIA)
-# --------------------------------------------------------------------------
 @app.exception_handler(httpx.TimeoutException)
 async def bff_timeout_exception_handler(request: Request, exc: httpx.TimeoutException):
     logger.error(f"Gateway Timeout detectado en el recurso: {request.url.path} | Error: {str(exc)}")
@@ -76,16 +73,12 @@ async def bff_network_exception_handler(request: Request, exc: httpx.NetworkErro
         }
     )
 
-# --------------------------------------------------------------------------
-# CONFIGURACIÓN DEL CONTROL DE ACCESO INTER-ORIGEN (CORS)
-# --------------------------------------------------------------------------
 origins_env = os.getenv("ALLOWED_ORIGINS", "")
 
 if origins_env:
     origenes_permitidos = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
 else:
-    # INVARIANTE: Con el Proxy Inverso implementado, el Frontend y el BFF comparten origen en Producción.
-    # Se mantienen las entradas locales únicamente para compatibilidad hacia atrás en desarrollo local.
+
     origenes_permitidos = [
         "http://localhost:8080",   
         "http://127.0.0.1:8080",  
@@ -102,9 +95,6 @@ app.add_middleware(
     expose_headers=["Content-Disposition"]
 )
 
-# --------------------------------------------------------------------------
-# REGISTRO DE ENRUTADORES CON PREFIJOS SEMÁNTICOS Y VERSIONAMIENTO
-# --------------------------------------------------------------------------
 API_PREFIX = "/api/v1"
 
 app.include_router(auth.router, prefix=f"{API_PREFIX}/auth", tags=["Autenticación & Sesión"])
