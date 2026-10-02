@@ -1,0 +1,118 @@
+import { adminService } from '/src/services/admin.js';
+
+export class ReadUsuarios {
+    constructor(containerId, permisos, onEdit, onDelete) {
+        this.containerId = containerId;
+        this.permisos = Array.isArray(permisos) ? permisos : [];
+        this.puedeEditar = this.permisos.includes('usuarios:actualizar') || this.permisos.includes('usuarios:editar');
+        this.puedeSuspender = this.permisos.includes('usuarios:borrar');
+
+        this.onEdit = onEdit;
+        this.onDelete = onDelete;
+
+        this._usuariosCache = new Map();
+        this._abortController = new AbortController();
+    }
+
+    render() {
+        const container = document.getElementById(this.containerId);
+        if (!container) return;
+
+        container.innerHTML = `
+            <div style="background:white; border: 1px solid #e0e0e0; border-radius: 4px; padding:15px;">
+                <h4 style="margin-top:0; color:#424242;">Directorio de Operadores</h4>
+                <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                    <thead>
+                        <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
+                            <th style="padding:8px;">Username</th>
+                            <th style="padding:8px;">Email</th>
+                            <th style="padding:8px;">Roles</th>
+                            <th style="padding:8px;">Estado</th>
+                            <th style="padding:8px; text-align:center;">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-usuarios">
+                        <tr><td colspan="5" style="padding:15px; text-align:center;">Cargando...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+        this.bindEvents();
+        this.cargarDatos();
+    }
+
+    bindEvents() {
+        const tbody = document.getElementById('tbody-usuarios');
+        if (tbody) {
+            tbody.addEventListener('click', (e) => {
+                const btnEditar = e.target.closest('.btn-editar-usuario');
+                const btnSuspender = e.target.closest('.btn-suspender-usuario');
+
+                if (btnEditar && this.puedeEditar) {
+                    const idUsuario = btnEditar.getAttribute('data-id');
+                    const usuario = this._usuariosCache.get(idUsuario);
+                    if (this.onEdit) this.onEdit(idUsuario, usuario);
+                } else if (btnSuspender && this.puedeSuspender) {
+                    const idUsuario = btnSuspender.getAttribute('data-id');
+                    if (this.onDelete) this.onDelete(idUsuario);
+                }
+            }, { signal: this._abortController.signal });
+        }
+    }
+
+    async cargarDatos() {
+        const tbody = document.getElementById('tbody-usuarios');
+        if (!tbody) return;
+
+        try {
+            const resp = await adminService.listarUsuarios(50, 0, false);
+            const usuarios = Array.isArray(resp) ? resp : (resp?.data || []);
+
+            this._usuariosCache.clear();
+            usuarios.forEach(u => this._usuariosCache.set(String(u.id_usuario), u));
+
+            if (usuarios.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px;">No existen usuarios registrados.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = usuarios.map(u => {
+                const nombresRoles = u.roles && Array.isArray(u.roles) 
+                    ? u.roles.map(r => r.nombre_rol).join(', ') 
+                    : 'N/A';
+
+                return `
+                <tr style="border-bottom:1px solid #e0e0e0; ${u.is_active ? '' : 'opacity:0.6;'}">
+                    <td style="padding:8px; font-family:monospace; font-weight:600;">${u.username}</td>
+                    <td style="padding:8px;">${u.email}</td>
+                    <td style="padding:8px; font-size:11px; color:#455a64;">${nombresRoles}</td>
+                    <td style="padding:8px;">${u.is_active ? '<span style="color:green;">Activo</span>' : '<span style="color:red;">Inactivo</span>'}</td>
+                    <td style="padding:8px; text-align:center;">
+                        <div style="display:flex; gap:4px; justify-content:center;">
+                            ${this.puedeEditar ? `
+                                <button class="btn-editar-usuario" data-id="${u.id_usuario}" 
+                                    style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    Editar
+                                </button>
+                            ` : ''}
+                            ${u.is_active && this.puedeSuspender ? `
+                                <button class="btn-suspender-usuario" data-id="${u.id_usuario}" 
+                                    style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    Suspender
+                                </button>
+                            ` : ''}
+                        </div>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        } catch (error) {
+            tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center; padding:15px;">Error al cargar datos</td></tr>';
+        }
+    }
+
+    unmount() {
+        this._abortController.abort();
+    }
+}

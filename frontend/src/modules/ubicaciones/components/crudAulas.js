@@ -4,7 +4,6 @@ export class CrudAulas {
     constructor(formContainerId, permisos) {
         this.formContainerId = formContainerId;
         
-        // Estandarizamos la lectura de permisos igual que en Edificios y Departamentos
         this.permisos = permisos || {};
         this.puedeCrearUbi = this.permisos.crear || false;
         this.puedeEditarUbi = this.permisos.editar || false;

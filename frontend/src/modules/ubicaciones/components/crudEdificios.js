@@ -4,10 +4,8 @@ export class CrudEdificios {
     constructor(formContainerId, tableContainerId, permisos) {
         this.formContainerId = formContainerId;
         this.tableContainerId = tableContainerId;
-        // Cambiamos el fallback a un objeto vacío
         this.permisos = permisos || {};
 
-        // Ahora leemos directamente las propiedades booleanas del objeto
         this.puedeCrearUbi = this.permisos.crear || false;
         this.puedeEditarUbi = this.permisos.editar || false;
         this.puedeBorrarUbi = this.permisos.borrar || false;
