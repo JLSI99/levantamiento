@@ -227,7 +227,6 @@ export class CrudActivos {
             }, { signal });
         }
 
-        // Búsqueda en tiempo real por ID / Serie / Nombre / Lector USB
         const inputBuscar = document.getElementById('input-buscar-qr');
         if (inputBuscar) {
             inputBuscar.addEventListener('input', (e) => {
@@ -235,7 +234,6 @@ export class CrudActivos {
             }, { signal });
         }
 
-        // Eventos de los Modales
         document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print(), { signal });
         document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => {
             document.getElementById('modal-qr-container').style.display = 'none';
@@ -253,7 +251,6 @@ export class CrudActivos {
         const qrBox = document.getElementById('qr-code-box');
         qrBox.innerHTML = '';
 
-        // Generar el código QR usando la librería QRCode.js
         if (window.QRCode) {
             new window.QRCode(qrBox, {
                 text: item.id_bien,
@@ -293,7 +290,7 @@ export class CrudActivos {
                     this.filtrarTabla(decodedText);
                 }
             },
-            () => {} // Ignorar errores de frame parcial
+            () => {}
         ).catch(err => {
             alert('No se pudo acceder a la cámara: ' + err);
             this.detenerEscanerCamara();
