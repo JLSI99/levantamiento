@@ -1,424 +1,81 @@
-import { bienesService } from '/src/services/bienes.js';
+import { CreateActivo } from '/src/modules/bienes/components/activosComponents/CreateActivo.js';
+import { ReadActivos } from '/src/modules/bienes/components/activosComponents/ReadActivos.js';
+import { UpdateActivo } from '/src/modules/bienes/components/activosComponents/UpdateActivo.js';
+import { DeleteActivo } from '/src/modules/bienes/components/activosComponents/DeleteActivo.js';
 
 export class CrudActivos {
     constructor(formContainerId, tableContainerId, permisos) {
         this.formContainerId = formContainerId;
         this.tableContainerId = tableContainerId;
         this.permisos = permisos;
-        
-        this._editingId = null;
-        this._cache = new Map();
         this._abortController = new AbortController();
-        this._html5QrCodeScanner = null;
+        this.tipos = [];
     }
 
     render() {
         const formContainer = document.getElementById(this.formContainerId);
-        const tableContainer = document.getElementById(this.tableContainerId);
-        if (!formContainer || !tableContainer) return;
+        if (!formContainer) return;
 
         formContainer.innerHTML = `
-            <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background: #ffffff;">
-                <h3 id="form-activo-titulo" style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px;">
-                    Indexación de Activo Físico
-                </h3>
-                ${this.permisos.crear || this.permisos.editar ? `
-                <form id="form-activo">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Descripción Completa *</label>
-                    <input type="text" name="descripcion" id="input-act-desc" placeholder="Ej. Monitor Dell UltraSharp 27" required 
-                        style="width:100%; margin-bottom:10px; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                    
-                    <div style="display:flex; gap:10px; margin-bottom:10px;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Serie</label>
-                            <input type="text" name="serie" id="input-act-serie" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Marca</label>
-                            <input type="text" name="marca" id="input-act-marca" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Modelo</label>
-                            <input type="text" name="modelo" id="input-act-modelo" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:10px; margin-bottom:15px;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Costo (MXN) *</label>
-                            <input type="number" step="0.01" name="costo" id="input-act-costo" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                        </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Adquisición</label>
-                            <input type="date" name="fecha_adquisicion" id="input-act-fecha" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
-                        </div>
-                    </div>
-
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tipo de Bien *</label>
-                    <select name="tipos_ids" id="select-act-tipos" multiple required 
-                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px;">
-                    </select>
-                    <small style="display:block; margin-top:-10px; margin-bottom:15px; color:#757575;">Mantén presionado Ctrl (Windows) o Cmd (Mac) para seleccionar varios</small>
-
-                    <button type="submit" id="btn-submit-activo" style="width:100%; padding:8px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
-                        Dar de Alta Activo
-                    </button>
-                    <button type="button" id="btn-cancelar-activo" style="display:none; width:100%; margin-top:8px; padding:8px; background:#757575; color:white; border:none; border-radius:4px; cursor:pointer;">
-                        Cancelar Edición
-                    </button>
-                </form>
-                ` : '<div style="color:#757575; font-style:italic;">Sin permisos de escritura para Bienes.</div>'}
-            </div>
+            <div id="create-activo-container"></div>
+            <div id="update-activo-container" style="display:none;"></div>
         `;
 
-        tableContainer.innerHTML = `
-            <div style="background:white; border: 1px solid #e0e0e0; border-radius: 4px; padding:15px; overflow-x: auto;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h4 style="margin:0; color:#424242;">Inventario Patrimonial</h4>
-                    
-                    <!-- Barra de Búsqueda y Escaneo QR -->
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="input-buscar-qr" placeholder="Buscar por ID / Serie / QR..." 
-                            style="padding:6px 10px; border:1px solid #ccc; border-radius:4px; font-size:12px; width:220px;">
-                        <button id="btn-camara-qr" style="background:#0288d1; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
-                            📷 Escanear QR
-                        </button>
-                    </div>
-                </div>
+        this.deleteActivo = new DeleteActivo(() => this.cargarDatos());
 
-                <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 600px;">
-                    <thead>
-                        <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:8px;">Descripción / ID</th>
-                            <th style="padding:8px;">Detalles (Marca/Mod/Serie)</th>
-                            <th style="padding:8px;">Costo</th>
-                            <th style="padding:8px;">Categorías</th>
-                            <th style="padding:8px; text-align:center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-activos">
-                        <tr><td colspan="5" style="padding:15px; text-align:center;">Cargando inventario...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+        this.readActivos = new ReadActivos(
+            this.tableContainerId,
+            this.permisos,
+            (id, item) => this.activarEdicion(id, item),
+            (id) => this.deleteActivo.darDeBaja(id)   
+        );
 
-            <!-- Modal Generador e Impresor de Etiqueta QR -->
-            <div id="modal-qr-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-                <div style="background:white; padding:20px; border-radius:8px; max-width:420px; width:90%; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-                    <h4 style="margin-top:0; color:#1a237e;">Etiqueta Patrimonial del Bien</h4>
-                    
-                    <!-- Formato físico imprimible de la etiqueta -->
-                    <div id="print-sticker-area" style="border:2px dashed #000; padding:15px; border-radius:6px; margin:15px 0; background:#fff; text-align:center;">
-                        <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:#333; margin-bottom:4px;">TecNM - Patrimonio Institucional</div>
-                        <div id="qr-code-box" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <div id="qr-info-desc" style="font-weight:bold; font-size:12px; margin-bottom:2px;"></div>
-                        <div id="qr-info-details" style="font-size:10px; color:#555;"></div>
-                        <div id="qr-info-id" style="font-family:monospace; font-size:10px; margin-top:4px; font-weight:600;"></div>
-                    </div>
+        this.createActivo = new CreateActivo(
+            'create-activo-container',
+            this.permisos,
+            () => this.cargarDatos()
+        );
 
-                    <div style="display:flex; gap:10px; justify-content:center;">
-                        <button id="btn-imprimir-qr" style="background:#2e7d32; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">
-                            🖨️ Imprimir Etiqueta
-                        </button>
-                        <button id="btn-cerrar-modal-qr" style="background:#757575; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">
-                            Cerrar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal Escáner de Cámara QR -->
-            <div id="modal-scanner-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-                <div style="background:white; padding:20px; border-radius:8px; max-width:400px; width:90%; text-align:center;">
-                    <h4 style="margin-top:0; color:#0288d1;">Escanear Código QR</h4>
-                    <div id="reader-qr-camera" style="width:100%; min-height:250px; background:#000; margin:10px 0; border-radius:4px;"></div>
-                    <button id="btn-cerrar-scanner" style="background:#c62828; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">
-                        Cancelar Escaneo
-                    </button>
-                </div>
-            </div>
-        `;
-
-        this.injectPrintStyles();
-        this.bindEvents();
-        this.cargarDatos();
-    }
-
-    injectPrintStyles() {
-        if (!document.getElementById('style-print-qr')) {
-            const style = document.createElement('style');
-            style.id = 'style-print-qr';
-            style.innerHTML = `
-                @media print {
-                    body * { visibility: hidden !important; }
-                    #print-sticker-area, #print-sticker-area * { visibility: visible !important; }
-                    #print-sticker-area { 
-                        position: absolute !important; 
-                        left: 0 !important; 
-                        top: 0 !important; 
-                        width: 100% !important;
-                        border: 2px solid #000 !important;
-                    }
-                }
-            `;
-            document.head.appendChild(style);
-        }
-    }
-
-    bindEvents() {
-        const signal = this._abortController.signal;
-        const form = document.getElementById('form-activo');
-        
-        if (form) {
-            form.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const formData = new FormData(form);
-                const selectElement = document.getElementById('select-act-tipos');
-                const tiposIds = Array.from(selectElement.selectedOptions).map(opt => opt.value);
-
-                const payload = {
-                    descripcion: formData.get('descripcion').trim(),
-                    serie: formData.get('serie').trim() || null,
-                    marca: formData.get('marca').trim() || null,
-                    modelo: formData.get('modelo').trim() || null,
-                    costo: parseFloat(formData.get('costo')),
-                    fecha_adquisicion: formData.get('fecha_adquisicion') || null,
-                    tipos_ids: tiposIds
-                };
-
-                try {
-                    if (this._editingId) {
-                        await bienesService.modificarBien(this._editingId, payload);
-                        alert('Activo actualizado exitosamente.');
-                    } else {
-                        await bienesService.crearNuevoBien(payload);
-                        alert('Activo indexado exitosamente.');
-                    }
-                    this.desactivarEdicion();
-                    this.cargarDatos();
-                } catch (err) {
-                    alert('Error: ' + (err.response?.data?.detail || err.message));
-                }
-            }, { signal });
-        }
-
-        const tbody = document.getElementById('tbody-activos');
-        if (tbody) {
-            tbody.addEventListener('click', async (e) => {
-                const btnEdit = e.target.closest('.btn-edit-act');
-                const btnDel = e.target.closest('.btn-del-act');
-                const btnQr = e.target.closest('.btn-qr-act');
-
-                if (btnEdit) {
-                    this.activarEdicion(btnEdit.getAttribute('data-id'));
-                } else if (btnDel && this.permisos.borrar) {
-                    if (confirm('¿Dar de baja este activo del inventario patrimonial?')) {
-                        try {
-                            await bienesService.darDeBajaBien(btnDel.getAttribute('data-id'));
-                            this.cargarDatos();
-                        } catch (err) {
-                            alert('Error al dar de baja: ' + err.message);
-                        }
-                    }
-                } else if (btnQr) {
-                    const idBien = btnQr.getAttribute('data-id');
-                    this.abrirModalQR(idBien);
-                }
-            }, { signal });
-        }
-
-        const inputBuscar = document.getElementById('input-buscar-qr');
-        if (inputBuscar) {
-            inputBuscar.addEventListener('input', (e) => {
-                this.filtrarTabla(e.target.value.trim());
-            }, { signal });
-        }
-
-        document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print(), { signal });
-        document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => {
-            document.getElementById('modal-qr-container').style.display = 'none';
-        }, { signal });
-
-        document.getElementById('btn-camara-qr')?.addEventListener('click', () => this.iniciarEscanerCamara(), { signal });
-        document.getElementById('btn-cerrar-scanner')?.addEventListener('click', () => this.detenerEscanerCamara(), { signal });
-        document.getElementById('btn-cancelar-activo')?.addEventListener('click', () => this.desactivarEdicion(), { signal });
-    }
-
-    abrirModalQR(idBien) {
-        const item = this._cache.get(idBien);
-        if (!item) return;
-
-        const qrBox = document.getElementById('qr-code-box');
-        qrBox.innerHTML = '';
-
-        if (window.QRCode) {
-            new window.QRCode(qrBox, {
-                text: item.id_bien,
-                width: 130,
-                height: 130,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: window.QRCode.CorrectLevel.H
-            });
-        }
-
-        document.getElementById('qr-info-desc').textContent = item.descripcion;
-        document.getElementById('qr-info-details').textContent = [item.marca, item.modelo, item.serie ? `S/N: ${item.serie}` : null].filter(Boolean).join(' | ');
-        document.getElementById('qr-info-id').textContent = `ID: ${item.id_bien}`;
-
-        document.getElementById('modal-qr-container').style.display = 'flex';
-    }
-
-    iniciarEscanerCamara() {
-        if (!window.Html5Qrcode) {
-            alert('Librería de escáner no disponible.');
-            return;
-        }
-
-        const modalScanner = document.getElementById('modal-scanner-container');
-        modalScanner.style.display = 'flex';
-
-        this._html5QrCodeScanner = new window.Html5Qrcode("reader-qr-camera");
-        this._html5QrCodeScanner.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            (decodedText) => {
-                this.detenerEscanerCamara();
-                const inputBuscar = document.getElementById('input-buscar-qr');
-                if (inputBuscar) {
-                    inputBuscar.value = decodedText;
-                    this.filtrarTabla(decodedText);
-                }
+        this.updateActivo = new UpdateActivo(
+            'update-activo-container',
+            this.permisos,
+            () => {
+                this.desactivarEdicion();
+                this.cargarDatos();
             },
-            () => {}
-        ).catch(err => {
-            alert('No se pudo acceder a la cámara: ' + err);
-            this.detenerEscanerCamara();
-        });
-    }
+            () => this.desactivarEdicion()
+        );
 
-    detenerEscanerCamara() {
-        if (this._html5QrCodeScanner) {
-            this._html5QrCodeScanner.stop().then(() => {
-                this._html5QrCodeScanner = null;
-                document.getElementById('modal-scanner-container').style.display = 'none';
-            }).catch(() => {
-                document.getElementById('modal-scanner-container').style.display = 'none';
-            });
-        } else {
-            document.getElementById('modal-scanner-container').style.display = 'none';
-        }
-    }
-
-    filtrarTabla(termino) {
-        const query = termino.toLowerCase();
-        const tbody = document.getElementById('tbody-activos');
-        if (!tbody) return;
-
-        const filas = tbody.querySelectorAll('tr');
-        filas.forEach(fila => {
-            const texto = fila.textContent.toLowerCase();
-            fila.style.display = texto.includes(query) ? '' : 'none';
-        });
+        this.readActivos.render();
+        this.createActivo.render();
     }
 
     actualizarSelectTipos(tipos) {
-        const select = document.getElementById('select-act-tipos');
-        if (!select) return;
-        
-        const seleccionesPrevias = Array.from(select.selectedOptions).map(o => o.value);
-        select.innerHTML = tipos.map(t => `<option value="${t.id_tipo}">${t.nombre}</option>`).join('');
-        
-        Array.from(select.options).forEach(opt => {
-            if (seleccionesPrevias.includes(opt.value)) opt.selected = true;
-        });
+        this.tipos = tipos;
+        if (this.createActivo) this.createActivo.actualizarSelectTipos(tipos);
+        if (this.updateActivo) this.updateActivo.actualizarSelectTipos(tipos);
     }
 
-    activarEdicion(id) {
-        const item = this._cache.get(id);
-        if (!item) return;
-        this._editingId = id;
+    cargarDatos() {
+        if (this.readActivos) this.readActivos.cargarDatos();
+    }
 
-        document.getElementById('input-act-desc').value = item.descripcion;
-        document.getElementById('input-act-serie').value = item.serie || '';
-        document.getElementById('input-act-marca').value = item.marca || '';
-        document.getElementById('input-act-modelo').value = item.modelo || '';
-        document.getElementById('input-act-costo').value = item.costo;
-        document.getElementById('input-act-fecha').value = item.fecha_adquisicion || '';
-        
-        const selectTipos = document.getElementById('select-act-tipos');
-        if (selectTipos && item.tipos) {
-            const idsTipos = item.tipos.map(t => t.id_tipo);
-            Array.from(selectTipos.options).forEach(opt => {
-                opt.selected = idsTipos.includes(opt.value);
-            });
-        }
-
-        document.getElementById('form-activo-titulo').textContent = 'Editar Activo';
-        const btnSub = document.getElementById('btn-submit-activo');
-        btnSub.textContent = 'Actualizar Activo';
-        btnSub.style.background = '#e65100';
-        document.getElementById('btn-cancelar-activo').style.display = 'block';
+    activarEdicion(id, item) {
+        document.getElementById('create-activo-container').style.display = 'none';
+        document.getElementById('update-activo-container').style.display = 'block';
+        this.updateActivo.render(item); 
     }
 
     desactivarEdicion() {
-        this._editingId = null;
-        document.getElementById('form-activo')?.reset();
-        document.getElementById('form-activo-titulo').textContent = 'Indexación de Activo Físico';
-        const btnSub = document.getElementById('btn-submit-activo');
-        if(btnSub) {
-            btnSub.textContent = 'Dar de Alta Activo';
-            btnSub.style.background = '#1a237e';
-        }
-        document.getElementById('btn-cancelar-activo').style.display = 'none';
-    }
-
-    async cargarDatos() {
-        const tbody = document.getElementById('tbody-activos');
-        if (!tbody) return;
-        try {
-            const resp = await bienesService.listarBienes(100, 0, false);
-            const data = resp.data || [];
-            
-            this._cache.clear();
-            data.forEach(d => this._cache.set(d.id_bien, d));
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px;">No hay activos registrados.</td></tr>';
-                return;
-            }
-
-            tbody.innerHTML = data.map(d => {
-                const idCorto = d.id_bien.substring(0, 8);
-                const categorias = d.tipos.map(t => `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block;">${t.nombre}</span>`).join('');
-                const detalles = [d.marca, d.modelo, d.serie].filter(Boolean).join(' / ') || '<span style="color:#9e9e9e;">Sin detalles</span>';
-
-                return `
-                    <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
-                        <td style="padding:8px;">
-                            <div style="font-weight:600; color:#212121;">${d.descripcion}</div>
-                            <div style="font-family:monospace; color:#757575; font-size:10px;">ID: ${idCorto}...</div>
-                        </td>
-                        <td style="padding:8px;">${detalles}</td>
-                        <td style="padding:8px; font-weight:bold;">$${parseFloat(d.costo).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
-                        <td style="padding:8px;">${categorias}</td>
-                        <td style="padding:8px; text-align:center;">
-                            <div style="display:flex; gap:4px; justify-content:center;">
-                                <button class="btn-qr-act" data-id="${d.id_bien}" style="background:#0288d1; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px; font-size:11px;">📌 QR</button>
-                                ${this.permisos.editar ? `<button class="btn-edit-act" data-id="${d.id_bien}" style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px; font-size:11px;">Editar</button>` : ''}
-                                ${d.esta_activo && this.permisos.borrar ? `<button class="btn-del-act" data-id="${d.id_bien}" style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px; font-size:11px;">Baja</button>` : ''}
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-        } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center; padding:15px;">Error al cargar inventario</td></tr>';
-        }
+        document.getElementById('update-activo-container').style.display = 'none';
+        document.getElementById('create-activo-container').style.display = 'block';
+        this.updateActivo.limpiar();
     }
 
     unmount() {
-        this.detenerEscanerCamara();
         this._abortController.abort();
+        this.readActivos?.unmount();
+        this.createActivo?.unmount();
+        this.updateActivo?.unmount();
     }
 }
