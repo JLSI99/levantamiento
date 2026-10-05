@@ -16,173 +16,11 @@ router = APIRouter(
     prefix="/bienes",
     tags=["Bienes (Activos Físicos)"]
 )
+
 # ==============================================================================
-# SUBSISTEMA: CATÁLOGO (TIPOS DE BIEN)
+# ENDPOINTS: BIENES (ACTIVOS FIJOS)
 # ==============================================================================
-@router.post(
-    "/tipos-bien", 
-    response_model=schemas.TipoBienOut, 
-    status_code=status.HTTP_201_CREATED
-)
-@limiter.limit("30/minute")
-async def crear_tipo_bien(
-    request: Request,
-    tipo: schemas.TipoBienCreate,
-    db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:editar"))
-):
 
-    nuevo = models.TipoBien(
-        nombre=tipo.nombre,
-        tasa_depreciacion_anual=tipo.tasa_depreciacion_anual,
-        esta_activo=True 
-    )
-    db.add(nuevo)
-    
-    try:
-        await db.commit()
-        await db.refresh(nuevo)
-        return nuevo
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, 
-            detail="Ya existe un tipo de bien registrado con este nombre."
-        )
-
-@router.get(
-    "/tipos-bien", 
-    response_model=schemas.TipoBienPaginatedOut
-)
-@limiter.limit("30/minute")
-async def listar_tipos_bien(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    limit: int = Query(10, ge=1, le=100),
-    offset: int = Query(0, ge=0),
-    incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
-    token_payload: dict = Depends(require_capability("bienes:leer"))
-):
-
-    query_count = select(func.count(models.TipoBien.id_tipo))
-    query_data = select(models.TipoBien)
-
-    if not incluir_inactivos:
-        query_count = query_count.where(models.TipoBien.esta_activo == True)
-        query_data = query_data.where(models.TipoBien.esta_activo == True)
-
-    total = await db.scalar(query_count)
-    
-    query_data = query_data.offset(offset).limit(limit)
-    result = await db.execute(query_data)
-    tipos = result.scalars().all()
-    
-    return {
-        "total": total, 
-        "limit": limit, 
-        "offset": offset, 
-        "data": tipos
-    }
-
-@router.get(
-    "/tipos-bien/{id_tipo}", 
-    response_model=schemas.TipoBienOut
-)
-@limiter.limit("30/minute")
-async def obtener_tipo_bien(
-    request: Request,
-    id_tipo: UUID,
-    db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:leer"))
-):
-
-    stmt = select(models.TipoBien).where(models.TipoBien.id_tipo == id_tipo)
-    result = await db.execute(stmt)
-    tipo = result.scalars().first()
-
-    if not tipo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Tipo de bien no encontrado."
-        )
-    return tipo
-
-@router.patch(
-    "/tipos-bien/{id_tipo}", 
-    response_model=schemas.TipoBienOut
-)
-@limiter.limit("30/minute")
-async def actualizar_tipo_bien(
-    request: Request,
-    id_tipo: UUID,
-    tipo_in: schemas.TipoBienUpdate,
-    db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:editar"))
-):
-
-    stmt = select(models.TipoBien).where(models.TipoBien.id_tipo == id_tipo)
-    result = await db.execute(stmt)
-    tipo = result.scalars().first()
-
-    if not tipo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Tipo de bien no encontrado."
-        )
-    if not tipo.esta_activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="No puedes editar un tipo de bien inactivo."
-        )
-
-    update_data = tipo_in.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(tipo, key, value)
-
-    try:
-        await db.commit()
-        await db.refresh(tipo)
-        return tipo
-    except IntegrityError:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, 
-            detail="Ya existe un tipo de bien registrado con este nombre."
-        )
-
-@router.delete(
-    "/tipos-bien/{id_tipo}", 
-    status_code=status.HTTP_204_NO_CONTENT
-)
-@limiter.limit("10/minute")
-async def borrar_tipo_bien(
-    request: Request,
-    id_tipo: UUID,
-    db: AsyncSession = Depends(get_db),
-    token_payload: dict = Depends(require_capability("bienes:borrar"))
-):
-
-    stmt = select(models.TipoBien).where(models.TipoBien.id_tipo == id_tipo)
-    result = await db.execute(stmt)
-    tipo = result.scalars().first()
-
-    if not tipo:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Tipo de bien no encontrado."
-        )
-    if not tipo.esta_activo:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="El tipo de bien ya está dado de baja."
-        )
-
-    tipo.esta_activo = False
-    await db.commit()
-    return
-# ==============================================================================
-# SUBSISTEMA: BIENES (ACTIVOS FIJOS)
-# ==============================================================================
 @router.post(
     "", 
     response_model=schemas.BienOut, 
@@ -195,7 +33,6 @@ async def crear_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:crear"))
 ):
-
     result = await db.execute(select(models.TipoBien).where(models.TipoBien.id_tipo.in_(bien.tipos_ids)))
     tipos = result.scalars().all()
 
@@ -206,10 +43,10 @@ async def crear_bien(
         )
     
     if any(not tipo.esta_activo for tipo in tipos):
-         raise HTTPException(
-             status_code=status.HTTP_400_BAD_REQUEST, 
-             detail="No es posible asignar tipos de bien inactivos a un activo nuevo."
-         )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="No es posible asignar tipos de bien inactivos a un activo nuevo."
+        )
 
     nuevo_bien = models.Bien(
         serie=bien.serie,
@@ -249,7 +86,6 @@ async def listar_bienes(
     incluir_inactivos: bool = Query(False, description="Incluir activos dados de baja en el resultado"),
     token_payload: dict = Depends(require_capability("bienes:leer"))
 ):
-
     query_count = select(func.count(models.Bien.id_bien))
     query_data = select(models.Bien).options(selectinload(models.Bien.tipos))
 
@@ -270,6 +106,7 @@ async def listar_bienes(
         "data": bienes
     }
 
+
 @router.get(
     "/{id_bien}", 
     response_model=schemas.BienOut
@@ -281,7 +118,6 @@ async def obtener_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:leer"))
 ):
-
     stmt = select(models.Bien).options(selectinload(models.Bien.tipos)).where(models.Bien.id_bien == id_bien)
     result = await db.execute(stmt)
     bien = result.scalars().first()
@@ -292,6 +128,7 @@ async def obtener_bien(
             detail="Activo no encontrado."
         )
     return bien
+
 
 @router.patch(
     "/{id_bien}", 
@@ -305,7 +142,6 @@ async def actualizar_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:editar"))
 ):
-
     stmt = select(models.Bien).options(selectinload(models.Bien.tipos)).where(models.Bien.id_bien == id_bien)
     result = await db.execute(stmt)
     bien = result.scalars().first()
@@ -360,7 +196,6 @@ async def borrar_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:borrar"))
 ):
-
     stmt = select(models.Bien).where(models.Bien.id_bien == id_bien)
     result = await db.execute(stmt)
     bien = result.scalars().first()

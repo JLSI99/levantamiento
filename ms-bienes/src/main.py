@@ -9,7 +9,7 @@ from src.dependencies.rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.routers import bienes
+from src.routers import bienes, tipobienes
 from src.database import engine
 import src.auditoria
 
@@ -51,4 +51,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(tipobienes.router)
 app.include_router(bienes.router)
