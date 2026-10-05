@@ -112,6 +112,8 @@ export class CrudUbicaciones {
             (idAula, idEdificio, nombre) => this.modAulas.activarEdicion(idAula, idEdificio, nombre)
         );
 
+        this.modEdificios.onDeleteAulaRequest = (idAula) => this.modAulas.eliminarAula(idAula);
+
         this.modDepartamentos = new CrudDepartamentos('section-departamentos', permisos);
 
         this.modEdificios.render();
