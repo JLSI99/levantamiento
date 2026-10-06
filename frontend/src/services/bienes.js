@@ -107,5 +107,31 @@ export const bienesService = {
             console.error(`Fallo en cascada al procesar la baja del activo [ID: ${idBien}]:`, error);
             throw error;
         }
+    },
+
+    async subirImagenBien(idBien, file) {
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            const response = await bffClient.post(`/bienes/${idBien}/imagenes`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
+            });
+            return response.data;
+        } catch (error) {
+            console.error(`Error al subir la imagen para el bien [ID: ${idBien}]:`, error);
+            throw error;
+        }
+    },
+
+    async eliminarImagenBien(idBien, idImagen) {
+        try {
+            await bffClient.delete(`/bienes/${idBien}/imagenes/${idImagen}`);
+            return true;
+        } catch (error) {
+            console.error(`Error al eliminar la imagen [ID: ${idImagen}] del bien [ID: ${idBien}]:`, error);
+            throw error;
+        }
     }
 };

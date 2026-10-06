@@ -8,8 +8,10 @@ services:
       - .env_code
     environment:
       - PYTHONUNBUFFERED=1
+      - MEDIA_DIR=/app/media
     volumes:
       - ./src:/app/src
+      - media_data_bienes:/app/media
     ports:
       - "${SERVER_IP}:${SERVER_PORT}:8000"
     depends_on:
@@ -60,6 +62,8 @@ volumes:
   db_data_bienes:
     driver: local
   pgadmin_data_bienes:
+    driver: local
+  media_data_bienes:
     driver: local
 
 networks:

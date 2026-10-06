@@ -16,6 +16,8 @@ export class UpdateActivo {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
+        const imagenesHtml = this.renderGaleriaImagenes(item?.imagenes || []);
+
         container.innerHTML = `
             <div style="padding: 15px; border: 1px solid #ffb74d; border-radius: 4px; background: #fff8e1;">
                 <h3 style="margin-top:0; color:#e65100; font-size:16px; border-bottom:1px solid #ffe0b2; padding-bottom:8px;">
@@ -58,6 +60,15 @@ export class UpdateActivo {
                         style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px;">
                     </select>
 
+                    <div style="margin-bottom:15px; border-top:1px solid #ffe0b2; padding-top:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:6px;">Galería de Imágenes</label>
+                        <div id="galeria-imagenes-container" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                            ${imagenesHtml}
+                        </div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Subir Nueva Imagen</label>
+                        <input type="file" id="input-archivo-imagen" accept="image/jpeg,image/png,image/webp" style="font-size:12px; width:100%;">
+                    </div>
+
                     <button type="submit" style="width:100%; padding:8px; background:#e65100; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
                         Actualizar Activo
                     </button>
@@ -71,6 +82,24 @@ export class UpdateActivo {
 
         this.bindEvents();
         this.renderSelectTipos();
+    }
+
+    renderGaleriaImagenes(imagenes) {
+        if (!imagenes || imagenes.length === 0) {
+            return `<span style="font-size:12px; color:#757575; font-style:italic;">Sin imágenes asociadas</span>`;
+        }
+
+        return imagenes.map(img => `
+            <div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; background:#fff;">
+                <img src="${img.url_imagen || img.url || ''}" alt="Imagen del bien" style="width:80px; height:80px; object-fit:cover; display:block;">
+                ${this.permisos.borrar ? `
+                    <button type="button" class="btn-eliminar-imagen" data-id="${img.id_imagen}" 
+                        style="position:absolute; top:2px; right:2px; background:rgba(211,47,47,0.85); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:11px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;">
+                        &times;
+                    </button>
+                ` : ''}
+            </div>
+        `).join('');
     }
 
     actualizarSelectTipos(tipos) {
@@ -115,10 +144,38 @@ export class UpdateActivo {
 
                 try {
                     await bienesService.modificarBien(this.item.id_bien, payload);
+
+                    const fileInput = document.getElementById('input-archivo-imagen');
+                    if (fileInput && fileInput.files && fileInput.files[0]) {
+                        await bienesService.subirImagenBien(this.item.id_bien, fileInput.files[0]);
+                    }
+
                     alert('Activo actualizado exitosamente.');
                     if (this.onSuccess) this.onSuccess();
                 } catch (err) {
                     alert('Error: ' + (err.response?.data?.detail || err.message));
+                }
+            }, { signal: this._abortController.signal });
+        }
+
+        const galeriaContainer = document.getElementById('galeria-imagenes-container');
+        if (galeriaContainer) {
+            galeriaContainer.addEventListener('click', async (e) => {
+                const target = e.target.closest('.btn-eliminar-imagen');
+                if (!target) return;
+
+                const idImagen = target.getAttribute('data-id');
+                if (!idImagen || !this.item) return;
+
+                if (confirm('¿Desea eliminar esta imagen?')) {
+                    try {
+                        await bienesService.eliminarImagenBien(this.item.id_bien, idImagen);
+                        this.item.imagenes = (this.item.imagenes || []).filter(img => img.id_imagen !== idImagen);
+                        galeriaContainer.innerHTML = this.renderGaleriaImagenes(this.item.imagenes);
+                        alert('Imagen eliminada correctamente.');
+                    } catch (err) {
+                        alert('Error al eliminar la imagen: ' + (err.response?.data?.detail || err.message));
+                    }
                 }
             }, { signal: this._abortController.signal });
         }

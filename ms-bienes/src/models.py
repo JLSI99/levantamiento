@@ -1,6 +1,6 @@
 import uuid
 import datetime
-from sqlalchemy import Column, String, Date, Boolean, Numeric, Table, ForeignKey
+from sqlalchemy import Column, String, Date, Boolean, Numeric, Table, ForeignKey, Integer, DateTime, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property 
@@ -33,6 +33,14 @@ class Bien(Base):
         lazy="selectin",
     )
 
+    imagenes = relationship(
+        "ImagenBien",
+        back_populates="bien",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="ImagenBien.orden"
+    )
+
     @hybrid_property
     def meses_uso(self) -> int:
         if not self.fecha_adquisicion:
@@ -40,6 +48,21 @@ class Bien(Base):
         hoy = datetime.date.today()
         dias = (hoy - self.fecha_adquisicion).days
         return max(0, dias // 30)
+
+
+class ImagenBien(Base):
+    __tablename__ = "imagenes_bienes"
+
+    id_imagen = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id_bien = Column(UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), nullable=False, index=True)
+    path_archivo = Column(String(255), nullable=False)
+    nombre_original = Column(String(255), nullable=False)
+    mime_type = Column(String(50), nullable=False)
+    tamano_bytes = Column(Integer, nullable=False)
+    orden = Column(Integer, default=1, nullable=False)
+    fecha_creacion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+    bien = relationship("Bien", back_populates="imagenes")
 
 
 class TipoBien(Base):

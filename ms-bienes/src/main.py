@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from src.dependencies.rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
@@ -12,6 +13,8 @@ from slowapi.middleware import SlowAPIMiddleware
 from src.routers import bienes, tipobienes
 from src.database import engine
 import src.auditoria
+
+MEDIA_DIR=os.getenv("MEDIA_DIR","/app/media")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -50,6 +53,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 app.include_router(tipobienes.router)
 app.include_router(bienes.router)

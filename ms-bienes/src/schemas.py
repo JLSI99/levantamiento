@@ -1,7 +1,7 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, computed_field
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 class TipoBienBase(BaseModel):
@@ -46,12 +46,31 @@ class TipoBienPaginatedOut(BaseModel):
     offset: int
     data: List[TipoBienOut]
 
+class ImagenBienOut(BaseModel):
+    id_imagen: UUID
+    id_bien: UUID
+    path_archivo: str
+    nombre_original: str
+    mime_type: str
+    tamano_bytes: int
+    orden: int
+    fecha_creacion: datetime
+
+    @computed_field
+    @property
+    def url(self) -> str:
+        return f"/media/{self.path_archivo}"
+
+    model_config = {
+        "from_attributes": True
+    }
+
 class BienBase(BaseModel):
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
     descripcion: str = Field(..., min_length=3, max_length=255)
-    costo: Decimal = Field(..., gt=Decimal("0.00"), description="El valor base debe ser estrictamente positivo")
+    costo: Decimal = Field(..., gt=Decimal("0.00"), description="El valor base debe ser strictly positivo")
     fecha_adquisicion: Optional[date] = None
 
     @field_validator('descripcion')
@@ -59,7 +78,7 @@ class BienBase(BaseModel):
     def validar_descripcion_obligatoria(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError('La descripción estructural es un campo obligatorio para el negocio de activos.')
+            raise ValueError('La descripción estructural es un campo obligatorio.')
         return v
 
     @field_validator('serie', 'modelo', 'marca')
@@ -71,7 +90,7 @@ class BienBase(BaseModel):
         return v
 
 class BienCreate(BienBase):
-    tipos_ids: List[UUID] = Field(..., min_length=1, description="Se requiere al menos un sub-dominio de asignación")
+    tipos_ids: List[UUID] = Field(..., min_length=1, description="Se requiere al menos un tipo de bien asignado")
 
 class BienUpdate(BaseModel):
     serie: Optional[str] = Field(None, max_length=50)
@@ -96,6 +115,7 @@ class BienOut(BienBase):
     esta_activo: bool
     meses_uso: int 
     tipos: List[TipoBienOut] = []
+    imagenes: List[ImagenBienOut] = []
     
     model_config = {
         "from_attributes": True

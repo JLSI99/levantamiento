@@ -29,7 +29,6 @@ def _extract_error_detail(
     except Exception:
         return fallback_msg
 
-
 @router.post(
     "/login",
     response_model=schemas_auth.TokenBFF,
@@ -102,7 +101,6 @@ async def login_bff(request: Request, login_data: schemas_auth.UserLoginBFF):
             detail="Error interno en la pasarela perimetral (BFF).",
         )
 
-
 @router.post(
     "/refresh",
     response_model=schemas_auth.TokenBFF,
@@ -172,7 +170,6 @@ async def refresh_bff(
             detail="Error interno al refrescar la sesión.",
         )
 
-
 @router.post(
     "/logout",
     status_code=status.HTTP_200_OK,
@@ -209,7 +206,6 @@ async def logout_bff(request: Request):
             f" {str(e)}"
         )
         return {"detail": "Sesión cerrada de forma perimetral"}
-
 
 @router.get(
     "/me",

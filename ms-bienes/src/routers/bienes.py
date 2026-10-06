@@ -1,6 +1,9 @@
+import os
+import uuid
+import pathspec
 from typing import List
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Request, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Query, status, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy.orm import selectinload
@@ -17,10 +20,25 @@ router = APIRouter(
     tags=["Bienes (Activos Físicos)"]
 )
 
+MEDIA_BASE_DIR = os.getenv("MEDIA_DIR", "/app/media")
+MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
+
+def validar_magic_bytes(header: bytes) -> str:
+
+    if header.startswith(b"\xFF\xD8\xFF"):
+        return "image/jpeg"
+    elif header.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    elif header.startswith(b"RIFF") and len(header) >= 12 and header[8:12] == b"WEBP":
+        return "image/webp"
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Firma binaria de archivo no permitida. Solo se admiten formatos JPEG, PNG y WEBP legítimos."
+        )
 # ==============================================================================
 # ENDPOINTS: BIENES (ACTIVOS FIJOS)
 # ==============================================================================
-
 @router.post(
     "", 
     response_model=schemas.BienOut, 
@@ -72,7 +90,6 @@ async def crear_bien(
             detail="Ya existe un activo registrado con este número de serie."
         )
 
-
 @router.get(
     "", 
     response_model=schemas.BienPaginatedOut
@@ -87,7 +104,10 @@ async def listar_bienes(
     token_payload: dict = Depends(require_capability("bienes:leer"))
 ):
     query_count = select(func.count(models.Bien.id_bien))
-    query_data = select(models.Bien).options(selectinload(models.Bien.tipos))
+    query_data = select(models.Bien).options(
+        selectinload(models.Bien.tipos),
+        selectinload(models.Bien.imagenes)
+    )
 
     if not incluir_inactivos:
         query_count = query_count.where(models.Bien.esta_activo == True)
@@ -106,7 +126,6 @@ async def listar_bienes(
         "data": bienes
     }
 
-
 @router.get(
     "/{id_bien}", 
     response_model=schemas.BienOut
@@ -118,7 +137,11 @@ async def obtener_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:leer"))
 ):
-    stmt = select(models.Bien).options(selectinload(models.Bien.tipos)).where(models.Bien.id_bien == id_bien)
+    stmt = select(models.Bien).options(
+        selectinload(models.Bien.tipos),
+        selectinload(models.Bien.imagenes)
+    ).where(models.Bien.id_bien == id_bien)
+    
     result = await db.execute(stmt)
     bien = result.scalars().first()
 
@@ -128,7 +151,6 @@ async def obtener_bien(
             detail="Activo no encontrado."
         )
     return bien
-
 
 @router.patch(
     "/{id_bien}", 
@@ -142,7 +164,11 @@ async def actualizar_bien(
     db: AsyncSession = Depends(get_db),
     token_payload: dict = Depends(require_capability("bienes:editar"))
 ):
-    stmt = select(models.Bien).options(selectinload(models.Bien.tipos)).where(models.Bien.id_bien == id_bien)
+    stmt = select(models.Bien).options(
+        selectinload(models.Bien.tipos),
+        selectinload(models.Bien.imagenes)
+    ).where(models.Bien.id_bien == id_bien)
+    
     result = await db.execute(stmt)
     bien = result.scalars().first()
 
@@ -184,7 +210,6 @@ async def actualizar_bien(
             detail="Ya existe un activo registrado con este número de serie."
         )
 
-
 @router.delete(
     "/{id_bien}", 
     status_code=status.HTTP_204_NO_CONTENT
@@ -213,4 +238,155 @@ async def borrar_bien(
 
     bien.esta_activo = False
     await db.commit()
+    return
+# ==============================================================================
+# ENDPOINTS: GESTIÓN DE IMÁGENES DE BIENES (MÁXIMO 3)
+# ==============================================================================
+@router.post(
+    "/{id_bien}/imagenes",
+    response_model=List[schemas.ImagenBienOut],
+    status_code=status.HTTP_201_CREATED
+)
+@limiter.limit("15/minute")
+async def cargar_imagenes_bien(
+    request: Request,
+    id_bien: UUID,
+    archivos: List[UploadFile] = File(...),
+    db: AsyncSession = Depends(get_db),
+    token_payload: dict = Depends(require_capability("bienes:editar"))
+):
+
+    if not archivos:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debe proporcionar al menos un archivo de imagen."
+        )
+
+    stmt = select(models.Bien).options(selectinload(models.Bien.imagenes)).where(models.Bien.id_bien == id_bien)
+    result = await db.execute(stmt)
+    bien = result.scalars().first()
+
+    if not bien:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="El bien especificado no existe."
+        )
+    if not bien.esta_activo:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se pueden adjuntar imágenes a un activo dado de baja."
+        )
+
+    imagenes_actuales = len(bien.imagenes)
+    if imagenes_actuales + len(archivos) > 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Límite excedido. El bien tiene {imagenes_actuales} imágenes y se intentó subir {len(archivos)}. Máximo permitido: 3."
+        )
+
+    directorio_destino = os.path.join(MEDIA_BASE_DIR, "bienes", str(id_bien))
+    os.makedirs(directorio_destino, exist_ok=True)
+
+    nuevas_imagenes_modelos = []
+    archivos_creados_en_disco = []
+
+    try:
+        siguiente_orden = imagenes_actuales + 1
+
+        for archivo in archivos:
+            contenido_inicial = await archivo.read(12)
+            mime_detectado = validar_magic_bytes(contenido_inicial)
+
+            await archivo.seek(0)
+            contenido_completo = await archivo.read()
+            tamano_bytes = len(contenido_completo)
+
+            if tamano_bytes > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"El archivo {archivo.filename} excede el límite permitido de 5 MB."
+                )
+
+            ext = ".jpg" if mime_detectado == "image/jpeg" else ".png" if mime_detectado == "image/png" else ".webp"
+            nombre_unico = f"{uuid.uuid4()}{ext}"
+            path_absoluto = os.path.join(directorio_destino, nombre_unico)
+            path_relativo = f"bienes/{id_bien}/{nombre_unico}"
+
+            with open(path_absoluto, "wb") as f:
+                f.write(contenido_completo)
+
+            archivos_creados_en_disco.append(path_absoluto)
+
+            nueva_img = models.ImagenBien(
+                id_bien=id_bien,
+                path_archivo=path_relativo,
+                nombre_original=archivo.filename or "imagen.jpg",
+                mime_type=mime_detectado,
+                tamano_bytes=tamano_bytes,
+                orden=siguiente_orden
+            )
+            siguiente_orden += 1
+            nuevas_imagenes_modelos.append(nueva_img)
+            db.add(nueva_img)
+
+        await db.commit()
+
+        for img in nuevas_imagenes_modelos:
+            await db.refresh(img)
+
+        return nuevas_imagenes_modelos
+
+    except Exception as exc:
+        await db.rollback()
+        for path_físico in archivos_creados_en_disco:
+            if os.path.exists(path_físico):
+                try:
+                    os.remove(path_físico)
+                except OSError:
+                    pass
+        if isinstance(exc, HTTPException):
+            raise exc
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error interno durante la persistencia de imágenes: {str(exc)}"
+        )
+
+
+@router.delete(
+    "/{id_bien}/imagenes/{id_imagen}",
+    status_code=status.HTTP_204_NO_CONTENT
+)
+@limiter.limit("15/minute")
+async def eliminar_imagen_bien(
+    request: Request,
+    id_bien: UUID,
+    id_imagen: UUID,
+    db: AsyncSession = Depends(get_db),
+    token_payload: dict = Depends(require_capability("bienes:borrar"))
+):
+
+    stmt = select(models.ImagenBien).where(
+        models.ImagenBien.id_imagen == id_imagen,
+        models.ImagenBien.id_bien == id_bien
+    )
+    result = await db.execute(stmt)
+    imagen = result.scalars().first()
+
+    if not imagen:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="La imagen especificada no existe para este bien."
+        )
+
+    path_absoluto = os.path.join(MEDIA_BASE_DIR, imagen.path_archivo)
+
+    await db.delete(imagen)
+    await db.commit()
+
+    if os.path.exists(path_absoluto):
+        try:
+            os.remove(path_absoluto)
+        except OSError:
+            pass
+
     return

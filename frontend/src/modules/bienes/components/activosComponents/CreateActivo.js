@@ -15,7 +15,7 @@ export class CreateActivo {
 
         container.innerHTML = `
             <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background: #ffffff;">
-                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px;">
+                <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px;">
                     Indexación de Activo Físico
                 </h3>
                 ${this.permisos.crear ? `
@@ -52,9 +52,14 @@ export class CreateActivo {
 
                     <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tipo de Bien *</label>
                     <select name="tipos_ids" id="select-create-tipos" multiple required 
-                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px;">
+                        style="width:100%; margin-bottom:4px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px;">
                     </select>
-                    <small style="display:block; margin-top:-10px; margin-bottom:15px; color:#757575;">Mantén presionado Ctrl (Win) o Cmd (Mac) para seleccionar varios</small>
+                    <small style="display:block; margin-bottom:15px; color:#757575;">Mantén presionado Ctrl (Win) o Cmd (Mac) para seleccionar varios</small>
+
+                    <div style="margin-bottom:15px; border-top:1px solid #e0e0e0; padding-top:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Imagen Inicial del Bien (Opcional)</label>
+                        <input type="file" id="input-archivo-imagen-create" accept="image/jpeg,image/png,image/webp" style="font-size:12px; width:100%;">
+                    </div>
 
                     <button type="submit" style="width:100%; padding:8px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
                         Dar de Alta Activo
@@ -99,7 +104,18 @@ export class CreateActivo {
                 };
 
                 try {
-                    await bienesService.crearNuevoBien(payload);
+                    const nuevoBien = await bienesService.crearNuevoBien(payload);
+                    
+                    const fileInput = document.getElementById('input-archivo-imagen-create');
+                    if (fileInput && fileInput.files && fileInput.files[0] && nuevoBien?.id_bien) {
+                        try {
+                            await bienesService.subirImagenBien(nuevoBien.id_bien, fileInput.files[0]);
+                        } catch (imgErr) {
+                            console.error('El bien se creó pero falló la carga de la imagen:', imgErr);
+                            alert('Activo indexado, pero ocurrió un error al subir la imagen.');
+                        }
+                    }
+
                     alert('Activo indexado exitosamente.');
                     form.reset();
                     if (this.onSuccess) this.onSuccess();

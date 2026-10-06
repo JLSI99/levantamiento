@@ -20,12 +20,11 @@ async def lifespan(app: FastAPI):
         max_connections=int(os.getenv("HTTP_POOL_MAX_CONNECTIONS", "200"))
     )
     
-    timeout_val = float(os.getenv("TIMEOUT_MICROSERVICIOS", "5.0")) 
     timeout_config = httpx.Timeout(
-        timeout=timeout_val,   
-        connect=2.0,           
-        read=7.0,             
-        write=2.0              
+        timeout=float(os.getenv("TIMEOUT_MICROSERVICIOS", "10.0")),   
+        connect=3.0,                                                   
+        read=15.0,   
+        write=15.0   
     )
 
     app.state.http_client = httpx.AsyncClient(

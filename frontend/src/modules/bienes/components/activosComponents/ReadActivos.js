@@ -31,9 +31,10 @@ export class ReadActivos {
                     </div>
                 </div>
 
-                <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 600px;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 650px;">
                     <thead>
                         <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
+                            <th style="padding:8px; width:50px; text-align:center;">Foto</th>
                             <th style="padding:8px;">Descripción / ID</th>
                             <th style="padding:8px;">Detalles (Marca/Mod/Serie)</th>
                             <th style="padding:8px;">Costo</th>
@@ -42,9 +43,17 @@ export class ReadActivos {
                         </tr>
                     </thead>
                     <tbody id="tbody-activos">
-                        <tr><td colspan="5" style="padding:15px; text-align:center;">Cargando inventario...</td></tr>
+                        <tr><td colspan="6" style="padding:15px; text-align:center;">Cargando inventario...</td></tr>
                     </tbody>
                 </table>
+            </div>
+
+            <!-- Modal Visualizador de Imagen -->
+            <div id="modal-img-preview" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
+                <div style="position:relative; background:white; padding:10px; border-radius:8px; max-width:80vw; max-height:80vh;">
+                    <button id="btn-cerrar-img-modal" style="position:absolute; top:-10px; right:-10px; background:#c62828; color:white; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer; font-weight:bold;">&times;</button>
+                    <img id="img-modal-target" src="" alt="Vista previa del bien" style="max-width:100%; max-height:75vh; object-fit:contain; display:block;">
+                </div>
             </div>
 
             <!-- Modal Generador e Impresor de Etiqueta QR -->
@@ -114,6 +123,7 @@ export class ReadActivos {
                 const btnEdit = e.target.closest('.btn-edit-act');
                 const btnDel = e.target.closest('.btn-del-act');
                 const btnQr = e.target.closest('.btn-qr-act');
+                const imgThumb = e.target.closest('.img-thumb-preview');
 
                 if (btnEdit) {
                     const id = btnEdit.getAttribute('data-id');
@@ -123,6 +133,9 @@ export class ReadActivos {
                     if (this.onDelete) this.onDelete(btnDel.getAttribute('data-id'));
                 } else if (btnQr) {
                     this.abrirModalQR(btnQr.getAttribute('data-id'));
+                } else if (imgThumb) {
+                    const src = imgThumb.getAttribute('data-full-src');
+                    if (src) this.abrirModalImagen(src);
                 }
             }, { signal });
         }
@@ -135,6 +148,10 @@ export class ReadActivos {
         document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print(), { signal });
         document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => {
             document.getElementById('modal-qr-container').style.display = 'none';
+        }, { signal });
+
+        document.getElementById('btn-cerrar-img-modal')?.addEventListener('click', () => {
+            document.getElementById('modal-img-preview').style.display = 'none';
         }, { signal });
 
         document.getElementById('btn-camara-qr')?.addEventListener('click', () => this.iniciarEscanerCamara(), { signal });
@@ -152,23 +169,29 @@ export class ReadActivos {
             data.forEach(d => this._cache.set(d.id_bien, d));
 
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:15px;">No hay activos registrados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px;">No hay activos registrados.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = data.map(d => {
                 const idCorto = d.id_bien.substring(0, 8);
-                const categorias = d.tipos.map(t => `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block;">${t.nombre}</span>`).join('');
+                const categorias = (d.tipos || []).map(t => `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block;">${t.nombre}</span>`).join('');
                 const detalles = [d.marca, d.modelo, d.serie].filter(Boolean).join(' / ') || '<span style="color:#9e9e9e;">Sin detalles</span>';
+                
+                const primeraImagen = d.imagenes && d.imagenes.length > 0 ? (d.imagenes[0].url_imagen || d.imagenes[0].url) : null;
+                const thumbHtml = primeraImagen 
+                    ? `<img src="${primeraImagen}" class="img-thumb-preview" data-full-src="${primeraImagen}" title="Clic para ampliar" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer;">`
+                    : `<div style="width:38px; height:38px; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#9e9e9e; font-size:16px;">📷</div>`;
 
                 return `
                     <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
+                        <td style="padding:8px; text-align:center;">${thumbHtml}</td>
                         <td style="padding:8px;">
                             <div style="font-weight:600; color:#212121;">${d.descripcion}</div>
                             <div style="font-family:monospace; color:#757575; font-size:10px;">ID: ${idCorto}...</div>
                         </td>
                         <td style="padding:8px;">${detalles}</td>
-                        <td style="padding:8px; font-weight:bold;">$${parseFloat(d.costo).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
+                        <td style="padding:8px; font-weight:bold;">$${parseFloat(d.costo || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
                         <td style="padding:8px;">${categorias}</td>
                         <td style="padding:8px; text-align:center;">
                             <div style="display:flex; gap:4px; justify-content:center;">
@@ -181,7 +204,16 @@ export class ReadActivos {
                 `;
             }).join('');
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="5" style="color:red; text-align:center; padding:15px;">Error al cargar inventario</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" style="color:red; text-align:center; padding:15px;">Error al cargar inventario</td></tr>';
+        }
+    }
+
+    abrirModalImagen(url) {
+        const modal = document.getElementById('modal-img-preview');
+        const imgTarget = document.getElementById('img-modal-target');
+        if (modal && imgTarget) {
+            imgTarget.src = url;
+            modal.style.display = 'flex';
         }
     }
 
@@ -250,10 +282,12 @@ export class ReadActivos {
                 this._html5QrCodeScanner = null;
                 document.getElementById('modal-scanner-container').style.display = 'none';
             }).catch(() => {
-                document.getElementById('modal-scanner-container').style.display = 'none';
+                const container = document.getElementById('modal-scanner-container');
+                if (container) container.style.display = 'none';
             });
         } else {
-            document.getElementById('modal-scanner-container').style.display = 'none';
+            const container = document.getElementById('modal-scanner-container');
+            if (container) container.style.display = 'none';
         }
     }
 

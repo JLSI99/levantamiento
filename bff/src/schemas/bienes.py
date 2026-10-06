@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from uuid import UUID
 from decimal import Decimal
-from datetime import date
+from datetime import date, datetime
 
 class TipoBienOutBFF(BaseModel):
     id_tipo: UUID
@@ -46,6 +46,20 @@ class TipoBienUpdateBFF(BaseModel):
                 raise ValueError('La actualización del nombre no puede ser una cadena vacía.')
         return v
 
+class ImagenBienOutBFF(BaseModel):
+    id_imagen: UUID
+    id_bien: UUID
+    url: str = Field(..., description="URL estática o computada para renderizado directo en clientes Web")
+    filename_almacenamiento: str = Field(..., description="Identificador único del archivo en disco/storage")
+    mime_type: str = Field(..., description="Tipo MIME verificado mediante magic bytes (ej. image/jpeg)")
+    tamanio_bytes: int = Field(..., description="Peso del archivo en bytes")
+    orden: int = Field(..., description="Secuencia de ordenamiento en la galería")
+    creado_en: datetime
+
+    model_config = {
+        "from_attributes": True
+    }
+
 class BienOutBFF(BaseModel):
     id_bien: UUID
     serie: Optional[str] = None
@@ -57,6 +71,7 @@ class BienOutBFF(BaseModel):
     esta_activo: bool
     meses_uso: int = Field(..., description="Cálculo dinámico provisto por el microservicio")
     tipos: List[TipoBienOutBFF] = []
+    imagenes: List[ImagenBienOutBFF] = Field(default_factory=list, description="Listado de imágenes adjuntas asociadas")
 
     model_config = {
         "from_attributes": True
