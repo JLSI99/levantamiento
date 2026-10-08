@@ -1,6 +1,6 @@
 import os
-from fastapi import FastAPI, Request, status
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, Request, HTTPException, status
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import httpx
@@ -10,6 +10,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("bff_main")
 
 from src.routers import auth, bienes, resguardos, admin, ubicaciones
+
+MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000").rstrip("/")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -77,7 +79,6 @@ origins_env = os.getenv("ALLOWED_ORIGINS", "")
 if origins_env:
     origenes_permitidos = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
 else:
-
     origenes_permitidos = [
         "http://localhost:8080",   
         "http://127.0.0.1:8080",  
@@ -101,6 +102,26 @@ app.include_router(bienes.router, prefix=f"{API_PREFIX}/bienes", tags=["Gestión
 app.include_router(resguardos.router, prefix=f"{API_PREFIX}/resguardos", tags=["Control de Resguardos"])
 app.include_router(ubicaciones.router, prefix=f"{API_PREFIX}/ubicaciones", tags=["Infraestructura y Ubicaciones"])
 app.include_router(admin.router, prefix=f"{API_PREFIX}/admin", tags=["Administración del Sistema"])
+
+@app.get("/media/{file_path:path}", tags=["Multimedia Proxy"])
+async def proxy_media(file_path: str, request: Request):
+    client: httpx.AsyncClient = request.app.state.http_client
+    url = f"{MS_BIENES_URL}/media/{file_path}"
+    
+    try:
+        req = client.build_request("GET", url)
+        response = await client.send(req, stream=True)
+        
+        if response.status_code != 200:
+            raise HTTPException(status_code=response.status_code, detail="Recurso multimedia no encontrado.")
+            
+        return StreamingResponse(
+            response.aiter_raw(),
+            status_code=response.status_code,
+            headers={"Content-Type": response.headers.get("Content-Type", "image/jpeg")}
+        )
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=503, detail=f"Error al obtener recurso multimedia: {str(e)}")
 
 @app.get("/", tags=["Health Check"])
 async def root():

@@ -61,12 +61,12 @@ export class UpdateActivo {
                     </select>
 
                     <div style="margin-bottom:15px; border-top:1px solid #ffe0b2; padding-top:10px;">
-                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:6px;">Galería de Imágenes</label>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:6px;">Galería de Imágenes (Máximo 3)</label>
                         <div id="galeria-imagenes-container" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
                             ${imagenesHtml}
                         </div>
-                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Subir Nueva Imagen</label>
-                        <input type="file" id="input-archivo-imagen" accept="image/jpeg,image/png,image/webp" style="font-size:12px; width:100%;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Subir Nuevas Imágenes</label>
+                        <input type="file" id="input-archivo-imagen" accept="image/jpeg,image/png,image/webp" multiple style="font-size:12px; width:100%;">
                     </div>
 
                     <button type="submit" style="width:100%; padding:8px; background:#e65100; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
@@ -89,17 +89,20 @@ export class UpdateActivo {
             return `<span style="font-size:12px; color:#757575; font-style:italic;">Sin imágenes asociadas</span>`;
         }
 
-        return imagenes.map(img => `
-            <div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; background:#fff;">
-                <img src="${img.url_imagen || img.url || ''}" alt="Imagen del bien" style="width:80px; height:80px; object-fit:cover; display:block;">
-                ${this.permisos.borrar ? `
-                    <button type="button" class="btn-eliminar-imagen" data-id="${img.id_imagen}" 
-                        style="position:absolute; top:2px; right:2px; background:rgba(211,47,47,0.85); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:11px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;">
-                        &times;
-                    </button>
-                ` : ''}
-            </div>
-        `).join('');
+        return imagenes.map(img => {
+            const srcUrl = img.url || (img.path_archivo ? `/media/${img.path_archivo}` : '');
+            return `
+                <div style="position:relative; display:inline-block; border:1px solid #ccc; border-radius:4px; overflow:hidden; background:#fff;">
+                    <img src="${srcUrl}" alt="Imagen del bien" style="width:80px; height:80px; object-fit:cover; display:block;">
+                    ${this.permisos.borrar ? `
+                        <button type="button" class="btn-eliminar-imagen" data-id="${img.id_imagen}" 
+                            style="position:absolute; top:2px; right:2px; background:rgba(211,47,47,0.85); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:11px; cursor:pointer; line-height:1; display:flex; align-items:center; justify-content:center;">
+                            &times;
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
     }
 
     actualizarSelectTipos(tipos) {
@@ -146,8 +149,9 @@ export class UpdateActivo {
                     await bienesService.modificarBien(this.item.id_bien, payload);
 
                     const fileInput = document.getElementById('input-archivo-imagen');
-                    if (fileInput && fileInput.files && fileInput.files[0]) {
-                        await bienesService.subirImagenBien(this.item.id_bien, fileInput.files[0]);
+                    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+                        const archivos = Array.from(fileInput.files);
+                        await bienesService.subirImagenBien(this.item.id_bien, archivos);
                     }
 
                     alert('Activo actualizado exitosamente.');

@@ -10,6 +10,9 @@ export class ReadActivos {
         this._cache = new Map();
         this._abortController = new AbortController();
         this._html5QrCodeScanner = null;
+
+        this._galeriaActual = [];
+        this._indexGaleriaActual = 0;
     }
 
     render() {
@@ -34,7 +37,7 @@ export class ReadActivos {
                 <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 650px;">
                     <thead>
                         <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:8px; width:50px; text-align:center;">Foto</th>
+                            <th style="padding:8px; width:65px; text-align:center;">Foto</th>
                             <th style="padding:8px;">Descripción / ID</th>
                             <th style="padding:8px;">Detalles (Marca/Mod/Serie)</th>
                             <th style="padding:8px;">Costo</th>
@@ -48,11 +51,23 @@ export class ReadActivos {
                 </table>
             </div>
 
-            <!-- Modal Visualizador de Imagen -->
-            <div id="modal-img-preview" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); justify-content:center; align-items:center; z-index:9999;">
-                <div style="position:relative; background:white; padding:10px; border-radius:8px; max-width:80vw; max-height:80vh;">
-                    <button id="btn-cerrar-img-modal" style="position:absolute; top:-10px; right:-10px; background:#c62828; color:white; border:none; border-radius:50%; width:28px; height:28px; cursor:pointer; font-weight:bold;">&times;</button>
-                    <img id="img-modal-target" src="" alt="Vista previa del bien" style="max-width:100%; max-height:75vh; object-fit:contain; display:block;">
+            <!-- Modal Visualizador / Carrusel de Galería de Imágenes -->
+            <div id="modal-img-preview" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); justify-content:center; align-items:center; z-index:9999;">
+                <div style="position:relative; background:white; padding:15px; border-radius:8px; max-width:85vw; max-height:85vh; display:flex; flex-direction:column; align-items:center; min-width:320px;">
+                    <button id="btn-cerrar-img-modal" style="position:absolute; top:-12px; right:-12px; background:#c62828; color:white; border:none; border-radius:50%; width:30px; height:30px; cursor:pointer; font-weight:bold; box-shadow:0 2px 5px rgba(0,0,0,0.3);">&times;</button>
+                    
+                    <!-- Imagen Principal del Carrusel -->
+                    <div style="position:relative; display:flex; align-items:center; justify-content:center; width:100%; height:60vh; background:#111; border-radius:6px; overflow:hidden;">
+                        <button id="btn-galeria-prev" style="position:absolute; left:10px; background:rgba(255,255,255,0.8); border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-weight:bold; font-size:16px; z-index:10;">◀</button>
+                        
+                        <img id="img-modal-target" src="" alt="Vista previa del bien" style="max-width:100%; max-height:100%; object-fit:contain; display:block;">
+                        
+                        <button id="btn-galeria-next" style="position:absolute; right:10px; background:rgba(255,255,255,0.8); border:none; border-radius:50%; width:36px; height:36px; cursor:pointer; font-weight:bold; font-size:16px; z-index:10;">▶</button>
+                    </div>
+
+                    <!-- Indicador y Miniaturas de la Galería -->
+                    <div id="galeria-contador" style="margin-top:8px; font-size:12px; font-weight:600; color:#424242;"></div>
+                    <div id="galeria-thumbs-modal" style="display:flex; gap:8px; margin-top:8px; overflow-x:auto; max-width:100%; padding:4px;"></div>
                 </div>
             </div>
 
@@ -134,8 +149,8 @@ export class ReadActivos {
                 } else if (btnQr) {
                     this.abrirModalQR(btnQr.getAttribute('data-id'));
                 } else if (imgThumb) {
-                    const src = imgThumb.getAttribute('data-full-src');
-                    if (src) this.abrirModalImagen(src);
+                    const idBien = imgThumb.getAttribute('data-id-bien');
+                    if (idBien) this.abrirGaleriaModal(idBien);
                 }
             }, { signal });
         }
@@ -144,6 +159,17 @@ export class ReadActivos {
         if (inputBuscar) {
             inputBuscar.addEventListener('input', (e) => this.filtrarTabla(e.target.value.trim()), { signal });
         }
+
+        document.getElementById('btn-galeria-prev')?.addEventListener('click', () => this.cambiarImagenGaleria(-1), { signal });
+        document.getElementById('btn-galeria-next')?.addEventListener('click', () => this.cambiarImagenGaleria(1), { signal });
+
+        document.getElementById('galeria-thumbs-modal')?.addEventListener('click', (e) => {
+            const thumb = e.target.closest('.modal-thumb-item');
+            if (thumb) {
+                const idx = parseInt(thumb.getAttribute('data-index'), 10);
+                if (!isNaN(idx)) this.mostrarImagenGaleria(idx);
+            }
+        }, { signal });
 
         document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print(), { signal });
         document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => {
@@ -178,10 +204,23 @@ export class ReadActivos {
                 const categorias = (d.tipos || []).map(t => `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block;">${t.nombre}</span>`).join('');
                 const detalles = [d.marca, d.modelo, d.serie].filter(Boolean).join(' / ') || '<span style="color:#9e9e9e;">Sin detalles</span>';
                 
-                const primeraImagen = d.imagenes && d.imagenes.length > 0 ? (d.imagenes[0].url_imagen || d.imagenes[0].url) : null;
-                const thumbHtml = primeraImagen 
-                    ? `<img src="${primeraImagen}" class="img-thumb-preview" data-full-src="${primeraImagen}" title="Clic para ampliar" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer;">`
-                    : `<div style="width:38px; height:38px; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#9e9e9e; font-size:16px;">📷</div>`;
+                const imagenes = d.imagenes || [];
+                const totalImagenes = imagenes.length;
+                const primeraImgObj = totalImagenes > 0 ? imagenes[0] : null;
+                const primeraImagenUrl = primeraImgObj 
+                    ? (primeraImgObj.url || (primeraImgObj.path_archivo ? `/media/${primeraImgObj.path_archivo}` : null))
+                    : null;
+
+                const badgeHtml = totalImagenes > 1 
+                    ? `<span style="position:absolute; bottom:2px; right:2px; background:rgba(0,0,0,0.75); color:white; font-size:9px; font-weight:bold; padding:1px 4px; border-radius:3px;">+${totalImagenes - 1}</span>`
+                    : '';
+
+                const thumbHtml = primeraImagenUrl 
+                    ? `<div style="position:relative; display:inline-block;">
+                        <img src="${primeraImagenUrl}" class="img-thumb-preview" data-id-bien="${d.id_bien}" title="Clic para abrir galería (${totalImagenes})" style="width:42px; height:42px; object-fit:cover; border-radius:4px; border:1px solid #ccc; cursor:pointer; display:block;">
+                        ${badgeHtml}
+                       </div>`
+                    : `<div style="width:42px; height:42px; background:#f0f0f0; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#9e9e9e; font-size:16px;">📷</div>`;
 
                 return `
                     <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
@@ -208,12 +247,52 @@ export class ReadActivos {
         }
     }
 
-    abrirModalImagen(url) {
+    abrirGaleriaModal(idBien) {
+        const item = this._cache.get(idBien);
+        if (!item || !item.imagenes || item.imagenes.length === 0) return;
+
+        this._galeriaActual = item.imagenes.map(img => img.url || (img.path_archivo ? `/media/${img.path_archivo}` : ''));
+        this._indexGaleriaActual = 0;
+
         const modal = document.getElementById('modal-img-preview');
-        const imgTarget = document.getElementById('img-modal-target');
-        if (modal && imgTarget) {
-            imgTarget.src = url;
+        if (modal) {
             modal.style.display = 'flex';
+            this.mostrarImagenGaleria(0);
+        }
+    }
+
+    mostrarImagenGaleria(index) {
+        if (index < 0 || index >= this._galeriaActual.length) return;
+        
+        this._indexGaleriaActual = index;
+        const targetImg = document.getElementById('img-modal-target');
+        const contador = document.getElementById('galeria-contador');
+        const thumbsContainer = document.getElementById('galeria-thumbs-modal');
+        const btnPrev = document.getElementById('btn-galeria-prev');
+        const btnNext = document.getElementById('btn-galeria-next');
+
+        if (targetImg) targetImg.src = this._galeriaActual[index];
+        if (contador) contador.textContent = `Imagen ${index + 1} de ${this._galeriaActual.length}`;
+
+        if (btnPrev) btnPrev.style.display = this._galeriaActual.length > 1 ? 'block' : 'none';
+        if (btnNext) btnNext.style.display = this._galeriaActual.length > 1 ? 'block' : 'none';
+
+        if (thumbsContainer) {
+            thumbsContainer.innerHTML = this._galeriaActual.map((url, i) => `
+                <img src="${url}" class="modal-thumb-item" data-index="${i}" 
+                    style="width:45px; height:45px; object-fit:cover; border-radius:4px; cursor:pointer; border: 2px solid ${i === index ? '#0288d1' : '#ccc'}; opacity: ${i === index ? '1' : '0.6'};">
+            `).join('');
+        }
+    }
+
+    cambiarImagenGaleria(delta) {
+        const nuevoIndex = this._indexGaleriaActual + delta;
+        if (nuevoIndex >= 0 && nuevoIndex < this._galeriaActual.length) {
+            this.mostrarImagenGaleria(nuevoIndex);
+        } else if (nuevoIndex < 0) {
+            this.mostrarImagenGaleria(this._galeriaActual.length - 1);
+        } else if (nuevoIndex >= this._galeriaActual.length) {
+            this.mostrarImagenGaleria(0);
         }
     }
 

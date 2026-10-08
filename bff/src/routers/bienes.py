@@ -1,6 +1,7 @@
 import os
 import httpx
 from uuid import UUID
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Request, Query, UploadFile, File, status
 
 from src.schemas import bienes as schemas_bienes
@@ -210,30 +211,29 @@ async def dar_de_baja_bien(
 # --------------------------------------------------------------------------
 @router.post(
     "/{id_bien}/imagenes", 
-    response_model=schemas_bienes.ImagenBienOutBFF, 
+    response_model=List[schemas_bienes.ImagenBienOutBFF], 
     status_code=status.HTTP_201_CREATED,
-    summary="Subir y asociar imagen a un bien patrimonial"
+    summary="Subir y asociar una o varias imágenes (hasta 3 en total) a un bien patrimonial"
 )
 async def subir_imagen_bien(
     request: Request,
     id_bien: UUID,
-    file: UploadFile = File(..., description="Archivo de imagen (JPEG, PNG, WEBP). Máximo 5MB."),
+    files: List[UploadFile] = File(..., description="Listado de archivos de imagen (JPEG, PNG, WEBP). Máximo 5MB cada uno."),
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:editar"))
 ):
-
     client: httpx.AsyncClient = request.app.state.http_client
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
 
     try:
-
-        files = {
-            "file": (file.filename, file.file, file.content_type)
-        }
+        httpx_files = []
+        for file in files:
+            content = await file.read()
+            httpx_files.append(("archivos", (file.filename, content, file.content_type)))
         
         response = await client.post(
             f"{MS_BIENES_ROUTE}/{id_bien}/imagenes",
             headers=headers,
-            files=files
+            files=httpx_files
         )
         
         if response.status_code != status.HTTP_201_CREATED:
@@ -248,10 +248,11 @@ async def subir_imagen_bien(
     except httpx.RequestError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
-            detail=f"Falla de transporte de red al delegar la carga de la imagen: {str(e)}"
+            detail=f"Falla de transporte de red al delegar la carga de imágenes: {str(e)}"
         )
     finally:
-        await file.close()
+        for file in files:
+            await file.close()
 
 @router.delete(
     "/{id_bien}/imagenes/{id_imagen}", 
@@ -264,7 +265,6 @@ async def eliminar_imagen_bien(
     id_imagen: UUID,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:borrar"))
 ):
-
     client: httpx.AsyncClient = request.app.state.http_client
     headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
 

@@ -57,8 +57,8 @@ export class CreateActivo {
                     <small style="display:block; margin-bottom:15px; color:#757575;">Mantén presionado Ctrl (Win) o Cmd (Mac) para seleccionar varios</small>
 
                     <div style="margin-bottom:15px; border-top:1px solid #e0e0e0; padding-top:10px;">
-                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Imagen Inicial del Bien (Opcional)</label>
-                        <input type="file" id="input-archivo-imagen-create" accept="image/jpeg,image/png,image/webp" style="font-size:12px; width:100%;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Imágenes Iniciales del Bien (Opcional, Máximo 3)</label>
+                        <input type="file" id="input-archivo-imagen-create" accept="image/jpeg,image/png,image/webp" multiple style="font-size:12px; width:100%;">
                     </div>
 
                     <button type="submit" style="width:100%; padding:8px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
@@ -107,12 +107,13 @@ export class CreateActivo {
                     const nuevoBien = await bienesService.crearNuevoBien(payload);
                     
                     const fileInput = document.getElementById('input-archivo-imagen-create');
-                    if (fileInput && fileInput.files && fileInput.files[0] && nuevoBien?.id_bien) {
+                    if (fileInput && fileInput.files && fileInput.files.length > 0 && nuevoBien?.id_bien) {
                         try {
-                            await bienesService.subirImagenBien(nuevoBien.id_bien, fileInput.files[0]);
+                            const archivos = Array.from(fileInput.files);
+                            await bienesService.subirImagenBien(nuevoBien.id_bien, archivos);
                         } catch (imgErr) {
                             console.error('El bien se creó pero falló la carga de la imagen:', imgErr);
-                            alert('Activo indexado, pero ocurrió un error al subir la imagen.');
+                            alert('Activo indexado, pero ocurrió un error al subir las imágenes.');
                         }
                     }
 

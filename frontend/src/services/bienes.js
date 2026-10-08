@@ -109,10 +109,18 @@ export const bienesService = {
         }
     },
 
-    async subirImagenBien(idBien, file) {
+    async subirImagenBien(idBien, fileOrFiles) {
         try {
             const formData = new FormData();
-            formData.append('file', file);
+            
+            if (Array.isArray(fileOrFiles)) {
+                fileOrFiles.forEach((file) => {
+                    formData.append('files', file);
+                });
+            } else {
+                formData.append('files', fileOrFiles);
+            }
+
             const response = await bffClient.post(`/bienes/${idBien}/imagenes`, formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data'

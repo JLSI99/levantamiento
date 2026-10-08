@@ -50,11 +50,12 @@ class ImagenBienOutBFF(BaseModel):
     id_imagen: UUID
     id_bien: UUID
     url: str = Field(..., description="URL estática o computada para renderizado directo en clientes Web")
-    filename_almacenamiento: str = Field(..., description="Identificador único del archivo en disco/storage")
-    mime_type: str = Field(..., description="Tipo MIME verificado mediante magic bytes (ej. image/jpeg)")
-    tamanio_bytes: int = Field(..., description="Peso del archivo en bytes")
+    path_archivo: str = Field(..., description="Identificador/ruta relativa del archivo en storage")
+    nombre_original: str = Field(..., description="Nombre original de la imagen subida")
+    mime_type: str = Field(..., description="Tipo MIME verificado mediante magic bytes")
+    tamano_bytes: int = Field(..., description="Peso del archivo en bytes")
     orden: int = Field(..., description="Secuencia de ordenamiento en la galería")
-    creado_en: datetime
+    fecha_creacion: datetime
 
     model_config = {
         "from_attributes": True
