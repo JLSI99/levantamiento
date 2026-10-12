@@ -40,7 +40,6 @@ async def create_persona(
                 detail="Ya existe una persona registrada con este CURP."
             )
         else:
-            # Fase de Absorción y Reactivación: Recupera el registro inactivo de una saga abortada previa
             persona_existente.nombres = persona_in.nombres.strip()
             persona_existente.apellidos = persona_in.apellidos.strip()
             persona_existente.is_active = True

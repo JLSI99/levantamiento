@@ -41,16 +41,14 @@ def auditar_antes_de_flush(session, flush_context, instances):
 
     usuario_actual = session.info.get('usuario_email', 'sistema')
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE INSERCIONES (INSERT)
-    # --------------------------------------------------------------------------
     for obj in session.new:
         if isinstance(obj, Auditoria): 
             continue
         
         audit_obj = Auditoria(
             tabla_afectada=obj.__tablename__,
-            registro_id="PENDIENTE", # Se resolverá en el after_flush una vez generado el PKey
+            registro_id="PENDIENTE",
             accion='INSERT',
             usuario_email=usuario_actual
         )
@@ -60,9 +58,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "accion": 'INSERT'
         })
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE MODIFICACIONES (UPDATE)
-    # --------------------------------------------------------------------------
     for obj in session.dirty:
         if isinstance(obj, Auditoria): 
             continue
@@ -105,9 +101,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
                 "accion": 'UPDATE'
             })
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE ELIMINACIONES (DELETE)
-    # --------------------------------------------------------------------------
     for obj in session.deleted:
         if isinstance(obj, Auditoria): 
             continue
@@ -128,11 +122,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "accion": 'DELETE'
         })
 
-    # --------------------------------------------------------------------------
     # AUDITORÍA DE RELACIONES MANY-TO-MANY (Soportando session.dirty y session.new)
-    # --------------------------------------------------------------------------
-    # Concatenamos ambos conjuntos para asegurar capturar relaciones tanto en entidades
-    # nuevas como en mutaciones de entidades preexistentes.
     todas_las_instancias = set(session.identity_map.values()).union(session.new).union(session.dirty)
     
     for obj in todas_las_instancias:
@@ -163,7 +153,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
                                 "relacion": relationship.key
                             }
                         )
-                        # Agregamos directo a la lista temporal de almacenamiento
                         session.info['auditoria_temp_store'].append({
                             "audit_record": audit_obj,
                             "target_obj": obj,
@@ -222,8 +211,6 @@ def auditar_despues_de_flush(session, flush_context):
             registros_a_guardar.append(audit_record)
             
         elif accion == 'M2M_ADD':
-            # Si el objeto padre era nuevo, su ID no existía en el before_flush.
-            # Aquí en el after_flush el ID ya fue poblado por la base de datos de forma segura.
             if "TRANSACCIONAL_NUEVO" in audit_record.registro_id or "None" in audit_record.registro_id:
                 pk_obj_name = target_obj.__mapper__.primary_key[0].name
                 real_id = str(getattr(target_obj, pk_obj_name))
@@ -234,7 +221,6 @@ def auditar_despues_de_flush(session, flush_context):
     
     session.info['auditoria_temp_store'] = []
     
-    # Inyección atómica en el pipeline de persistencia sin alterar el bucle de eventos asíncronos
     if registros_a_guardar:
         for record in registros_a_guardar:
             session.add(record)

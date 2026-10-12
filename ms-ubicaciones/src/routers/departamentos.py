@@ -158,7 +158,6 @@ async def borrar_departamento(
     if not depto.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="El departamento ya está dado de baja.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     depto.is_active = False

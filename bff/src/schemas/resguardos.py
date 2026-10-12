@@ -3,9 +3,8 @@ from typing import List, Optional
 from uuid import UUID
 from datetime import date
 import re
-# ==============================================================================
+
 # SCHEMAS DE USO COMÚN / INTERNO
-# ==============================================================================
 class BienResguardoOut(BaseModel):
     id_bien: UUID
     descripcion: str
@@ -22,9 +21,8 @@ class PersonaResguardoOut(BaseModel):
     curp: str
     nombres: str
     apellidos: str
-# ==============================================================================
+
 # VISTA: RESGUARDANTE (FLUJO ORIGINAL CLIENTE)
-# ==============================================================================
 class MisResguardosOut(BaseModel):
     id_asignacion: UUID
     fecha_inicio: date
@@ -37,9 +35,8 @@ class MisResguardosPaginatedOut(BaseModel):
     limit: int
     offset: int
     data: List[MisResguardosOut]
-# ==============================================================================
+
 # VISTA: LEVANTADOR / ADMINISTRADOR (GESTIÓN DE TERCEROS)
-# ==============================================================================
 class ResguardoCreateBFF(BaseModel):
     id_bien: UUID
     curp: str = Field(..., min_length=18, max_length=18)

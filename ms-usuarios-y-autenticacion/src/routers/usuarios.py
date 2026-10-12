@@ -17,9 +17,7 @@ router = APIRouter(
     tags=["Usuarios"]
 )
 
-# ==============================================================================
 # 1. OPERACIONES DE CREACIÓN Y ESCRITURA CORE
-# ==============================================================================
 @router.post(
     "",
     response_model=schemas.UserOut,
@@ -36,7 +34,6 @@ async def create_user(
 
     try:
         async with db.begin():
-            # Validación preventiva ante condiciones de carrera (Anti-Pattern: Check-Then-Act)
             stmt_user = select(models.Usuario).where(
                 or_(
                     models.Usuario.email == user_in.email,
@@ -50,15 +47,12 @@ async def create_user(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="El email, username o CURP ya están registrados de forma activa en el sistema."
                 )
-
-            # Resolución atómica de la matriz relacional de roles solicitados
             stmt_roles = select(models.Rol).where(
                 models.Rol.id_rol.in_(user_in.role_ids)
             )
             result_roles = await db.execute(stmt_roles)
             roles = result_roles.scalars().all()
 
-            # Garantía de cardinalidad estricta para asignaciones íntegras
             if len(roles) != len(set(user_in.role_ids)):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -90,9 +84,7 @@ async def create_user(
             }
         )
 
-# ==============================================================================
 # 2. SISTEMA DE LECTURA, CONSULTA Y PAGINACIÓN
-# ==============================================================================
 @router.get(
     "",
     response_model=schemas.UserPaginatedOut
@@ -181,9 +173,7 @@ async def get_user(
 
     return user
 
-# ==============================================================================
 # 3. MUTACIONES DE ESTADO Y ASOCIACIONES COMPUESTAS
-# ==============================================================================
 @router.patch(
     "/{id_usuario}",
     response_model=schemas.UserOut,

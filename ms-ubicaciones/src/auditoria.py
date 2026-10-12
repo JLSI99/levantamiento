@@ -36,12 +36,10 @@ def get_estado_objeto(obj) -> dict:
 
 @event.listens_for(Session, "before_flush")
 def auditar_antes_de_flush(session, flush_context, instances):
-    # Mitigación del fallo global: Aislamiento absoluto por sesión activa
     if 'auditoria_temp_store' not in session.info:
         session.info['auditoria_temp_store'] = []
 
     usuario_actual = session.info.get('usuario_email', 'sistema')
-
     # --- DETECCIÓN DE INSERCIONES ---
     for obj in session.new:
         if isinstance(obj, Auditoria): 
@@ -56,7 +54,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "target_obj": obj,
             "accion": 'INSERT'
         })
-
     # --- DETECCIÓN DE MODIFICACIONES ---
     for obj in session.dirty:
         if isinstance(obj, Auditoria): 
@@ -99,7 +96,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
                 "target_obj": obj,
                 "accion": 'UPDATE'
             })
-
     # --- DETECCIÓN DE ELIMINACIONES ---
     for obj in session.deleted:
         if isinstance(obj, Auditoria): 
@@ -119,7 +115,6 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "target_obj": obj,
             "accion": 'DELETE'
         })
-
 
 @event.listens_for(Session, "after_flush")
 def auditar_despues_de_flush(session, flush_context):

@@ -15,9 +15,8 @@ class CatalogosUbicacionesOutBFF(BaseModel):
     edificios: List[ElementoCatalogoBFF] = Field(..., description="Listado unificado de edificios activos")
     aulas: List[ElementoCatalogoBFF] = Field(..., description="Listado mapeado de aulas activas con contexto posicional")
     departamentos: List[ElementoCatalogoBFF] = Field(..., description="Listado unificado de departamentos organizacionales")
-# ==============================================================================
+
 # SUB-DOMINIO: EDIFICIOS
-# ==============================================================================
 class EdificioCreateBFF(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100, description="Nombre de la infraestructura")
     clave: Optional[str] = Field(None, max_length=20, description="Clave identificadora corta del edificio")
@@ -51,9 +50,8 @@ class EdificioPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[EdificioOutBFF]
-# ==============================================================================
+
 # SUB-DOMINIO: AULAS
-# ==============================================================================
 class AulaCreateBFF(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100, description="Identificador del aula o laboratorio")
 
@@ -69,9 +67,8 @@ class AulaOutBFF(BaseModel):
     model_config = {
         "from_attributes": True
     }
-# ==============================================================================
+
 # SUB-DOMINIO: DEPARTAMENTOS
-# ==============================================================================
 class DepartamentoCreateBFF(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150, description="Nombre oficial del departamento")
     curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)

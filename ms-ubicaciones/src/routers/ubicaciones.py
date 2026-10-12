@@ -16,9 +16,8 @@ router = APIRouter(
     prefix="/ubicaciones",
     tags=["Ubicaciones Físicas"]
 )
-# ------------------------------------------------------------------------------
+
 # SUBSISTEMA: EDIFICIOS
-# ------------------------------------------------------------------------------
 @router.post(
     "/edificios", 
     response_model=schemas.EdificioOut, 
@@ -120,7 +119,6 @@ async def actualizar_edificio(
     if not edificio.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No puedes editar un edificio inactivo.")
 
-    # Invariante de Auditoría
     db.info['usuario_email'] = token_payload.get('email', 'desconocido')
 
     update_data = edificio_in.model_dump(exclude_unset=True)
@@ -169,9 +167,8 @@ async def borrar_edificio(
     
     await db.commit()
     return
-# ------------------------------------------------------------------------------
+
 # SUBSISTEMA: AULAS
-# ------------------------------------------------------------------------------
 @router.post(
     "/edificios/{id_edificio}/aulas", 
     response_model=schemas.AulaOut, 

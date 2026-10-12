@@ -36,9 +36,8 @@ def _extraer_detalle_error(response: httpx.Response) -> Any:
         return f"Error de infraestructura upstream (HTTP {response.status_code}). Servidor denegó la petición o está inaccesible."
         
     return texto_crudo
-# ==============================================================================
+
 # ORQUESTACIÓN TRANSACCIONAL BIFÁSICA (Alta Compuesta - Patrón Saga Orquestado)
-# ==============================================================================
 @router.post(
     "/alta-personal", 
     response_model=schemas.AltaPersonalCompuestaOutBFF, 
@@ -128,9 +127,9 @@ async def alta_personal_centralizada(
             )
 
         raise HTTPException(status_code=status_error, detail=error_detalle)
-# ==============================================================================
+
 # OPERACIONES PASIVAS DE REDIRECCIÓN SÍNCRONA (PROXY-BFF)
-# ==============================================================================
+
 @router.post("/personas", response_model=schemas.PersonaOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_persona(
     request: Request,
@@ -260,9 +259,8 @@ async def dar_baja_usuario(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=_extraer_detalle_error(response))
     return
-# ==============================================================================
+
 # CONTROL DE ROLES Y PERMISOS GLOBAL (PROXY DIRECTO)
-# ==============================================================================
 @router.get("/roles", response_model=List[schemas.RolOutBFF])
 async def listar_roles(
     request: Request,

@@ -25,9 +25,8 @@ def extraer_detalle_error(response: httpx.Response) -> str:
         return f"Error upstream no estructurado ({response.status_code}): {response.text[:200]}"
     except Exception:
         return f"Error de comunicación remota con código de estado: {response.status_code}"
-# ==============================================================================
+
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
-# ==============================================================================
 @router.get("/catalogos", response_model=schemas.CatalogosUbicacionesOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_todos_los_catalogos_form(
     request: Request,
@@ -95,9 +94,8 @@ async def obtener_todos_los_catalogos_form(
         aulas=lista_aulas,
         departamentos=lista_deptos
     )
-# ==============================================================================
+
 # CRUD SUB-DOMINIO: EDIFICIOS (Montado en /api/v1/ubicaciones/edificios)
-# ==============================================================================
 @router.post("/edificios", response_model=schemas.EdificioOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_edificio(
     request: Request,
@@ -180,9 +178,8 @@ async def borrar_edificio(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-# ==============================================================================
+
 # CRUD SUB-DOMINIO: AULAS (Montado en /api/v1/ubicaciones/...)
-# ==============================================================================
 @router.post("/edificios/{id_edificio}/aulas", response_model=schemas.AulaOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_aula(
     request: Request,
@@ -252,9 +249,8 @@ async def borrar_aula(
     if response.status_code != 204:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
-# ==============================================================================
+
 # CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
-# ==============================================================================
 @router.post("/departamentos", response_model=schemas.DepartamentoOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_departamento(
     request: Request,

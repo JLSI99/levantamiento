@@ -13,10 +13,7 @@ router = APIRouter(
     tags=["Roles y Permisos"]
 )
 
-# ==============================================================================
 # 1. BLOQUE DE RUTAS ESTÁTICAS (Raíces y Colecciones Globales)
-# ==============================================================================
-
 @router.get(
     "",
     response_model=list[schemas.RolOut]
@@ -45,9 +42,8 @@ async def create_rol(
         async with db.begin():
             nuevo_rol = models.Rol(**rol_data.model_dump())
             db.add(nuevo_rol)
-            await db.flush()  # Evalúa restricciones de integridad antes del commit
+            await db.flush()
             
-        # El refresh se ejecuta POST-COMMIT (fuera del bloque contextual)
         await db.refresh(nuevo_rol)
         return nuevo_rol
     except IntegrityError as e:
@@ -103,11 +99,7 @@ async def create_permiso(
             }
         )
 
-
-# ==============================================================================
 # 2. BLOQUE DE RUTAS DINÁMICAS DE PERMISOS (Evita colisiones con operaciones de Rol)
-# ==============================================================================
-
 @router.get(
     "/permisos/{id_permiso}",
     response_model=schemas.PermisoOut
@@ -180,11 +172,7 @@ async def delete_permiso(
         await db.flush()
     return
 
-
-# ==============================================================================
 # 3. BLOQUE DE RUTAS DINÁMICAS DE ROLES (id_rol como identificador base)
-# ==============================================================================
-
 @router.get(
     "/{id_rol}",
     response_model=schemas.RolOut
@@ -236,7 +224,6 @@ async def update_rol(
             }
         )
 
-
 @router.delete(
     "/{id_rol}",
     status_code=status.HTTP_204_NO_CONTENT
@@ -257,11 +244,7 @@ async def delete_rol(
         await db.flush()
     return
 
-
-# ==============================================================================
 # 4. SUBSISTEMA RELACIONAL (Matriz de Asociación Relativa Muchos a Muchos)
-# ==============================================================================
-
 @router.get(
     "/{id_rol}/permisos",
     response_model=list[schemas.PermisoOut]

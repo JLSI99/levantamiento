@@ -42,9 +42,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
 
     usuario_actual = session.info.get('usuario_email', 'sistema')
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE INSERCIONES
-    # --------------------------------------------------------------------------
     for obj in session.new:
         if isinstance(obj, Auditoria): 
             continue
@@ -60,9 +58,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
             "accion": 'INSERT'
         })
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE MODIFICACIONES
-    # --------------------------------------------------------------------------
     for obj in session.dirty:
         if isinstance(obj, Auditoria): 
             continue
@@ -105,9 +101,7 @@ def auditar_antes_de_flush(session, flush_context, instances):
                 "accion": 'UPDATE'
             })
 
-    # --------------------------------------------------------------------------
     # DETECCIÓN DE ELIMINACIONES
-    # --------------------------------------------------------------------------
     for obj in session.deleted:
         if isinstance(obj, Auditoria): 
             continue

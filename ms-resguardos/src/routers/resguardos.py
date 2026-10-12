@@ -16,9 +16,8 @@ router = APIRouter(
     prefix="/resguardos",
     tags=["Resguardos (Asignaciones de Activos)"]
 )
-# ==============================================================================
+
 # SUBSISTEMA: OPERACIONES DE RESGUARDOS (PERSISTENCIA HISTÓRICA)
-# ==============================================================================
 @router.post(
     "", 
     response_model=schemas.AsignacionOut, 
@@ -110,7 +109,6 @@ async def listar_resguardos(
         "data": resguardos
     }
 
-# MICROSERVICIO: Agregar este endpoint específico para resguardos propios
 @router.get(
     "/mis-resguardos", 
     response_model=schemas.AsignacionPaginatedOut
@@ -123,10 +121,8 @@ async def listar_mis_resguardos_ms(
     offset: int = Query(0, ge=0),
     solo_vigentes: bool = Query(True),
     incluir_borrados: bool = Query(False),
-    # Exigimos el permiso de usuario normal
     token_payload: dict = Depends(require_capability("MisResguardos:leer")) 
 ):
-    # Extraemos la curp directamente del token en el microservicio por seguridad
     curp = token_payload.get("curp") or token_payload.get("username")
     
     query_count = select(func.count(models.Asignacion.id_asignacion)).where(models.Asignacion.curp == curp)
@@ -304,4 +300,3 @@ async def borrar_resguardo(
             detail="Error interno al procesar la baja lógica del resguardo."
         )
     return
-

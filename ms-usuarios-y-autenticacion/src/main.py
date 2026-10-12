@@ -16,13 +16,8 @@ from src.database import engine, Base
 async def lifespan(app: FastAPI):
     print("🔐 Inicializando Microservicio de Identidad bajo Arquitectura de Capacidades...")
     
-    # --------------------------------------------------------------------------
-    # INVARIANTE SEGURO: Inicialización y Verificación Automática de Tablas
-    # --------------------------------------------------------------------------
     try:
         async with engine.begin() as conn:
-            # Al importar los routers arriba, estos cargan models.py, garantizando 
-            # que Base.metadata posea el mapa completo de tablas (incluyendo auditoria).
             await conn.run_sync(Base.metadata.create_all)
         print("📊 Esquema relacional y tablas de auditoría sincronizadas con éxito en PostgreSQL.")
     except Exception as e:
@@ -32,7 +27,6 @@ async def lifespan(app: FastAPI):
     yield
     
     print("🛑 Liberando descriptores de archivos, buffers y pools de conexión de forma atómica...")
-    # Invariante: Cierre explícito del pool asíncrono para mitigar sockets huérfanos
     await engine.dispose()
 
 async def custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:

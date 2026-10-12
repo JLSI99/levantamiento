@@ -131,7 +131,7 @@ class Permiso(Base):
         nullable=False, 
         unique=True, 
         index=True
-    )  # Ejemplo: "bienes:crear", "bienes:leer"
+    )
     descripcion = Column(
         String(255), 
         nullable=True

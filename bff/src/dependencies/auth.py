@@ -5,9 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError, ExpiredSignatureError 
 from jose.exceptions import JWTClaimsError
 from pydantic import BaseModel, Field
-# --------------------------------------------------------------------------
-# CONFIGURACIÓN DE VARIABLES DE ENTORNO (PERÍMETRO DE SEGURIDAD)
-# --------------------------------------------------------------------------
+
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 JWT_ISSUER = os.getenv("JWT_ISSUER", "itsc-auth-service")
@@ -17,9 +15,8 @@ if not SECRET_KEY:
     raise ValueError("CRÍTICO: SECRET_KEY no configurada en las variables de entorno del BFF.")
 
 bearer_scheme = HTTPBearer(auto_error=True)
-# --------------------------------------------------------------------------
+
 # ESQUEMAS DE DATOS ESTRUCTURADOS (PYDANTIC V2)
-# --------------------------------------------------------------------------
 class TokenPayload(BaseModel):
     sub: str = Field(..., description="Identificador único del usuario (UUID de la cuenta)")
     username: str = Field(..., description="Nombre de usuario único extraído del microservicio")
@@ -32,9 +29,7 @@ class TokenPayload(BaseModel):
     aud: str = Field(..., description="Audiencia destino del token")
     exp: int = Field(..., description="Timestamp de expiración Unix")
     raw_token: str = Field(..., description="Cadena de texto original del JWT Bearer")
-# --------------------------------------------------------------------------
-# INTERCEPTOR Y VALIDADOR CRIPTOGRÁFICO DE TOKENS
-# --------------------------------------------------------------------------
+
 async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)) -> TokenPayload:
     token = credentials.credentials
     
@@ -71,9 +66,7 @@ async def obtener_token_valido(credentials: HTTPAuthorizationCredentials = Depen
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token inválido, firma corrupta o estructura alterada ilegítimamente."
         )
-# --------------------------------------------------------------------------
-# CLASE DE CONTROL DE ACCESO BASADO EN CAPACIDADES (CapBAC)
-# --------------------------------------------------------------------------
+
 class RequireCapabilityBFF:
     def __init__(self, capacidad_requerida: str):
         self.capacidad_requerida = capacidad_requerida

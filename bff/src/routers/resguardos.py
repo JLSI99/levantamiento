@@ -11,19 +11,16 @@ from src.schemas import resguardos as schemas_resguardos
 
 router = APIRouter()
 logger = logging.getLogger("bff.routers.resguardos")
-# ==============================================================================
+
 # SUBSISTEMA DE CONFIGURACIÓN DE RED E INVARIANTE DE DIRECCIONAMIENTO
-# ==============================================================================
 MS_RESGUARDOS_BASE_URL = os.getenv("MS_RESGUARDOS_URL", "http://ms_resguardo_api:8000").rstrip("/")
 MS_RESGUARDOS_ENDPOINT = f"{MS_RESGUARDOS_BASE_URL}/resguardos"
-
 MS_BIENES_ROUTE        = f"{os.getenv('MS_BIENES_URL', 'http://ms_bienes_api:8000').rstrip('/')}/bienes"
 MS_UBICACIONES_ROUTE   = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/ubicaciones"
 MS_DEPARTAMENTOS_ROUTE = f"{os.getenv('MS_UBICACIONES_URL', 'http://ms_ubicaciones_api:8000').rstrip('/')}/departamentos"
 MS_PERSONAS_ROUTE      = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
-# ==============================================================================
+
 # FUNCIONES AUXILIARES DE HIDRATACIÓN (ORQUESTACIÓN ASÍNCRONA)
-# ==============================================================================
 async def hidratar_un_resguardo(
     resguardo: dict, 
     headers: dict, 
@@ -153,9 +150,8 @@ async def hidratar_resguardo_completo(
             departamento=depto_data.get("nombre", "N/D")
         )
     )
-# ==============================================================================
+
 # ENDPOINTS: RUTA DEL RESGUARDANTE
-# ==============================================================================
 @router.get("/mis-resguardos", response_model=schemas_resguardos.MisResguardosPaginatedOut)
 async def listar_mis_resguardos(
     request: Request,
@@ -192,9 +188,8 @@ async def listar_mis_resguardos(
     return schemas_resguardos.MisResguardosPaginatedOut(
         total=total_registros, limit=limit, offset=offset, data=resultados_finales
     )
-# ==============================================================================
+
 # ENDPOINTS: CRUD DEL ADMINISTRADOR
-# ==============================================================================
 @router.post("", response_model=schemas_resguardos.ResguardoAdminOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_asignacion_resguardo(
     request: Request,

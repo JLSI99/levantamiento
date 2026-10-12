@@ -36,9 +36,8 @@ def validar_magic_bytes(header: bytes) -> str:
             status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
             detail="Firma binaria de archivo no permitida. Solo se admiten formatos JPEG, PNG y WEBP legítimos."
         )
-# ==============================================================================
+    
 # ENDPOINTS: BIENES (ACTIVOS FIJOS)
-# ==============================================================================
 @router.post(
     "", 
     response_model=schemas.BienOut, 
@@ -239,9 +238,8 @@ async def borrar_bien(
     bien.esta_activo = False
     await db.commit()
     return
-# ==============================================================================
+
 # ENDPOINTS: GESTIÓN DE IMÁGENES DE BIENES (MÁXIMO 3)
-# ==============================================================================
 @router.post(
     "/{id_bien}/imagenes",
     response_model=List[schemas.ImagenBienOut],

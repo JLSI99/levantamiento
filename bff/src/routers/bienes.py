@@ -10,7 +10,6 @@ from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 router = APIRouter()
 
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000").rstrip("/")
-
 MS_BIENES_ROUTE = f"{MS_BIENES_URL}/bienes"
 MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/bienes/tipos-bien" 
 
@@ -206,9 +205,7 @@ async def dar_de_baja_bien(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
-# --------------------------------------------------------------------------
 # ENDPOINTS DE ORQUESTACIÓN PARA GESTIÓN FOTOGRÁFICA (MULTIMEDIA)
-# --------------------------------------------------------------------------
 @router.post(
     "/{id_bien}/imagenes", 
     response_model=List[schemas_bienes.ImagenBienOutBFF], 

@@ -5,9 +5,8 @@ from typing import Optional, List
 
 PATRON_CURP_COMPLIANT = r"(?i)^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
 PATRON_NOMBRES_BFF = r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$"
-# ------------------------------------------------------------------------------
+
 # SUBSISTEMA DE PERSONAS (DATOS DEMOGRÁFICOS)
-# ------------------------------------------------------------------------------
 class PersonaCreateBFF(BaseModel):
     nombres: str = Field(..., min_length=2, max_length=100, description="Nombres de la persona")
     apellidos: str = Field(..., min_length=2, max_length=100, description="Apellidos de la persona")
@@ -66,9 +65,8 @@ class PersonaPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[PersonaOutBFF]
-# ------------------------------------------------------------------------------
+
 # SUBSISTEMA DE USUARIOS E IDENTIDADES CRIPTOGRÁFICAS
-# ------------------------------------------------------------------------------
 class RolOutBFF(BaseModel):
     id_rol: int
     nombre_rol: str
@@ -152,9 +150,8 @@ class UserPaginatedOutBFF(BaseModel):
     limit: int
     offset: int
     data: List[UserOutBFF]
-# ------------------------------------------------------------------------------
+
 # ESTRUCTURAS COMPUESTAS ATÓMICAS (ORQUESTACIÓN)
-# ------------------------------------------------------------------------------
 class AltaPersonalCompuestaRequestBFF(BaseModel):
     persona: PersonaCreateBFF
     usuario: UserRegisterRequestBFF
@@ -162,9 +159,8 @@ class AltaPersonalCompuestaRequestBFF(BaseModel):
 class AltaPersonalCompuestaOutBFF(BaseModel):
     persona: PersonaOutBFF
     usuario: UserOutBFF
-# ------------------------------------------------------------------------------
+
 # SUBSISTEMA DE CAPACIDADES Y ROLES GLOBALES
-# ------------------------------------------------------------------------------
 class RolCreateBFF(BaseModel):
     nombre_rol: str = Field(..., max_length=100)
     descripcion: Optional[str] = Field(None, max_length=255)

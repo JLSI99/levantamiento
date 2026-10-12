@@ -5,7 +5,7 @@ services:
       dockerfile: dockerfile
     container_name: ms_ubicaciones_api
     env_file: 
-      - .env_code
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
     volumes:
