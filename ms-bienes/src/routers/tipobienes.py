@@ -19,7 +19,6 @@ router = APIRouter(
 # ==============================================================================
 # ENDPOINTS: CATÁLOGO (TIPOS DE BIEN)
 # ==============================================================================
-
 @router.post(
     "", 
     response_model=schemas.TipoBienOut, 

@@ -12,7 +12,7 @@ router = APIRouter()
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000").rstrip("/")
 
 MS_BIENES_ROUTE = f"{MS_BIENES_URL}/bienes"
-MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/bienes/tipos-bien"
+MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/bienes/tipos-bien" 
 
 @router.get("/tipos-bien", response_model=schemas_bienes.TipoBienPaginatedOutBFF, status_code=status.HTTP_200_OK)
 async def listar_tipos_bien_revisor(
