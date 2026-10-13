@@ -324,9 +324,7 @@ export class ReadActivos {
             });
         }
 
-        document.getElementById('qr-info-desc').textContent = item.descripcion;
         document.getElementById('qr-info-details').textContent = [item.marca, item.modelo, item.serie ? `S/N: ${item.serie}` : null].filter(Boolean).join(' | ');
-        document.getElementById('qr-info-id').textContent = `ID: ${item.id_bien}`;
         document.getElementById('modal-qr-container').style.display = 'flex';
     }
 

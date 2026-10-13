@@ -13,9 +13,9 @@ export class CreateResguardo {
                 <form id="form-crear-resguardo">
                     <div style="display:flex; gap:15px; margin-bottom:10px;">
                         <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">ID del Bien (UUID) *</label>
+                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">No de Inventario</label>
                             <div style="display:flex; gap:6px;">
-                                <input type="text" id="input-id-bien" name="id_bien" required placeholder="Código o UUID del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                                <input type="text" id="input-id-bien" name="id_bien" required placeholder="No de Inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
                                 <button type="button" id="btn-camara-qr-resguardo" style="background:#0288d1; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
                                     📷 Escanear QR
                                 </button>
