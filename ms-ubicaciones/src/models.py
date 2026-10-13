@@ -12,7 +12,6 @@ class Departamento(Base):
     curp_jefe_departamento = Column(String(18), nullable=False, index=True)
     is_active = Column(Boolean, default=True, nullable=False)
 
-
 class Edificio(Base):
     __tablename__ = "edificios"
 
@@ -27,7 +26,6 @@ class Edificio(Base):
         cascade="all, delete-orphan",
         lazy="selectin"
     )
-
 
 class Aula(Base):
     __tablename__ = "aulas"

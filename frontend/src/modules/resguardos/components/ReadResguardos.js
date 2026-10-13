@@ -49,9 +49,9 @@ export class ReadResguardos {
                         <tr style="background-color:#f5f5f5; border-bottom: 1px solid #e0e0e0;">
                             <th style="padding:10px; color: #424242; font-weight:700;">Identificador Asignación</th>
                             ${this.capacidadGlobal ? '<th style="padding:10px; color: #424242; font-weight:700;">Custodio / Responsable</th>' : ''}
-                            <th style="padding:10px; color: #424242; font-weight:700;">Descripción del Bien Fijo</th>
-                            <th style="padding:10px; color: #424242; font-weight:700;">Ubicación Topológica</th>
-                            <th style="padding:10px; color: #424242; font-weight:700;">Fecha Asignación</th>
+                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Descripción del Bien Fijo</th>
+                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Ubicación Topológica</th>
+                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Fecha Asignación</th>
                             <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Vigencia</th>
                             ${this.puedeModificar ? '<th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Operaciones</th>' : ''}
                         </tr>
@@ -160,7 +160,9 @@ export class ReadResguardos {
     _generarFilaTabla(item) {
         const idStr = String(item.id_asignacion);
         const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
-        const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula} (${item.ubicacion.departamento})` : 'Ubicación no asignada';
+        
+        // Modificado: Omitido el departamento de la ubicación topológica
+        const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula}` : 'Ubicación no asignada';
         
         const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
         const custodioNombre = item.persona ? `${item.persona.apellidos}, ${item.persona.nombres} [${item.persona.curp}]` : 'No asignado';
@@ -296,7 +298,10 @@ export class ReadResguardos {
 
         const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}, Serie: ${item.bien.serie || 'N/A'}]` : 'Sin datos de bien';
         const custodio = item.persona ? `${item.persona.nombres} ${item.persona.apellidos} (${item.persona.curp})` : 'Sin asignar';
-        const ubicacion = item.ubicacion ? `Edificio: ${item.ubicacion.edificio}, Aula: ${item.ubicacion.aula}, Depto: ${item.ubicacion.departamento}` : 'Sin ubicación';
+        
+        // Modificado: Omitido el departamento de la ubicación topológica dentro del modal
+        const ubicacion = item.ubicacion ? `Edificio: ${item.ubicacion.edificio}, Aula: ${item.ubicacion.aula}` : 'Sin ubicación';
+        
         const fecha = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'N/A';
 
         contenedorContenido.innerHTML = `

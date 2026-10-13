@@ -35,7 +35,7 @@ export const ubicacionesService = {
     },
 
     async actualizarEdificio(idEdificio, data) {
-        const response = await bffClient.put(`/ubicaciones/edificios/${idEdificio}`, data);
+        const response = await bffClient.patch(`/ubicaciones/edificios/${idEdificio}`, data);
         return response.data;
     },
 
@@ -48,7 +48,6 @@ export const ubicacionesService = {
     // AULAS / ESPACIOS
     // ==========================================
     async obtenerAulasPorEdificio(idEdificio) {
-       
         const response = await bffClient.get(`/ubicaciones/edificios/${idEdificio}`);
         const edificioData = response.data;
         
@@ -64,7 +63,7 @@ export const ubicacionesService = {
     },
 
     async actualizarAula(idAula, data) {
-        const response = await bffClient.put(`/ubicaciones/aulas/${idAula}`, data);
+        const response = await bffClient.patch(`/ubicaciones/aulas/${idAula}`, data);
         return response.data;
     },
 
@@ -89,7 +88,7 @@ export const ubicacionesService = {
     },
 
     async actualizarDepartamento(idDepartamento, data) {
-        const response = await bffClient.put(`/ubicaciones/departamentos/${idDepartamento}`, data);
+        const response = await bffClient.patch(`/ubicaciones/departamentos/${idDepartamento}`, data);
         return response.data;
     },
 

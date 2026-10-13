@@ -13,12 +13,11 @@ router = APIRouter()
 MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000").rstrip("/")
 
 def extraer_detalle_error(response: httpx.Response) -> str:
-
     try:
         content_type = response.headers.get("content-type", "")
         if "application/json" in content_type:
             detail = response.json().get("detail")
-        
+            
             if isinstance(detail, list):
                 return str(detail)
             return str(detail or response.text)
@@ -32,7 +31,6 @@ async def obtener_todos_los_catalogos_form(
     request: Request,
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("ubicaciones:leer")) 
 ):
-
     client: httpx.AsyncClient = request.app.state.http_client
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
@@ -191,9 +189,12 @@ async def crear_aula(
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
+    datos_envio = body.model_dump()
+    datos_envio["id_edificio"] = str(id_edificio)
+    
     response = await client.post(
         f"{MS_UBICACIONES_URL}/ubicaciones/edificios/{id_edificio}/aulas", 
-        json=body.model_dump(), 
+        json=datos_envio, 
         headers=headers
     )
     if response.status_code != 201:
@@ -245,9 +246,23 @@ async def borrar_aula(
     jwt_crudo = token_payload.raw_token
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
-    response = await client.delete(f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}", headers=headers)
-    if response.status_code != 204:
-        raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
+    try:
+        # Aseguramos que la ruta coincida exactamente con la expuesta por ms-ubicaciones (/ubicaciones/aulas/{id_aula})
+        url_destino = f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}"
+        
+        response = await client.delete(url_destino, headers=headers)
+        
+        if response.status_code not in [status.HTTP_204_NO_CONTENT, status.HTTP_200_OK]:
+            raise HTTPException(
+                status_code=response.status_code, 
+                detail=extraer_detalle_error(response)
+            )
+    except httpx.RequestError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=f"Error de comunicación con el microservicio de ubicaciones: {str(exc)}"
+        )
+    
     return
 
 # CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
