@@ -152,6 +152,23 @@ async def crear_nuevo_bien(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
+@router.get("/por-inventario/{numero_inventario}", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_200_OK)
+async def obtener_bien_por_numero_inventario(
+    request: Request, 
+    numero_inventario: str,
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:leer"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+
+    try:
+        response = await client.get(f"{MS_BIENES_ROUTE}/por-inventario/{numero_inventario}", headers=headers)
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
 @router.get("/{id_bien}", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_bien_por_id(
     request: Request, 

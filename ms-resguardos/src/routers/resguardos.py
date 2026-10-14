@@ -35,7 +35,7 @@ async def crear_resguardo(
     result = await db.execute(
         select(models.Asignacion)
         .where(
-            models.Asignacion.id_bien == data.id_bien,
+            models.Asignacion.numero_inventario == data.numero_inventario,
             models.Asignacion.fecha_fin.is_(None),
             models.Asignacion.esta_activo == True 
         )

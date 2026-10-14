@@ -16,6 +16,11 @@ export class UpdateActivo {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
+        // Reiniciamos el controlador de aborto si se re-renderiza
+        if (this._abortController.signal.aborted) {
+            this._abortController = new AbortController();
+        }
+
         const imagenesHtml = this.renderGaleriaImagenes(item?.imagenes || []);
 
         container.innerHTML = `
@@ -25,39 +30,47 @@ export class UpdateActivo {
                 </h3>
                 ${this.permisos.editar ? `
                 <form id="form-update-activo">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Descripción Completa *</label>
-                    <input type="text" name="descripcion" required value="${item?.descripcion || ''}"
-                        style="width:100%; margin-bottom:10px; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Número de Inventario *</label>
+                        <input type="text" name="numero_inventario" required value="${item?.numero_inventario || ''}"
+                            style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
+
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Descripción Completa *</label>
+                        <input type="text" name="descripcion" required value="${item?.descripcion || ''}"
+                            style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
                     
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Serie</label>
-                            <input type="text" name="serie" value="${item?.serie || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="serie" value="${item?.serie || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Marca</label>
-                            <input type="text" name="marca" value="${item?.marca || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="marca" value="${item?.marca || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Modelo</label>
-                            <input type="text" name="modelo" value="${item?.modelo || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="modelo" value="${item?.modelo || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                     </div>
 
                     <div style="display:flex; gap:10px; margin-bottom:15px;">
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Costo (MXN) *</label>
-                            <input type="number" step="0.01" name="costo" required value="${item?.costo || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="number" step="0.01" name="costo" required value="${item?.costo || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Adquisición</label>
-                            <input type="date" name="fecha_adquisicion" value="${item?.fecha_adquisicion || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="date" name="fecha_adquisicion" value="${item?.fecha_adquisicion || ''}" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                     </div>
 
                     <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tipo de Bien *</label>
                     <select name="tipos_ids" id="select-update-tipos" multiple required 
-                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px;">
+                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px; box-sizing:border-box;">
                     </select>
 
                     <div style="margin-bottom:15px; border-top:1px solid #ffe0b2; padding-top:10px;">
@@ -117,9 +130,9 @@ export class UpdateActivo {
         select.innerHTML = this.tipos.map(t => `<option value="${t.id_tipo}">${t.nombre}</option>`).join('');
         
         if (this.item && this.item.tipos) {
-            const idsTipos = this.item.tipos.map(t => t.id_tipo);
+            const idsTipos = this.item.tipos.map(t => String(t.id_tipo));
             Array.from(select.options).forEach(opt => {
-                opt.selected = idsTipos.includes(opt.value);
+                opt.selected = idsTipos.includes(String(opt.value));
             });
         }
     }
@@ -136,6 +149,7 @@ export class UpdateActivo {
                 const tiposIds = Array.from(selectElement.selectedOptions).map(opt => opt.value);
 
                 const payload = {
+                    numero_inventario: formData.get('numero_inventario').trim(),
                     descripcion: formData.get('descripcion').trim(),
                     serie: formData.get('serie').trim() || null,
                     marca: formData.get('marca').trim() || null,
@@ -174,7 +188,7 @@ export class UpdateActivo {
                 if (confirm('¿Desea eliminar esta imagen?')) {
                     try {
                         await bienesService.eliminarImagenBien(this.item.id_bien, idImagen);
-                        this.item.imagenes = (this.item.imagenes || []).filter(img => img.id_imagen !== idImagen);
+                        this.item.imagenes = (this.item.imagenes || []).filter(img => String(img.id_imagen) !== String(idImagen));
                         galeriaContainer.innerHTML = this.renderGaleriaImagenes(this.item.imagenes);
                         alert('Imagen eliminada correctamente.');
                     } catch (err) {

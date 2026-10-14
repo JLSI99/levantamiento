@@ -23,33 +23,41 @@ export class CreateActivo {
                 </h3>
                 ${this.permisos.crear ? `
                 <form id="form-create-activo">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Descripción Completa *</label>
-                    <input type="text" name="descripcion" placeholder="Ej. Monitor Dell UltraSharp 27" required 
-                        style="width:100%; margin-bottom:10px; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Número de Inventario *</label>
+                        <input type="text" name="numero_inventario" placeholder="Ej. INV-TIC-2026-001" required 
+                            style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
+
+                    <div style="margin-bottom:10px;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Descripción Completa *</label>
+                        <input type="text" name="descripcion" placeholder="Ej. Monitor Dell UltraSharp 27" required 
+                            style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </div>
                     
                     <div style="display:flex; gap:10px; margin-bottom:10px;">
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Serie</label>
-                            <input type="text" name="serie" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="serie" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Marca</label>
-                            <input type="text" name="marca" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="marca" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Modelo</label>
-                            <input type="text" name="modelo" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="text" name="modelo" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                     </div>
 
                     <div style="display:flex; gap:10px; margin-bottom:15px;">
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Costo (MXN) *</label>
-                            <input type="number" step="0.01" name="costo" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="number" step="0.01" name="costo" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Adquisición</label>
-                            <input type="date" name="fecha_adquisicion" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                            <input type="date" name="fecha_adquisicion" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                     </div>
 
@@ -178,6 +186,7 @@ export class CreateActivo {
 
                 // El backend espera un arreglo (tipos_ids), por lo que lo enviamos como arreglo de un solo elemento
                 const payload = {
+                    numero_inventario: formData.get('numero_inventario').trim(),
                     descripcion: formData.get('descripcion').trim(),
                     serie: formData.get('serie').trim() || null,
                     marca: formData.get('marca').trim() || null,

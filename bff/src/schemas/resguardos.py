@@ -6,7 +6,7 @@ import re
 
 # SCHEMAS DE USO COMÚN / INTERNO
 class BienResguardoOut(BaseModel):
-    id_bien: UUID
+    numero_inventario: str
     descripcion: str
     marca: Optional[str] = None
     modelo: Optional[str] = None
@@ -38,7 +38,7 @@ class MisResguardosPaginatedOut(BaseModel):
 
 # VISTA: LEVANTADOR / ADMINISTRADOR (GESTIÓN DE TERCEROS)
 class ResguardoCreateBFF(BaseModel):
-    id_bien: UUID
+    numero_inventario: str
     curp: str = Field(..., min_length=18, max_length=18)
     id_aula: UUID
     id_edificio: UUID
@@ -54,7 +54,7 @@ class ResguardoCreateBFF(BaseModel):
         return v
 
 class ResguardoUpdateBFF(BaseModel):
-    id_bien: Optional[UUID] = None
+    numero_inventario: Optional[str] = None
     curp: Optional[str] = None
     id_aula: Optional[UUID] = None
     id_edificio: Optional[UUID] = None

@@ -9,7 +9,7 @@ class Asignacion(Base):
     __tablename__ = "asignaciones"
 
     id_asignacion = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    id_bien = Column(UUID(as_uuid=True), nullable=False, index=True)
+    numero_inventario = Column(String, nullable=False, index=True)
     curp = Column(String(18), nullable=False, index=True)
     id_aula = Column(UUID(as_uuid=True), nullable=False) 
     id_edificio = Column(UUID(as_uuid=True), nullable=False)
@@ -22,7 +22,7 @@ class Asignacion(Base):
     __table_args__ = (
         Index(
             "idx_bien_unico_activo",
-            id_bien,
+            numero_inventario,
             unique=True,
             postgresql_where=(esta_activo == True)
         ),

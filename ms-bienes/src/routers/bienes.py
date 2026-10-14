@@ -24,7 +24,6 @@ MEDIA_BASE_DIR = os.getenv("MEDIA_DIR", "/app/media")
 MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 def validar_magic_bytes(header: bytes) -> str:
-
     if header.startswith(b"\xFF\xD8\xFF"):
         return "image/jpeg"
     elif header.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -66,6 +65,7 @@ async def crear_bien(
         )
 
     nuevo_bien = models.Bien(
+        numero_inventario=bien.numero_inventario,
         serie=bien.serie,
         modelo=bien.modelo,
         marca=bien.marca,
@@ -86,7 +86,7 @@ async def crear_bien(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
-            detail="Ya existe un activo registrado con este número de serie."
+            detail="Ya existe un activo registrado con este número de inventario o número de serie."
         )
 
 @router.get(
@@ -124,6 +124,32 @@ async def listar_bienes(
         "offset": offset, 
         "data": bienes
     }
+
+@router.get(
+    "/por-inventario/{numero_inventario}", 
+    response_model=schemas.BienOut
+)
+@limiter.limit("30/minute")
+async def obtener_bien_por_numero_inventario(
+    request: Request,
+    numero_inventario: str,
+    db: AsyncSession = Depends(get_db),
+    token_payload: dict = Depends(require_capability("bienes:leer"))
+):
+    stmt = select(models.Bien).options(
+        selectinload(models.Bien.tipos),
+        selectinload(models.Bien.imagenes)
+    ).where(models.Bien.numero_inventario == numero_inventario)
+    
+    result = await db.execute(stmt)
+    bien = result.scalars().first()
+
+    if not bien:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail=f"Activo con número de inventario '{numero_inventario}' no encontrado."
+        )
+    return bien
 
 @router.get(
     "/{id_bien}", 
@@ -206,7 +232,7 @@ async def actualizar_bien(
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
-            detail="Ya existe un activo registrado con este número de serie."
+            detail="Ya existe un activo registrado con este número de inventario o número de serie."
         )
 
 @router.delete(

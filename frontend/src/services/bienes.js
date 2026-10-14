@@ -75,8 +75,22 @@ export const bienesService = {
         }
     },
 
-    async obtenerBienPorQr(idBien) {
-        return await this.obtenerBienPorId(idBien);
+    async obtenerBienPorNumeroInventario(numeroInventario) {
+        try {
+            const response = await bffClient.get(`/bienes/por-inventario/${numeroInventario}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error al consultar detalle del bien por número de inventario [${numeroInventario}]:`, error);
+            throw error;
+        }
+    },
+
+    async obtenerBienPorQr(numeroInventarioOId) {
+        try {
+            return await this.obtenerBienPorNumeroInventario(numeroInventarioOId);
+        } catch (e) {
+            return await this.obtenerBienPorId(numeroInventarioOId);
+        }
     },
 
     async crearNuevoBien(bienData) {

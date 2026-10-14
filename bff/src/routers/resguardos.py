@@ -26,13 +26,13 @@ async def hidratar_un_resguardo(
     headers: dict, 
     client: httpx.AsyncClient
 ) -> schemas_resguardos.MisResguardosOut:
-    id_bien = resguardo["id_bien"]
+    numero_inventario = resguardo["numero_inventario"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
     id_departamento = resguardo["id_departamento"]
 
     tareas = [
-        client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
+        client.get(f"{MS_BIENES_ROUTE}/por-inventario/{numero_inventario}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
         client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers)
@@ -59,7 +59,7 @@ async def hidratar_un_resguardo(
         fecha_inicio=resguardo["fecha_inicio"],
         dias_vigencia=resguardo["dias_vigencia"],
         bien=schemas_resguardos.BienResguardoOut(
-            id_bien=id_bien,
+            numero_inventario=numero_inventario,
             descripcion=bien_data.get("descripcion", "Información no disponible"),
             marca=bien_data.get("marca"),
             modelo=bien_data.get("modelo"),
@@ -77,7 +77,7 @@ async def hidratar_resguardo_completo(
     headers: dict, 
     client: httpx.AsyncClient
 ) -> schemas_resguardos.ResguardoAdminOutBFF:
-    id_bien = resguardo["id_bien"]
+    numero_inventario = resguardo["numero_inventario"]
     id_aula = resguardo["id_aula"]
     id_edificio = resguardo["id_edificio"]
     id_departamento = resguardo["id_departamento"]
@@ -90,7 +90,7 @@ async def hidratar_resguardo_completo(
     }
 
     tareas = [
-        client.get(f"{MS_BIENES_ROUTE}/{id_bien}", headers=headers),
+        client.get(f"{MS_BIENES_ROUTE}/por-inventario/{numero_inventario}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/aulas/{id_aula}", headers=headers),
         client.get(f"{MS_UBICACIONES_ROUTE}/edificios/{id_edificio}", headers=headers),
         client.get(f"{MS_DEPARTAMENTOS_ROUTE}/{id_departamento}", headers=headers),
@@ -138,7 +138,7 @@ async def hidratar_resguardo_completo(
         dias_vigencia=resguardo["dias_vigencia"],
         persona=schemas_resguardos.PersonaResguardoOut(**persona_final),
         bien=schemas_resguardos.BienResguardoOut(
-            id_bien=id_bien,
+            numero_inventario=numero_inventario,
             descripcion=bien_data.get("descripcion", "Información no disponible"),
             marca=bien_data.get("marca"),
             modelo=bien_data.get("modelo"),
@@ -170,7 +170,7 @@ async def listar_mis_resguardos(
             detail="Operación inválida: El token de sesión no contiene la CURP o Identidad del usuario."
         )
 
-    params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False, "curp": curp}
+    params = {"limit": limit, "offset": offset, "solo_vigentes": True, "incluir_borrados": False}
     try:
         resguardos_resp = await client.get(f"{MS_RESGUARDOS_ENDPOINT}/mis-resguardos", params=params, headers=headers)
         if resguardos_resp.status_code != 200:

@@ -6,8 +6,7 @@ export class DeleteActivo {
     }
 
     /**
-     * Solicita la baja lógica de un activo patrimonial en el inventario.
-     * @param {string} idBien - UUID único del bien a dar de baja.
+     * @param {string} idBien
      */
     async darDeBaja(idBien) {
         if (!idBien) {

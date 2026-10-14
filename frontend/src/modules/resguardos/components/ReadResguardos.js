@@ -35,7 +35,7 @@ export class ReadResguardos {
     _obtenerPlantillaLectura() {
         return `
             <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, ID Bien, Serie o Descripción..." style="flex: 1; min-width: 220px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, No de Inventario, Serie o Descripción..." style="flex: 1; min-width: 220px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
                 ${this.puedeModificar ? `
                     <button type="button" id="btn-qr-devolucion-rapida" style="background-color: #0288d1; color: white; border: none; padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                         📷 Devolución / Escanear QR
@@ -123,14 +123,14 @@ export class ReadResguardos {
                 const query = filtroBusqueda.toUpperCase().trim();
                 asignaciones = asignaciones.filter(item => {
                     const idAsignacion = String(item.id_asignacion || '').toUpperCase();
-                    const idBien = String(item.bien?.id_bien || '').toUpperCase();
+                    const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
                     const bienSerie = String(item.bien?.serie || '').toUpperCase();
                     const bienDesc = String(item.bien?.descripcion || '').toUpperCase();
                     const curp = String(item.persona?.curp || '').toUpperCase();
                     const nombreCompleto = `${item.persona?.nombres || ''} ${item.persona?.apellidos || ''}`.toUpperCase();
                     
                     return idAsignacion.includes(query) || 
-                           idBien.includes(query) || 
+                           numeroInventario.includes(query) || 
                            bienSerie.includes(query) || 
                            bienDesc.includes(query) || 
                            curp.includes(query) || 
@@ -158,7 +158,8 @@ export class ReadResguardos {
 
     _generarFilaTabla(item) {
         const idStr = String(item.id_asignacion);
-        const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
+        const numeroInv = item.bien?.numero_inventario ? `[Inv: ${item.bien.numero_inventario}]` : '';
+        const bienDesc = item.bien ? `${item.bien.descripcion} ${numeroInv} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
         
         const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula}` : 'Ubicación no asignada';
         const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
@@ -268,10 +269,10 @@ export class ReadResguardos {
 
         for (const [id, item] of this.asignacionesMemoria.entries()) {
             const idAsignacion = String(item.id_asignacion || '').toUpperCase();
-            const idBien = String(item.bien?.id_bien || '').toUpperCase();
+            const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
             const bienSerie = String(item.bien?.serie || '').toUpperCase();
 
-            if (idAsignacion === query || idBien === query || bienSerie === query) {
+            if (idAsignacion === query || numeroInventario === query || bienSerie === query) {
                 match = item;
                 break;
             }
@@ -292,7 +293,8 @@ export class ReadResguardos {
         const contenedorContenido = this.container.querySelector('#modal-devolucion-contenido');
         if (!modalAccion || !contenedorContenido) return;
 
-        const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}, Serie: ${item.bien.serie || 'N/A'}]` : 'Sin datos de bien';
+        const numeroInv = item.bien?.numero_inventario ? `[Inv: ${item.bien.numero_inventario}]` : '';
+        const bienDesc = item.bien ? `${item.bien.descripcion} ${numeroInv} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}, Serie: ${item.bien.serie || 'N/A'}]` : 'Sin datos de bien';
         const custodio = item.persona ? `${item.persona.nombres} ${item.persona.apellidos} (${item.persona.curp})` : 'Sin asignar';
         const ubicacion = item.ubicacion ? `Edificio: ${item.ubicacion.edificio}, Aula: ${item.ubicacion.aula}` : 'Sin ubicación';
         const fecha = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'N/A';

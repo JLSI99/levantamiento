@@ -63,6 +63,7 @@ class ImagenBienOutBFF(BaseModel):
 
 class BienOutBFF(BaseModel):
     id_bien: UUID
+    numero_inventario: str = Field(..., description="Número de inventario institucional único")
     serie: Optional[str] = None
     modelo: Optional[str] = None
     marca: Optional[str] = None
@@ -85,6 +86,7 @@ class BienPaginatedOutBFF(BaseModel):
     data: List[BienOutBFF]
 
 class BienCreateBFF(BaseModel):
+    numero_inventario: str = Field(..., min_length=1, max_length=50, description="Número de inventario institucional único")
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
@@ -93,15 +95,16 @@ class BienCreateBFF(BaseModel):
     fecha_adquisicion: Optional[date] = None
     tipos_ids: List[UUID] = Field(..., min_length=1, description="Asociación obligatoria M2M")
 
-    @field_validator('descripcion')
+    @field_validator('numero_inventario', 'descripcion')
     @classmethod
-    def limpiar_descripcion(cls, v: str) -> str:
+    def limpiar_campos_obligatorios(cls, v: str) -> str:
         v = v.strip()
-        if len(v) < 3:
-            raise ValueError('La descripción debe contener al menos 3 caracteres reales.')
+        if not v:
+            raise ValueError('Este campo obligatorio no puede estar vacío.')
         return v
 
 class BienUpdateBFF(BaseModel):
+    numero_inventario: Optional[str] = Field(None, min_length=1, max_length=50)
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
@@ -109,3 +112,12 @@ class BienUpdateBFF(BaseModel):
     costo: Optional[Decimal] = Field(None, gt=Decimal("0.00"))
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None
+
+    @field_validator('numero_inventario', 'serie', 'modelo', 'marca', 'descripcion')
+    @classmethod
+    def limpiar_espacios_parciales(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError('El campo enviado no puede contener únicamente espacios en blanco.')
+        return v

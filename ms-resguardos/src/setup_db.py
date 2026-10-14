@@ -9,7 +9,7 @@ from src.database import engine, Base
 from src import models
 from src.auditoria import Auditoria
 
-UUID_BIEN_LAPTOP = uuid.UUID("66666666-7777-8888-9999-000000000000")
+NUMERO_INVENTARIO_LAPTOP = "INV-TIC-2026-001"
 UUID_AULA_INGENIERIA = uuid.UUID("e9d8c7b6-a5f4-4e3d-2c1b-0a9f8e7d6c5b")
 UUID_EDIFICIO= uuid.UUID("a0e1b2c3-d4e5-4f6a-bf7a-9e8d7c6b5a41")
 UUID_DEP_SISTEMAS = uuid.UUID("f1e2d3c4-b5a6-4f7e-8d9c-0b1a2f3e4d5c")
@@ -19,7 +19,7 @@ CURP_DESARROLLADOR = "GOME900101HDFRRN01"
 RESGUARDOS_SEMILLA = [
     {
         "id_asignacion": uuid.UUID("99999999-8888-7777-6666-555555555555"),
-        "id_bien": UUID_BIEN_LAPTOP,
+        "numero_inventario": NUMERO_INVENTARIO_LAPTOP,
         "curp": CURP_DESARROLLADOR,
         "id_aula": UUID_AULA_INGENIERIA,
         "id_edificio": UUID_EDIFICIO,
@@ -59,7 +59,7 @@ async def setup():
 
                 nueva = models.Asignacion(
                     id_asignacion=seed["id_asignacion"],
-                    id_bien=seed["id_bien"],
+                    numero_inventario=seed["numero_inventario"],
                     curp=seed["curp"],
                     id_aula=seed["id_aula"],
                     id_edificio=seed["id_edificio"],
@@ -70,7 +70,7 @@ async def setup():
 
                 session.add(nueva)
                 print(
-                    f"   -> Resguardo sembrado para bien {seed['id_bien']}"
+                    f"   -> Resguardo sembrado para número de inventario {seed['numero_inventario']}"
                 )
 
             await session.commit()

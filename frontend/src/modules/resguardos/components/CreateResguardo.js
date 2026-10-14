@@ -15,7 +15,7 @@ export class CreateResguardo {
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">No de Inventario</label>
                             <div style="display:flex; gap:6px;">
-                                <input type="text" id="input-id-bien" name="id_bien" required placeholder="No de Inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                                <input type="text" id="input-numero-inventario" name="numero_inventario" required placeholder="Número de inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
                                 <button type="button" id="btn-camara-qr-resguardo" style="background:#0288d1; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
                                     📷 Escanear QR
                                 </button>
@@ -58,7 +58,7 @@ export class CreateResguardo {
     bindEvents(containerElement) {
         if (!containerElement) return;
 
-        const inputIdBien = containerElement.querySelector('#input-id-bien');
+        const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
         const btnCamara = containerElement.querySelector('#btn-camara-qr-resguardo');
         const btnCerrarScanner = containerElement.querySelector('#btn-cerrar-scanner-resguardo');
 
@@ -70,32 +70,32 @@ export class CreateResguardo {
             btnCerrarScanner.addEventListener('click', () => this.detenerEscanerCamara(containerElement));
         }
 
-        if (inputIdBien) {
+        if (inputNumeroInventario) {
             let timeoutId = null;
-            inputIdBien.addEventListener('input', (e) => {
+            inputNumeroInventario.addEventListener('input', (e) => {
                 clearTimeout(timeoutId);
                 const val = e.target.value.trim();
-                if (val.length >= 8) {
+                if (val.length >= 3) {
                     timeoutId = setTimeout(() => this.validarYMostrarBien(val, containerElement), 300);
                 } else {
                     this.limpiarPreviewBien(containerElement);
                 }
             });
 
-            inputIdBien.addEventListener('change', (e) => {
+            inputNumeroInventario.addEventListener('change', (e) => {
                 const val = e.target.value.trim();
                 if (val) this.validarYMostrarBien(val, containerElement);
             });
         }
     }
 
-    async validarYMostrarBien(idBien, containerElement) {
+    async validarYMostrarBien(numeroInventario, containerElement) {
         const preview = containerElement.querySelector('#preview-bien-info');
         if (!preview) return;
 
         try {
             preview.innerHTML = '<span style="color:#f57c00;">Consultando datos del activo...</span>';
-            const bien = await bienesService.obtenerBienPorQr(idBien);
+            const bien = await bienesService.obtenerBienPorNumeroInventario(numeroInventario);
             if (bien) {
                 const detalles = [bien.marca, bien.modelo, bien.serie ? `S/N: ${bien.serie}` : null].filter(Boolean).join(' | ');
                 preview.innerHTML = `<span style="color:#2e7d32; font-weight:600;">✓ ${bien.descripcion}</span> <span style="color:#666;">(${detalles || 'Sin más detalles'})</span>`;
@@ -103,7 +103,7 @@ export class CreateResguardo {
                 preview.innerHTML = '<span style="color:#c62828;">Bien no encontrado.</span>';
             }
         } catch (error) {
-            preview.innerHTML = '<span style="color:#c62828;">Bien no encontrado o ID no válido.</span>';
+            preview.innerHTML = '<span style="color:#c62828;">Bien no encontrado o número de inventario no válido.</span>';
         }
     }
 
@@ -127,9 +127,9 @@ export class CreateResguardo {
             { fps: 10, qrbox: { width: 220, height: 220 } },
             (decodedText) => {
                 this.detenerEscanerCamara(containerElement);
-                const inputIdBien = containerElement.querySelector('#input-id-bien');
-                if (inputIdBien) {
-                    inputIdBien.value = decodedText;
+                const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
+                if (inputNumeroInventario) {
+                    inputNumeroInventario.value = decodedText;
                     this.validarYMostrarBien(decodedText, containerElement);
                 }
             },

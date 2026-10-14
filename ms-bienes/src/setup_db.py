@@ -8,7 +8,6 @@ from sqlalchemy.orm import sessionmaker
 
 from src.database import engine, Base
 from src import models
-from src.auditoria import Auditoria
 
 UUID_TIPO_COMPUTO = uuid.UUID("b3c3d3e3-f3a3-4b3c-9d3e-1f3a3b3c3d3e")
 UUID_TIPO_MOBILIARIO = uuid.UUID("c4d4e4f4-a4b4-4c4d-8e4f-2a4b4c4d4e4f")
@@ -29,6 +28,7 @@ BIENES_SEMILLA = {
     "bienes": [
         {
             "id_bien": uuid.UUID("11111111-2222-3333-4444-555555555555"),
+            "numero_inventario": "INV-TIC-2026-001",
             "serie": "HP-PROBOOK-2026-XYZ",
             "modelo": "ProBook 450 G10",
             "marca": "HP",
@@ -39,6 +39,7 @@ BIENES_SEMILLA = {
         },
         {
             "id_bien": uuid.UUID("66666666-7777-8888-9999-000000000000"),
+            "numero_inventario": "INV-MOB-2026-002",
             "serie": "HERMAN-MILLER-AERON-01",
             "modelo": "Aeron Chair Size B",
             "marca": "Herman Miller",
@@ -61,7 +62,6 @@ async def setup():
     
     async with async_session_factory() as session:
         try:
-
             print("🌱 Sembrando catálogo base de tipos de bien...")
             tipos_en_memoria = {}
             
@@ -95,6 +95,7 @@ async def setup():
                 if not bien_db:
                     nuevo_bien = models.Bien(
                         id_bien=b_seed["id_bien"],
+                        numero_inventario=b_seed["numero_inventario"],
                         serie=b_seed["serie"],
                         modelo=b_seed["modelo"],
                         marca=b_seed["marca"],
@@ -110,9 +111,9 @@ async def setup():
                             nuevo_bien.tipos.append(instancia_tipo)
                     
                     session.add(nuevo_bien)
-                    print(f"   -> Bien sembrado: {b_seed['marca']} {b_seed['modelo']} (S/N: {b_seed['serie']})")
+                    print(f"   -> Bien sembrado: {b_seed['marca']} {b_seed['modelo']} (Inv: {b_seed['numero_inventario']})")
                 else:
-                    print(f"   -> Bien preexistente omitido de forma segura (S/N: {b_seed['serie']})")
+                    print(f"   -> Bien preexistente omitido de forma segura (Inv: {b_seed['numero_inventario']})")
 
             await session.commit()
             print("🚀 Infraestructura de datos y catálogo de activos inicializados con éxito.")

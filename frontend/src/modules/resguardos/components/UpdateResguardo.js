@@ -6,14 +6,18 @@ export class UpdateResguardo {
         document.getElementById('btn-submit-resguardo').textContent = 'Guardar Cambios';
         document.getElementById('btn-cancelar-edicion').style.display = 'block';
 
-        const inputBien = document.getElementById('input-id-bien');
+        const inputNumeroInventario = document.getElementById('input-numero-inventario');
         const inputCurp = document.getElementById('input-curp');
 
-        if (inputBien && item.bien) inputBien.value = item.bien.id_bien;
-        if (inputCurp && item.persona) inputCurp.value = item.persona.curp;
+        if (inputNumeroInventario && item.bien) {
+            inputNumeroInventario.value = item.bien.numero_inventario || '';
+        }
+        if (inputCurp && item.persona) {
+            inputCurp.value = item.persona.curp || '';
+        }
 
-        if (inputBien && item.bien) {
-            inputBien.dispatchEvent(new Event('change'));
+        if (inputNumeroInventario && item.bien && item.bien.numero_inventario) {
+            inputNumeroInventario.dispatchEvent(new Event('change'));
         }
 
         document.getElementById('form-crear-resguardo').scrollIntoView({ behavior: 'smooth' });

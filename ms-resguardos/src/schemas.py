@@ -5,8 +5,8 @@ from datetime import date
 import re
 
 class AsignacionBase(BaseModel):
-    id_bien: UUID = Field(..., description="Identificador único del activo fijo externo")
-    curp: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
+    numero_inventario: str = Field(..., description="Número de inventario único del activo físico")
+    curp: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
     id_aula: UUID = Field(..., description="Identificador de la ubicación física exacta")
     id_edificio: UUID = Field(..., description="Identificador de la estructura edilicia")
     id_departamento: UUID = Field(..., description="Unidad administrativa responsable")
@@ -24,7 +24,7 @@ class AsignacionCreate(AsignacionBase):
     pass
 
 class AsignacionUpdate(BaseModel):
-    id_bien: Optional[UUID] = None
+    numero_inventario: Optional[str] = None
     curp: Optional[str] = None
     id_aula: Optional[UUID] = None
     id_edificio: Optional[UUID] = None

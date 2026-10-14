@@ -38,7 +38,7 @@ export class ReadActivos {
                     <thead>
                         <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
                             <th style="padding:8px; width:65px; text-align:center;">Foto</th>
-                            <th style="padding:8px;">Descripción / No Inv.</th>
+                            <th style="padding:8px;">Descripción / No. Inventario</th>
                             <th style="padding:8px;">Detalles (Marca/Mod/Serie)</th>
                             <th style="padding:8px;">Costo</th>
                             <th style="padding:8px;">Categorías</th>
@@ -81,7 +81,7 @@ export class ReadActivos {
                         <div id="qr-code-box" style="display:flex; justify-content:center; margin:10px 0;"></div>
                         <div id="qr-info-desc" style="font-weight:bold; font-size:12px; margin-bottom:2px;"></div>
                         <div id="qr-info-details" style="font-size:10px; color:#555;"></div>
-                        <div id="qr-info-id" style="font-family:monospace; font-size:10px; margin-top:4px; font-weight:600;"></div>
+                        <div id="qr-info-inventario" style="font-family:monospace; font-size:11px; margin-top:6px; font-weight:700;"></div>
                     </div>
 
                     <div style="display:flex; gap:10px; justify-content:center;">
@@ -192,7 +192,10 @@ export class ReadActivos {
             const data = resp.data || [];
             
             this._cache.clear();
-            data.forEach(d => this._cache.set(d.id_bien, d));
+            data.forEach(d => {
+                if (d.id_bien) this._cache.set(String(d.id_bien), d);
+                if (d.numero_inventario) this._cache.set(String(d.numero_inventario), d);
+            });
 
             if (data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px;">No hay activos registrados.</td></tr>';
@@ -200,9 +203,9 @@ export class ReadActivos {
             }
 
             tbody.innerHTML = data.map(d => {
-                const idCorto = d.id_bien.substring(0, 8);
+                const numInv = d.numero_inventario || 'S/N';
                 const categorias = (d.tipos || []).map(t => `<span style="background:#e3f2fd; color:#1565c0; padding:2px 6px; border-radius:3px; margin:2px; display:inline-block;">${t.nombre}</span>`).join('');
-                const detalles = [d.marca, d.modelo, d.serie].filter(Boolean).join(' / ') || '<span style="color:#9e9e9e;">Sin detalles</span>';
+                const detalles = [d.marca, d.modelo, d.serie ? `S/N: ${d.serie}` : null].filter(Boolean).join(' / ') || '<span style="color:#9e9e9e;">Sin detalles</span>';
                 
                 const imagenes = d.imagenes || [];
                 const totalImagenes = imagenes.length;
@@ -227,7 +230,7 @@ export class ReadActivos {
                         <td style="padding:8px; text-align:center;">${thumbHtml}</td>
                         <td style="padding:8px;">
                             <div style="font-weight:600; color:#212121;">${d.descripcion}</div>
-                            <div style="font-family:monospace; color:#757575; font-size:10px;">No Inv.: ${idCorto}...</div>
+                            <div style="font-family:monospace; color:#1565c0; font-size:11px; font-weight:bold;">No. Inv: ${numInv}</div>
                         </td>
                         <td style="padding:8px;">${detalles}</td>
                         <td style="padding:8px; font-weight:bold;">$${parseFloat(d.costo || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
@@ -317,14 +320,16 @@ export class ReadActivos {
 
         if (window.QRCode) {
             new window.QRCode(qrBox, {
-                text: item.id_bien,
+                text: item.numero_inventario || item.id_bien,
                 width: 130, height: 130,
                 colorDark: "#000000", colorLight: "#ffffff",
                 correctLevel: window.QRCode.CorrectLevel.H
             });
         }
 
+        document.getElementById('qr-info-desc').textContent = item.descripcion || '';
         document.getElementById('qr-info-details').textContent = [item.marca, item.modelo, item.serie ? `S/N: ${item.serie}` : null].filter(Boolean).join(' | ');
+        document.getElementById('qr-info-inventario').textContent = `No. Inv: ${item.numero_inventario || 'N/D'}`;
         document.getElementById('modal-qr-container').style.display = 'flex';
     }
 
@@ -357,8 +362,10 @@ export class ReadActivos {
         if (this._html5QrCodeScanner) {
             this._html5QrCodeScanner.stop().then(() => {
                 this._html5QrCodeScanner = null;
-                document.getElementById('modal-scanner-container').style.display = 'none';
+                const container = document.getElementById('modal-scanner-container');
+                if (container) container.style.display = 'none';
             }).catch(() => {
+                this._html5QrCodeScanner = null;
                 const container = document.getElementById('modal-scanner-container');
                 if (container) container.style.display = 'none';
             });
@@ -371,5 +378,6 @@ export class ReadActivos {
     unmount() {
         this.detenerEscanerCamara();
         this._abortController.abort();
+        this._cache.clear();
     }
 }

@@ -66,6 +66,7 @@ class ImagenBienOut(BaseModel):
     }
 
 class BienBase(BaseModel):
+    numero_inventario: str = Field(..., min_length=1, max_length=50, description="Número de inventario institucional único")
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
@@ -73,12 +74,12 @@ class BienBase(BaseModel):
     costo: Decimal = Field(..., gt=Decimal("0.00"), description="El valor base debe ser strictly positivo")
     fecha_adquisicion: Optional[date] = None
 
-    @field_validator('descripcion')
+    @field_validator('numero_inventario', 'descripcion')
     @classmethod
-    def validar_descripcion_obligatoria(cls, v: str) -> str:
+    def validar_campos_obligatorios(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError('La descripción estructural es un campo obligatorio.')
+            raise ValueError('Este campo obligatorio no puede estar vacío.')
         return v
 
     @field_validator('serie', 'modelo', 'marca')
@@ -93,6 +94,7 @@ class BienCreate(BienBase):
     tipos_ids: List[UUID] = Field(..., min_length=1, description="Se requiere al menos un tipo de bien asignado")
 
 class BienUpdate(BaseModel):
+    numero_inventario: Optional[str] = Field(None, min_length=1, max_length=50)
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
@@ -101,7 +103,7 @@ class BienUpdate(BaseModel):
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None 
 
-    @field_validator('serie', 'modelo', 'marca', 'descripcion')
+    @field_validator('numero_inventario', 'serie', 'modelo', 'marca', 'descripcion')
     @classmethod
     def limpiar_espacios_parciales(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
