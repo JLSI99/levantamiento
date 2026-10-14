@@ -47,7 +47,6 @@ export class ReadResguardos {
                 <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;" id="tabla-resguardos-personales">
                     <thead>
                         <tr style="background-color:#f5f5f5; border-bottom: 1px solid #e0e0e0;">
-                            <th style="padding:10px; color: #424242; font-weight:700;">Identificador Asignación</th>
                             ${this.capacidadGlobal ? '<th style="padding:10px; color: #424242; font-weight:700;">Custodio / Responsable</th>' : ''}
                             <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Descripción del Bien Fijo</th>
                             <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Ubicación Topológica</th>
@@ -58,7 +57,7 @@ export class ReadResguardos {
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="${this.capacidadGlobal ? '7' : (this.puedeModificar ? '6' : '5')}" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
+                            <td colspan="${this.capacidadGlobal ? '6' : (this.puedeModificar ? '5' : '4')}" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
                         </tr>
                     </tbody>
                 </table>
@@ -103,7 +102,7 @@ export class ReadResguardos {
 
         this.tokenConcurrenciaId++;
         const currentTokenId = this.tokenConcurrenciaId;
-        const columnasTotales = this.capacidadGlobal ? 7 : (this.puedeModificar ? 6 : 5);
+        const columnasTotales = this.capacidadGlobal ? 6 : (this.puedeModificar ? 5 : 4);
 
         try {
             let respuestaBFF;
@@ -161,15 +160,12 @@ export class ReadResguardos {
         const idStr = String(item.id_asignacion);
         const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
         
-        // Modificado: Omitido el departamento de la ubicación topológica
         const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula}` : 'Ubicación no asignada';
-        
         const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
         const custodioNombre = item.persona ? `${item.persona.apellidos}, ${item.persona.nombres} [${item.persona.curp}]` : 'No asignado';
         
         let html = `
             <tr style="border-bottom: 1px solid #e0e0e0;">
-                <td style="padding:10px; font-family:monospace; color:#1a237e; font-size:11px;">${this._escapeHtml(idStr)}</td>
                 ${this.capacidadGlobal ? `<td style="padding:10px; font-weight:500; color:#37474f;">${this._escapeHtml(custodioNombre)}</td>` : ''}
                 <td style="padding:10px; font-weight:600; color: #212121;">${this._escapeHtml(bienDesc)}</td>
                 <td style="padding:10px; color: #37474f;">${this._escapeHtml(ubicacionFisica)}</td>
@@ -298,15 +294,11 @@ export class ReadResguardos {
 
         const bienDesc = item.bien ? `${item.bien.descripcion} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}, Serie: ${item.bien.serie || 'N/A'}]` : 'Sin datos de bien';
         const custodio = item.persona ? `${item.persona.nombres} ${item.persona.apellidos} (${item.persona.curp})` : 'Sin asignar';
-        
-        // Modificado: Omitido el departamento de la ubicación topológica dentro del modal
         const ubicacion = item.ubicacion ? `Edificio: ${item.ubicacion.edificio}, Aula: ${item.ubicacion.aula}` : 'Sin ubicación';
-        
         const fecha = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'N/A';
 
         contenedorContenido.innerHTML = `
             <div style="background:#f5f5f5; padding:12px; border-radius:4px; margin-bottom:10px;">
-                <p style="margin:0 0 6px 0;"><strong>ID Asignación:</strong> <span style="font-family:monospace; color:#1a237e;">${this._escapeHtml(String(item.id_asignacion))}</span></p>
                 <p style="margin:0 0 6px 0;"><strong>Activo / Bien:</strong> ${this._escapeHtml(bienDesc)}</p>
                 <p style="margin:0 0 6px 0;"><strong>Custodio Actual:</strong> ${this._escapeHtml(custodio)}</p>
                 <p style="margin:0 0 6px 0;"><strong>Ubicación Topológica:</strong> ${this._escapeHtml(ubicacion)}</p>

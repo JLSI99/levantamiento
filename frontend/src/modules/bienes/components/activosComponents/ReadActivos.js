@@ -26,7 +26,7 @@ export class ReadActivos {
                     
                     <!-- Barra de Búsqueda y Escaneo QR -->
                     <div style="display:flex; gap:8px;">
-                        <input type="text" id="input-buscar-qr" placeholder="Buscar por ID / Serie / QR..." 
+                        <input type="text" id="input-buscar-qr" placeholder="Buscar por No de Inv. / Serie / QR" 
                             style="padding:6px 10px; border:1px solid #ccc; border-radius:4px; font-size:12px; width:220px;">
                         <button id="btn-camara-qr" style="background:#0288d1; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
                             📷 Escanear QR
@@ -38,7 +38,7 @@ export class ReadActivos {
                     <thead>
                         <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
                             <th style="padding:8px; width:65px; text-align:center;">Foto</th>
-                            <th style="padding:8px;">Descripción / ID</th>
+                            <th style="padding:8px;">Descripción / No Inv.</th>
                             <th style="padding:8px;">Detalles (Marca/Mod/Serie)</th>
                             <th style="padding:8px;">Costo</th>
                             <th style="padding:8px;">Categorías</th>
@@ -227,7 +227,7 @@ export class ReadActivos {
                         <td style="padding:8px; text-align:center;">${thumbHtml}</td>
                         <td style="padding:8px;">
                             <div style="font-weight:600; color:#212121;">${d.descripcion}</div>
-                            <div style="font-family:monospace; color:#757575; font-size:10px;">ID: ${idCorto}...</div>
+                            <div style="font-family:monospace; color:#757575; font-size:10px;">No Inv.: ${idCorto}...</div>
                         </td>
                         <td style="padding:8px;">${detalles}</td>
                         <td style="padding:8px; font-weight:bold;">$${parseFloat(d.costo || 0).toLocaleString('es-MX', {minimumFractionDigits: 2})}</td>
