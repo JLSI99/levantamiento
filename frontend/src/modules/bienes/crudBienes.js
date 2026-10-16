@@ -1,11 +1,16 @@
 import authStore from '/src/core/store/authStore.js';
 import { CrudTiposBien } from '/src/modules/bienes/components/crudTiposBien.js';
 import { CrudActivos } from '/src/modules/bienes/components/crudActivos.js';
+import { CrudTagsBien } from '/src/modules/bienes/components/crudTagsBien.js';
 
 export class CrudBienes {
     constructor(containerId) {
         this.containerId = containerId;
         this._abortController = new AbortController();
+
+        this.crudTiposBien = null;
+        this.crudActivos = null;
+        this.crudTagsBien = null;
     }
 
     render() {
@@ -45,16 +50,27 @@ export class CrudBienes {
                     <button id="tab-btn-tipos" style="padding: 10px 20px; border: none; background: #e0e0e0; color: #424242; cursor: pointer; font-weight: 600; border-radius: 4px 4px 0 0;">
                         Catálogo de Tipos de Bien
                     </button>
+                    <button id="tab-btn-tags" style="padding: 10px 20px; border: none; background: #e0e0e0; color: #424242; cursor: pointer; font-weight: 600; border-radius: 4px 4px 0 0;">
+                        Catálogo de Etiquetas (Tags)
+                    </button>
                 </div>
 
+                <!-- Sección 1: Activos -->
                 <div id="section-activos" style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
                     <div id="wrapper-form-activos"></div>
                     <div id="wrapper-tabla-activos"></div>
                 </div>
 
+                <!-- Sección 2: Tipos de Bien -->
                 <div id="section-tipos" style="display: none; grid-template-columns: 1fr 2fr; gap: 20px;">
                     <div id="wrapper-form-tipos"></div>
                     <div id="wrapper-tabla-tipos"></div>
+                </div>
+
+                <!-- Sección 3: Etiquetas (Tags) -->
+                <div id="section-tags" style="display: none; grid-template-columns: 1fr 2fr; gap: 20px;">
+                    <div id="wrapper-form-tags"></div>
+                    <div id="wrapper-tabla-tags"></div>
                 </div>
             </div>
         `;
@@ -65,52 +81,69 @@ export class CrudBienes {
 
     bindEvents() {
         const signal = this._abortController.signal;
+
         const btnTabActivos = document.getElementById('tab-btn-activos');
         const btnTabTipos = document.getElementById('tab-btn-tipos');
+        const btnTabTags = document.getElementById('tab-btn-tags');
+
         const secActivos = document.getElementById('section-activos');
         const secTipos = document.getElementById('section-tipos');
+        const secTags = document.getElementById('section-tags');
 
-        if (btnTabActivos && btnTabTipos) {
-            btnTabActivos.addEventListener('click', () => {
-                btnTabActivos.style.background = '#1a237e';
-                btnTabActivos.style.color = 'white';
-                btnTabTipos.style.background = '#e0e0e0';
-                btnTabTipos.style.color = '#424242';
-                secActivos.style.display = 'grid';
-                secTipos.style.display = 'none';
-            }, { signal });
+        const alternarPestana = (activa) => {
+            const tabs = [
+                { btn: btnTabActivos, sec: secActivos, key: 'activos' },
+                { btn: btnTabTipos, sec: secTipos, key: 'tipos' },
+                { btn: btnTabTags, sec: secTags, key: 'tags' }
+            ];
 
-            btnTabTipos.addEventListener('click', () => {
-                btnTabTipos.style.background = '#1a237e';
-                btnTabTipos.style.color = 'white';
-                btnTabActivos.style.background = '#e0e0e0';
-                btnTabActivos.style.color = '#424242';
-                secTipos.style.display = 'grid';
-                secActivos.style.display = 'none';
-            }, { signal });
-        }
+            tabs.forEach(t => {
+                if (t.btn && t.sec) {
+                    if (t.key === activa) {
+                        t.btn.style.background = '#1a237e';
+                        t.btn.style.color = 'white';
+                        t.sec.style.display = 'grid';
+                    } else {
+                        t.btn.style.background = '#e0e0e0';
+                        t.btn.style.color = '#424242';
+                        t.sec.style.display = 'none';
+                    }
+                }
+            });
+        };
+
+        if (btnTabActivos) btnTabActivos.addEventListener('click', () => alternarPestana('activos'), { signal });
+        if (btnTabTipos) btnTabTipos.addEventListener('click', () => alternarPestana('tipos'), { signal });
+        if (btnTabTags) btnTabTags.addEventListener('click', () => alternarPestana('tags'), { signal });
     }
 
     initModules(permisos) {
         this.crudTiposBien = new CrudTiposBien('wrapper-form-tipos', 'wrapper-tabla-tipos', permisos);
         this.crudActivos = new CrudActivos('wrapper-form-activos', 'wrapper-tabla-activos', permisos);
+        this.crudTagsBien = new CrudTagsBien('wrapper-form-tags', 'wrapper-tabla-tags', permisos);
 
         this.crudTiposBien.onTiposLoaded = (tipos) => {
             this.crudActivos.actualizarSelectTipos(tipos);
         };
-        
+
         this.crudTiposBien.onTiposChanged = () => {
-            this.crudTiposBien.cargarDatos(); 
-            this.crudActivos.cargarDatos(); 
+            this.crudTiposBien.cargarDatos();
+            this.crudActivos.cargarDatos();
+        };
+
+        this.crudTagsBien.onTagsChanged = () => {
+            this.crudTagsBien.cargarDatos();
         };
 
         this.crudTiposBien.render();
         this.crudActivos.render();
+        this.crudTagsBien.render();
     }
 
     unmount() {
         this._abortController.abort();
         this.crudTiposBien?.unmount();
         this.crudActivos?.unmount();
+        this.crudTagsBien?.unmount();
     }
 }

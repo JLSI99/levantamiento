@@ -18,18 +18,17 @@ export class ReadTagsbien {
 
         tableContainer.innerHTML = `
             <div style="background:white; border: 1px solid #e0e0e0; border-radius: 4px; padding:15px;">
-                <h4 style="margin-top:0; color:#424242;">Catálogo de Tipos</h4>
+                <h4 style="margin-top:0; color:#424242;">Catálogo de Etiquetas (Tags)</h4>
                 <table style="width:100%; border-collapse:collapse; font-size:12px;">
                     <thead>
                         <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:8px;">Categoría</th>
-                            <th style="padding:8px;">Depreciación</th>
+                            <th style="padding:8px;">Etiqueta</th>
                             <th style="padding:8px;">Estado</th>
                             <th style="padding:8px; text-align:center;">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-tipos-bien">
-                        <tr><td colspan="4" style="padding:15px; text-align:center;">Cargando...</td></tr>
+                    <tbody id="tbody-tags-bien">
+                        <tr><td colspan="3" style="padding:15px; text-align:center;">Cargando...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -41,12 +40,12 @@ export class ReadTagsbien {
 
     bindEvents() {
         const signal = this._abortController.signal;
-        const tbody = document.getElementById('tbody-tipos-bien');
+        const tbody = document.getElementById('tbody-tags-bien');
 
         if (tbody) {
             tbody.addEventListener('click', (e) => {
-                const btnEdit = e.target.closest('.btn-edit-tipo');
-                const btnDel = e.target.closest('.btn-del-tipo');
+                const btnEdit = e.target.closest('.btn-edit-tag');
+                const btnDel = e.target.closest('.btn-del-tag');
 
                 if (btnEdit) {
                     const id = btnEdit.getAttribute('data-id');
@@ -60,37 +59,42 @@ export class ReadTagsbien {
     }
 
     async cargarDatos() {
-        const tbody = document.getElementById('tbody-tipos-bien');
+        const tbody = document.getElementById('tbody-tags-bien');
         if (!tbody) return;
         try {
-            const resp = await bienesService.listarTiposBien(100, 0, false);
+            const resp = await bienesService.listarTagsBien(100, 0, false);
             const data = resp.data || [];
 
             this._cache.clear();
-            data.forEach(d => this._cache.set(d.id_tipo, d));
+            data.forEach(d => {
+                const tagId = d.id_tag || d.id_tipo;
+                this._cache.set(tagId, d);
+            });
 
             if (this.onLoaded) this.onLoaded(data);
 
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px;">No hay tipos registrados.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px;">No hay etiquetas registradas.</td></tr>';
                 return;
             }
 
-            tbody.innerHTML = data.map(d => `
-                <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
-                    <td style="padding:8px; font-weight:600;">${d.nombre}</td>
-                    <td style="padding:8px;">${d.tasa_depreciacion_anual}%</td>
-                    <td style="padding:8px;">${d.esta_activo ? '<span style="color:green;">Activo</span>' : '<span style="color:red;">Inactivo</span>'}</td>
-                    <td style="padding:8px; text-align:center;">
-                        <div style="display:flex; gap:4px; justify-content:center;">
-                            ${this.permisos.editar ? `<button class="btn-edit-tipo" data-id="${d.id_tipo}" style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">Editar</button>` : ''}
-                            ${d.esta_activo && this.permisos.borrar ? `<button class="btn-del-tipo" data-id="${d.id_tipo}" style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">Baja</button>` : ''}
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = data.map(d => {
+                const tagId = d.id_tag || d.id_tipo;
+                return `
+                    <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
+                        <td style="padding:8px; font-weight:600;">${d.nombre}</td>
+                        <td style="padding:8px;">${d.esta_activo ? '<span style="color:green;">Activa</span>' : '<span style="color:red;">Inactiva</span>'}</td>
+                        <td style="padding:8px; text-align:center;">
+                            <div style="display:flex; gap:4px; justify-content:center;">
+                                ${this.permisos.editar ? `<button class="btn-edit-tag" data-id="${tagId}" style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">Editar</button>` : ''}
+                                ${d.esta_activo && this.permisos.borrar ? `<button class="btn-del-tag" data-id="${tagId}" style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">Baja</button>` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="4" style="color:red; text-align:center; padding:15px;">Error al cargar datos</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="color:red; text-align:center; padding:15px;">Error al cargar datos</td></tr>';
         }
     }
 
