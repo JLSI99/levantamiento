@@ -118,9 +118,17 @@ export class HistorialResguardos {
         }
 
         const formData = new FormData(form);
+        const numeroInventarioVal = formData.get('numero_inventario');
+        const curpVal = formData.get('curp');
+
+        if (!numeroInventarioVal || !numeroInventarioVal.trim()) {
+            if (feedback) feedback.textContent = "Error: Ingrese un número de inventario válido.";
+            return;
+        }
+
         const payload = {
-            id_bien: formData.get('id_bien').trim(),
-            curp: formData.get('curp') ? formData.get('curp').trim().toUpperCase() : null,
+            numero_inventario: numeroInventarioVal.trim(),
+            curp: curpVal ? curpVal.trim().toUpperCase() : null,
             id_edificio: this.ubicacionActual.id_edificio,
             id_aula: this.ubicacionActual.id_aula,
             id_departamento: this.ubicacionActual.id_departamento

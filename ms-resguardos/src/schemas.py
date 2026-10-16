@@ -4,6 +4,8 @@ from uuid import UUID
 from datetime import date
 import re
 
+PATRON_CURP_RENAPO = r"^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
+
 class AsignacionBase(BaseModel):
     numero_inventario: str = Field(..., description="Número de inventario único del activo físico")
     curp: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
@@ -15,9 +17,8 @@ class AsignacionBase(BaseModel):
     @classmethod
     def validar_formato_curp(cls, v: str) -> str:
         v = v.upper().strip()
-        pattern = r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$"
-        if not re.match(pattern, v):
-            raise ValueError("El formato del CURP es inválido.")
+        if not re.match(PATRON_CURP_RENAPO, v):
+            raise ValueError("El formato del CURP es inválido ante los estándares de RENAPO.")
         return v
 
 class AsignacionCreate(AsignacionBase):
@@ -38,8 +39,7 @@ class AsignacionUpdate(BaseModel):
         if v is None:
             return v
         v = v.upper().strip()
-        pattern = r"^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$"
-        if not re.match(pattern, v):
+        if not re.match(PATRON_CURP_RENAPO, v):
             raise ValueError("El formato del CURP es inválido.")
         return v
 

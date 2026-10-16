@@ -37,21 +37,6 @@ def validar_magic_bytes(header: bytes) -> str:
         )
     
 # ENDPOINTS: BIENES (ACTIVOS FIJOS)
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from sqlalchemy import select
-from sqlalchemy.orm import selectinload
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
-
-from src import models, schemas
-from src.database import get_db
-from src.dependencies.rate_limiter import limiter
-from src.dependencies.validar_rol_y_firma import require_capability
-
-router = APIRouter(prefix="/bienes", tags=["Bienes"])
-
-
 @router.post(
     "", 
     response_model=schemas.BienOut, 
