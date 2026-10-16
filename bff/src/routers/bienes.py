@@ -146,11 +146,20 @@ async def crear_nuevo_bien(
     try:
         payload = bien_in.model_dump(mode="json")
         response = await client.post(MS_BIENES_ROUTE, headers=headers, json=payload)
+        
         if response.status_code != status.HTTP_201_CREATED:
-            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+            try:
+                error_detail = response.json().get("detail")
+            except Exception:
+                error_detail = response.text or "Error interno en el microservicio de bienes."
+            raise HTTPException(status_code=response.status_code, detail=error_detail)
+            
         return response.json()
     except httpx.RequestError as e:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, 
+            detail=f"Servicio de bienes no disponible: {str(e)}"
+        )
 
 @router.get("/por-inventario/{numero_inventario}", response_model=schemas_bienes.BienOutBFF, status_code=status.HTTP_200_OK)
 async def obtener_bien_por_numero_inventario(

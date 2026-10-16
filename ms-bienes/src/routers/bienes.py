@@ -37,6 +37,21 @@ def validar_magic_bytes(header: bytes) -> str:
         )
     
 # ENDPOINTS: BIENES (ACTIVOS FIJOS)
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+
+from src import models, schemas
+from src.database import get_db
+from src.dependencies.rate_limiter import limiter
+from src.dependencies.validar_rol_y_firma import require_capability
+
+router = APIRouter(prefix="/bienes", tags=["Bienes"])
+
+
 @router.post(
     "", 
     response_model=schemas.BienOut, 
@@ -80,14 +95,25 @@ async def crear_bien(
     
     try:
         await db.commit()
-        await db.refresh(nuevo_bien)
-        return nuevo_bien
     except IntegrityError:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, 
             detail="Ya existe un activo registrado con este número de inventario o número de serie."
         )
+
+    stmt = (
+        select(models.Bien)
+        .where(models.Bien.id_bien == nuevo_bien.id_bien)
+        .options(
+            selectinload(models.Bien.tipos),
+            selectinload(models.Bien.imagenes)
+        )
+    )
+    result_bien = await db.execute(stmt)
+    nuevo_bien_cargado = result_bien.scalar_one()
+
+    return nuevo_bien_cargado
 
 @router.get(
     "", 

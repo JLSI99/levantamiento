@@ -27,4 +27,4 @@ cd ms-usuarios-y-autenticacion && docker compose down -v && cd ..
 echo "--- Deteniendo ms observabilidad ---"
 cd ms-observabilidad && docker compose down -v && cd ..
 
-echo "=== ECOSISTEMA LIMPIO ==="
+echo "=== ECOSISTEMA LIMPIO ===" 

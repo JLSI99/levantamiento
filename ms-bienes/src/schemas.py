@@ -103,14 +103,22 @@ class BienUpdate(BaseModel):
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None 
 
-    @field_validator('numero_inventario', 'serie', 'modelo', 'marca', 'descripcion')
+    @field_validator('numero_inventario', 'descripcion')
     @classmethod
-    def limpiar_espacios_parciales(cls, v: Optional[str]) -> Optional[str]:
+    def limpiar_obligatorios(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             v = v.strip()
             if not v:
                 raise ValueError('El campo enviado no puede contener únicamente espacios en blanco.')
         return v
+
+    @field_validator('serie', 'modelo', 'marca')
+    @classmethod
+    def sanitizar_opcionales_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            return v if v else None
+        return None
 
 class BienOut(BienBase):
     id_bien: UUID

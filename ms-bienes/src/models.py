@@ -17,7 +17,6 @@ class Bien(Base):
     __tablename__ = "bienes"
 
     id_bien = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    # Nuevo atributo de número de inventario (único y indexado para consultas eficientes)
     numero_inventario = Column(String(50), unique=True, nullable=False, index=True)
     
     serie = Column(String(50), unique=True, nullable=True, index=True) 

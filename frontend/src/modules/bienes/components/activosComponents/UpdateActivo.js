@@ -16,7 +16,6 @@ export class UpdateActivo {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        // Reiniciamos el controlador de aborto si se re-renderiza
         if (this._abortController.signal.aborted) {
             this._abortController = new AbortController();
         }
@@ -148,14 +147,19 @@ export class UpdateActivo {
                 const selectElement = document.getElementById('select-update-tipos');
                 const tiposIds = Array.from(selectElement.selectedOptions).map(opt => opt.value);
 
+                const serieVal = formData.get('serie');
+                const marcaVal = formData.get('marca');
+                const modeloVal = formData.get('modelo');
+                const fechaVal = formData.get('fecha_adquisicion');
+
                 const payload = {
                     numero_inventario: formData.get('numero_inventario').trim(),
                     descripcion: formData.get('descripcion').trim(),
-                    serie: formData.get('serie').trim() || null,
-                    marca: formData.get('marca').trim() || null,
-                    modelo: formData.get('modelo').trim() || null,
+                    serie: serieVal && serieVal.trim() !== '' ? serieVal.trim() : null,
+                    marca: marcaVal && marcaVal.trim() !== '' ? marcaVal.trim() : null,
+                    modelo: modeloVal && modeloVal.trim() !== '' ? modeloVal.trim() : null,
                     costo: parseFloat(formData.get('costo')),
-                    fecha_adquisicion: formData.get('fecha_adquisicion') || null,
+                    fecha_adquisicion: fechaVal && fechaVal.trim() !== '' ? fechaVal.trim() : null,
                     tipos_ids: tiposIds
                 };
 

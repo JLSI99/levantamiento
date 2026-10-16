@@ -103,6 +103,14 @@ class BienCreateBFF(BaseModel):
             raise ValueError('Este campo obligatorio no puede estar vacío.')
         return v
 
+    @field_validator('serie', 'modelo', 'marca')
+    @classmethod
+    def sanitizar_opcionales(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            return v if v else None
+        return None
+
 class BienUpdateBFF(BaseModel):
     numero_inventario: Optional[str] = Field(None, min_length=1, max_length=50)
     serie: Optional[str] = Field(None, max_length=50)
@@ -113,11 +121,19 @@ class BienUpdateBFF(BaseModel):
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None
 
-    @field_validator('numero_inventario', 'serie', 'modelo', 'marca', 'descripcion')
+    @field_validator('numero_inventario', 'descripcion')
     @classmethod
-    def limpiar_espacios_parciales(cls, v: Optional[str]) -> Optional[str]:
+    def limpiar_obligatorios_update(cls, v: Optional[str]) -> Optional[str]:
         if v is not None:
             v = v.strip()
             if not v:
-                raise ValueError('El campo enviado no puede contener únicamente espacios en blanco.')
+                raise ValueError('El campo no puede estar vacío.')
         return v
+
+    @field_validator('serie', 'modelo', 'marca')
+    @classmethod
+    def sanitizar_opcionales_update(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            return v if v else None
+        return None

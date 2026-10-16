@@ -11,14 +11,18 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from src.routers import bienes, tipobienes
-from src.database import engine
+from src.database import engine, Base
 import src.auditoria
+import src.models
 
-MEDIA_DIR=os.getenv("MEDIA_DIR","/app/media")
+MEDIA_DIR = os.getenv("MEDIA_DIR", "/app/media")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     print("🧠 Inicializando Microservicio de Activos Universitarios (Gestión de Bienes)...")
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    print("✅ Tablas relacionales y auditoría verificadas en PostgreSQL.")
     yield
     print("🛑 Drenando sockets y liberando pools de conexiones en ms-bienes...")
     await engine.dispose()
