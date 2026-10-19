@@ -9,31 +9,43 @@ export class CrudActivos {
         this.tableContainerId = tableContainerId;
         this.permisos = permisos;
         this._abortController = new AbortController();
-        this.tipos = [];
+
+        this.onActivosChanged = null;
     }
 
     render() {
         const formContainer = document.getElementById(this.formContainerId);
-        if (!formContainer) return;
+        const tableContainer = document.getElementById(this.tableContainerId);
+        if (!formContainer || !tableContainer) return;
 
         formContainer.innerHTML = `
             <div id="create-activo-container"></div>
             <div id="update-activo-container" style="display:none;"></div>
         `;
 
-        this.deleteActivo = new DeleteActivo(() => this.cargarDatos());
+        tableContainer.innerHTML = `
+            <div id="read-activo-container"></div>
+        `;
+
+        this.deleteActivo = new DeleteActivo(() => {
+            this.cargarDatos();
+            if (this.onActivosChanged) this.onActivosChanged();
+        });
 
         this.readActivos = new ReadActivos(
-            this.tableContainerId,
+            'read-activo-container',
             this.permisos,
             (id, item) => this.activarEdicion(id, item),
-            (id) => this.deleteActivo.darDeBaja(id)   
+            (id) => this.deleteActivo.darDeBaja(id)
         );
 
         this.createActivo = new CreateActivo(
             'create-activo-container',
             this.permisos,
-            () => this.cargarDatos()
+            () => {
+                this.cargarDatos();
+                if (this.onActivosChanged) this.onActivosChanged();
+            }
         );
 
         this.updateActivo = new UpdateActivo(
@@ -42,6 +54,7 @@ export class CrudActivos {
             () => {
                 this.desactivarEdicion();
                 this.cargarDatos();
+                if (this.onActivosChanged) this.onActivosChanged();
             },
             () => this.desactivarEdicion()
         );
@@ -50,26 +63,42 @@ export class CrudActivos {
         this.createActivo.render();
     }
 
-    actualizarSelectTipos(tipos) {
-        this.tipos = tipos;
-        if (this.createActivo) this.createActivo.actualizarSelectTipos(tipos);
-        if (this.updateActivo) this.updateActivo.actualizarSelectTipos(tipos);
-    }
-
     cargarDatos() {
         if (this.readActivos) this.readActivos.cargarDatos();
     }
 
+    actualizarSelectTipos(tipos) {
+        if (this.createActivo?.actualizarSelectTipos) {
+            this.createActivo.actualizarSelectTipos(tipos);
+        }
+        if (this.updateActivo?.actualizarSelectTipos) {
+            this.updateActivo.actualizarSelectTipos(tipos);
+        }
+    }
+
+    actualizarSelectTags(tags) {
+        if (this.createActivo?.actualizarSelectTags) {
+            this.createActivo.actualizarSelectTags(tags);
+        }
+        if (this.updateActivo?.actualizarSelectTags) {
+            this.updateActivo.actualizarSelectTags(tags);
+        }
+    }
+
     activarEdicion(id, item) {
-        document.getElementById('create-activo-container').style.display = 'none';
-        document.getElementById('update-activo-container').style.display = 'block';
-        this.updateActivo.render(item); 
+        const createContainer = document.getElementById('create-activo-container');
+        const updateContainer = document.getElementById('update-activo-container');
+        if (createContainer) createContainer.style.display = 'none';
+        if (updateContainer) updateContainer.style.display = 'block';
+        if (this.updateActivo) this.updateActivo.render(item);
     }
 
     desactivarEdicion() {
-        document.getElementById('update-activo-container').style.display = 'none';
-        document.getElementById('create-activo-container').style.display = 'block';
-        this.updateActivo.limpiar();
+        const createContainer = document.getElementById('create-activo-container');
+        const updateContainer = document.getElementById('update-activo-container');
+        if (updateContainer) updateContainer.style.display = 'none';
+        if (createContainer) createContainer.style.display = 'block';
+        if (this.updateActivo) this.updateActivo.limpiar();
     }
 
     unmount() {

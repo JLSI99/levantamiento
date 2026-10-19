@@ -10,7 +10,7 @@ from src.dependencies.rate_limiter import limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from src.routers import bienes, tipobienes
+from src.routers import bienes, tipobienes, tagsBienes, imagenesBienes
 from src.database import engine, Base
 import src.auditoria
 import src.models
@@ -61,4 +61,6 @@ app.add_middleware(
 app.mount("/media", StaticFiles(directory=MEDIA_DIR), name="media")
 
 app.include_router(tipobienes.router)
+app.include_router(tagsBienes.router)
 app.include_router(bienes.router)
+app.include_router(imagenesBienes.router)

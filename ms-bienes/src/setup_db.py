@@ -12,10 +12,14 @@ from src import models
 UUID_TIPO_COMPUTO = uuid.UUID("b3c3d3e3-f3a3-4b3c-9d3e-1f3a3b3c3d3e")
 UUID_TIPO_MOBILIARIO = uuid.UUID("c4d4e4f4-a4b4-4c4d-8e4f-2a4b4c4d4e4f")
 
+UUID_TAG_COMPUTADORA = uuid.UUID("e1e1e1e1-1111-4111-8111-111111111111")
+UUID_TAG_SMARTPHONE = uuid.UUID("e2e2e2e2-2222-4222-8222-222222222222")
+UUID_TAG_MOBILIARIO = uuid.UUID("e3e3e3e3-3333-4333-8333-333333333333")
+
 BIENES_SEMILLA = {
     "tipos_bien": [
         {
-            "id_tipo": uuid.UUID("b3c3d3e3-f3a3-4b3c-9d3e-1f3a3b3c3d3e"),
+            "id_tipo": UUID_TIPO_COMPUTO,
             "nombre": "Equipo de Cómputo y Tecnologías de Información",
             "tasa_depreciacion_anual": Decimal("30.00")
         },
@@ -23,6 +27,20 @@ BIENES_SEMILLA = {
             "id_tipo": UUID_TIPO_MOBILIARIO,
             "nombre": "Mobiliario y Equipo de Administración",
             "tasa_depreciacion_anual": Decimal("10.00")
+        }
+    ],
+    "tags_bien": [
+        {
+            "id_tag": UUID_TAG_COMPUTADORA,
+            "nombre": "Computadora"
+        },
+        {
+            "id_tag": UUID_TAG_SMARTPHONE,
+            "nombre": "Smartphone"
+        },
+        {
+            "id_tag": UUID_TAG_MOBILIARIO,
+            "nombre": "Mobiliario"
         }
     ],
     "bienes": [
@@ -35,7 +53,8 @@ BIENES_SEMILLA = {
             "descripcion": "Laptop institucional asignada al área de desarrollo de sistemas",
             "costo": Decimal("18500.00"),
             "fecha_adquisicion": datetime.date(2026, 1, 15),
-            "tipos_asociados": [UUID_TIPO_COMPUTO]
+            "tipos_asociados": [UUID_TIPO_COMPUTO],
+            "tags_asociados": [UUID_TAG_COMPUTADORA, UUID_TAG_MOBILIARIO]
         },
         {
             "id_bien": uuid.UUID("66666666-7777-8888-9999-000000000000"),
@@ -46,7 +65,8 @@ BIENES_SEMILLA = {
             "descripcion": "Silla ergonómica para estación de trabajo de ingeniería",
             "costo": Decimal("24999.00"),
             "fecha_adquisicion": datetime.date(2026, 2, 20),
-            "tipos_asociados": [UUID_TIPO_MOBILIARIO]
+            "tipos_asociados": [UUID_TIPO_MOBILIARIO],
+            "tags_asociados": [UUID_TAG_MOBILIARIO]
         }
     ]
 }
@@ -84,6 +104,27 @@ async def setup():
                 
                 tipos_en_memoria[t_seed["id_tipo"]] = tipo_db
 
+            print("🌱 Sembrando catálogo base de etiquetas (tags)...")
+            tags_en_memoria = {}
+
+            for tag_seed in BIENES_SEMILLA["tags_bien"]:
+                stmt = select(models.TagBien).where(models.TagBien.id_tag == tag_seed["id_tag"])
+                res = await session.execute(stmt)
+                tag_db = res.scalar()
+
+                if not tag_db:
+                    tag_db = models.TagBien(
+                        id_tag=tag_seed["id_tag"],
+                        nombre=tag_seed["nombre"],
+                        esta_activo=True
+                    )
+                    session.add(tag_db)
+                    print(f"   -> Tag creado: {tag_seed['nombre']}")
+                else:
+                    print(f"   -> Tag preexistente detectado: {tag_seed['nombre']}")
+
+                tags_en_memoria[tag_seed["id_tag"]] = tag_db
+
             await session.flush()
 
             print("🌱 Sembrando registros de bienes e inventario institucional...")
@@ -110,6 +151,11 @@ async def setup():
                         if instancia_tipo:
                             nuevo_bien.tipos.append(instancia_tipo)
                     
+                    for tag_uuid in b_seed.get("tags_asociados", []):
+                        instancia_tag = tags_en_memoria.get(tag_uuid)
+                        if instancia_tag:
+                            nuevo_bien.tags.append(instancia_tag)
+
                     session.add(nuevo_bien)
                     print(f"   -> Bien sembrado: {b_seed['marca']} {b_seed['modelo']} (Inv: {b_seed['numero_inventario']})")
                 else:

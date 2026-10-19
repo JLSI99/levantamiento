@@ -6,7 +6,6 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property 
 from src.database import Base
 
-# Tabla intermedia Bienes <-> Tipos de Bien
 bien_tipo_bien = Table(
     "bien_tipo_bien",
     Base.metadata,
@@ -14,7 +13,6 @@ bien_tipo_bien = Table(
     Column("id_tipo", UUID(as_uuid=True), ForeignKey("tipos_bien.id_tipo", ondelete="CASCADE"), primary_key=True),
 )
 
-# Tabla intermedia Bienes <-> Tags (Etiquetas)
 bien_tag_bien = Table(
     "bien_tag_bien",
     Base.metadata,

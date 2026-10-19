@@ -1,5 +1,5 @@
 import { CreateTagsBien } from '/src/modules/bienes/components/tagsBienComponents/CreateTagsBien.js';
-import { ReadTagsbien } from '/src/modules/bienes/components/tagsBienComponents/ReadTagsbien.js';
+import { ReadTagsBien } from '/src/modules/bienes/components/tagsBienComponents/ReadTagsBien.js';
 import { UpdateTagsBien } from '/src/modules/bienes/components/tagsBienComponents/UpdateTagsBien.js';
 import { DeleteTagsBien } from '/src/modules/bienes/components/tagsBienComponents/DeleteTagsBien.js';
 
@@ -32,7 +32,7 @@ export class CrudTagsBien {
             if (this.onTagsChanged) this.onTagsChanged();
         });
 
-        this.readTagsbien = new ReadTagsbien(
+        this.readTagsBien = new ReadTagsBien(
             'read-tag-container',
             this.permisos,
             (id, item) => this.activarEdicion(id, item),
@@ -60,12 +60,12 @@ export class CrudTagsBien {
             () => this.desactivarEdicion()
         );
 
-        this.readTagsbien.render();
+        this.readTagsBien.render();
         this.createTagsBien.render();
     }
 
     cargarDatos() {
-        if (this.readTagsbien) this.readTagsbien.cargarDatos();
+        if (this.readTagsBien) this.readTagsBien.cargarDatos();
     }
 
     activarEdicion(id, item) {
@@ -86,7 +86,7 @@ export class CrudTagsBien {
 
     unmount() {
         this._abortController.abort();
-        this.readTagsbien?.unmount();
+        this.readTagsBien?.unmount();
         this.createTagsBien?.unmount();
         this.updateTagsBien?.unmount();
     }

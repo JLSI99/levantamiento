@@ -8,11 +8,15 @@ export class UpdateActivo {
         this.onCancel = onCancel;
         this._abortController = new AbortController();
         this.tipos = [];
+        this.tags = [];
+        this.tagsSeleccionados = [];
         this.item = null;
     }
 
-    render(item) {
+    async render(item) {
         this.item = item;
+        this.tagsSeleccionados = item?.tags ? item.tags.map(t => String(t.id_tag)) : [];
+
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
@@ -68,8 +72,13 @@ export class UpdateActivo {
                     </div>
 
                     <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tipo de Bien *</label>
-                    <select name="tipos_ids" id="select-update-tipos" multiple required 
-                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:80px; box-sizing:border-box;">
+                    <select name="tipos_ids" id="select-update-tipos" required 
+                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                    </select>
+
+                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Etiquetas / Tags (Múltiple, Mantenga presionado Ctrl/Cmd para varias)</label>
+                    <select id="select-update-tags" multiple 
+                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; height:90px; box-sizing:border-box;">
                     </select>
 
                     <div style="margin-bottom:15px; border-top:1px solid #ffe0b2; padding-top:10px;">
@@ -93,7 +102,30 @@ export class UpdateActivo {
         `;
 
         this.bindEvents();
-        this.renderSelectTipos();
+
+        if (this.tipos.length === 0 || this.tags.length === 0) {
+            await this.cargarCatalogos();
+        } else {
+            this.renderSelectTipos();
+            this.renderSelectTags();
+        }
+    }
+
+    async cargarCatalogos() {
+        try {
+            if (this.tipos.length === 0) {
+                const resTipos = await bienesService.listarTiposBien(100, 0, false);
+                this.tipos = Array.isArray(resTipos) ? resTipos : (resTipos?.data || []);
+            }
+            if (this.tags.length === 0) {
+                const resTags = await bienesService.listarTagsBien(100, 0, false);
+                this.tags = Array.isArray(resTags) ? resTags : (resTags?.data || []);
+            }
+            this.renderSelectTipos();
+            this.renderSelectTags();
+        } catch (error) {
+            console.error('Error al cargar catálogos desde UpdateActivo:', error);
+        }
     }
 
     renderGaleriaImagenes(imagenes) {
@@ -118,20 +150,45 @@ export class UpdateActivo {
     }
 
     actualizarSelectTipos(tipos) {
-        this.tipos = tipos;
+        this.tipos = Array.isArray(tipos) ? tipos : (tipos?.data || []);
         this.renderSelectTipos();
+    }
+
+    actualizarSelectTags(tags) {
+        this.tags = Array.isArray(tags) ? tags : (tags?.data || []);
+        this.renderSelectTags();
     }
 
     renderSelectTipos() {
         const select = document.getElementById('select-update-tipos');
         if (!select) return;
         
+        if (this.tipos.length === 0) {
+            select.innerHTML = '<option value="" disabled>No hay tipos disponibles</option>';
+            return;
+        }
+
         select.innerHTML = this.tipos.map(t => `<option value="${t.id_tipo}">${t.nombre}</option>`).join('');
         
-        if (this.item && this.item.tipos) {
-            const idsTipos = this.item.tipos.map(t => String(t.id_tipo));
+        if (this.item && this.item.tipos && this.item.tipos.length > 0) {
+            select.value = String(this.item.tipos[0].id_tipo);
+        }
+    }
+
+    renderSelectTags() {
+        const select = document.getElementById('select-update-tags');
+        if (!select) return;
+
+        if (this.tags.length === 0) {
+            select.innerHTML = '<option value="" disabled>No hay etiquetas disponibles</option>';
+            return;
+        }
+
+        select.innerHTML = this.tags.map(t => `<option value="${t.id_tag}">${t.nombre}</option>`).join('');
+
+        if (this.tagsSeleccionados.length > 0) {
             Array.from(select.options).forEach(opt => {
-                opt.selected = idsTipos.includes(String(opt.value));
+                opt.selected = this.tagsSeleccionados.includes(String(opt.value));
             });
         }
     }
@@ -144,8 +201,13 @@ export class UpdateActivo {
                 if (!this.item) return;
 
                 const formData = new FormData(form);
-                const selectElement = document.getElementById('select-update-tipos');
-                const tiposIds = Array.from(selectElement.selectedOptions).map(opt => opt.value);
+                const selectTipos = document.getElementById('select-update-tipos');
+                const tipoIdSeleccionado = selectTipos ? selectTipos.value : null;
+
+                const selectTags = document.getElementById('select-update-tags');
+                const tagsIdsSeleccionados = selectTags 
+                    ? Array.from(selectTags.selectedOptions).map(opt => opt.value)
+                    : [];
 
                 const serieVal = formData.get('serie');
                 const marcaVal = formData.get('marca');
@@ -160,7 +222,8 @@ export class UpdateActivo {
                     modelo: modeloVal && modeloVal.trim() !== '' ? modeloVal.trim() : null,
                     costo: parseFloat(formData.get('costo')),
                     fecha_adquisicion: fechaVal && fechaVal.trim() !== '' ? fechaVal.trim() : null,
-                    tipos_ids: tiposIds
+                    tipos_ids: tipoIdSeleccionado ? [tipoIdSeleccionado] : [],
+                    tags_ids: tagsIdsSeleccionados
                 };
 
                 try {
@@ -209,6 +272,7 @@ export class UpdateActivo {
 
     limpiar() {
         this.item = null;
+        this.tagsSeleccionados = [];
         document.getElementById('form-update-activo')?.reset();
     }
 

@@ -7,12 +7,14 @@ export class CreateActivo {
         this.onSuccess = onSuccess;
         this._abortController = new AbortController();
         this.tipos = [];
+        this.tags = [];
         this.tipoSeleccionado = null;
+        this.tagsSeleccionados = [];
 
         this.handleOutsideClick = this._handleOutsideClick.bind(this);
     }
 
-    render() {
+    async render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
@@ -61,6 +63,7 @@ export class CreateActivo {
                         </div>
                     </div>
 
+                    <!-- SELECTOR TIPO DE BIEN -->
                     <div style="margin-bottom:15px; position:relative;" id="dropdown-tipos-container">
                         <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tipo de Bien *</label>
                         <div id="dropdown-toggle-btn" style="width:100%; min-height:34px; padding:6px 10px; border:1px solid #ccc; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box;">
@@ -70,6 +73,21 @@ export class CreateActivo {
                         
                         <div id="dropdown-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
                             <div id="dropdown-options-list" style="padding:4px 0;"></div>
+                        </div>
+                    </div>
+
+                    <!-- SELECTOR DE TAGS / ETIQUETAS (MULTISELECCIÓN) -->
+                    <div style="margin-bottom:15px; position:relative;" id="dropdown-tags-container">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Etiquetas / Tags (Opcional - Múltiple)</label>
+                        <div id="dropdown-tags-toggle-btn" style="width:100%; min-height:34px; padding:4px 8px; border:1px solid #ccc; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box;">
+                            <div id="dropdown-tags-placeholder" style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">
+                                <span style="color:#757575;">Seleccionar etiquetas...</span>
+                            </div>
+                            <span style="font-size:10px; color:#555; margin-left:6px;">▼</span>
+                        </div>
+                        
+                        <div id="dropdown-tags-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
+                            <div id="dropdown-tags-options-list" style="padding:4px 0;"></div>
                         </div>
                     </div>
 
@@ -87,12 +105,40 @@ export class CreateActivo {
         `;
 
         this.bindEvents();
-        this.renderSelectTipos();
+
+        if (this.tipos.length === 0 || this.tags.length === 0) {
+            await this.cargarCatalogos();
+        } else {
+            this.renderSelectTipos();
+            this.renderSelectTags();
+        }
+    }
+
+    async cargarCatalogos() {
+        try {
+            if (this.tipos.length === 0) {
+                const resTipos = await bienesService.listarTiposBien(100, 0, false);
+                this.tipos = Array.isArray(resTipos) ? resTipos : (resTipos?.data || []);
+            }
+            if (this.tags.length === 0) {
+                const resTags = await bienesService.listarTagsBien(100, 0, false);
+                this.tags = Array.isArray(resTags) ? resTags : (resTags?.data || []);
+            }
+            this.renderSelectTipos();
+            this.renderSelectTags();
+        } catch (error) {
+            console.error('Error al cargar catálogos desde CreateActivo:', error);
+        }
     }
 
     actualizarSelectTipos(tipos) {
-        this.tipos = tipos;
+        this.tipos = Array.isArray(tipos) ? tipos : (tipos?.data || []);
         this.renderSelectTipos();
+    }
+
+    actualizarSelectTags(tags) {
+        this.tags = Array.isArray(tags) ? tags : (tags?.data || []);
+        this.renderSelectTags();
     }
 
     renderSelectTipos() {
@@ -116,6 +162,28 @@ export class CreateActivo {
         this._actualizarTextoBotonDropdown();
     }
 
+    renderSelectTags() {
+        const optionsList = document.getElementById('dropdown-tags-options-list');
+        if (!optionsList) return;
+
+        if (this.tags.length === 0) {
+            optionsList.innerHTML = `<div style="padding:8px 12px; font-size:12px; color:#757575;">No hay etiquetas disponibles</div>`;
+            return;
+        }
+
+        optionsList.innerHTML = this.tags.map(t => {
+            const isSelected = this.tagsSeleccionados.includes(String(t.id_tag));
+            return `
+                <div class="dropdown-tag-option-item" data-id="${t.id_tag}" style="padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:${isSelected ? '#e8f5e9' : 'transparent'}; color:${isSelected ? '#2e7d32' : '#212121'}; font-weight:${isSelected ? '600' : 'normal'};">
+                    <span>${this._escapeHtml(t.nombre)}</span>
+                    ${isSelected ? '<span style="font-size:11px; color:#2e7d32;">✓</span>' : ''}
+                </div>
+            `;
+        }).join('');
+
+        this._actualizarChipsTags();
+    }
+
     _actualizarTextoBotonDropdown() {
         const placeholder = document.getElementById('dropdown-placeholder');
         if (!placeholder) return;
@@ -130,22 +198,57 @@ export class CreateActivo {
         }
     }
 
+    _actualizarChipsTags() {
+        const container = document.getElementById('dropdown-tags-placeholder');
+        if (!container) return;
+
+        if (this.tagsSeleccionados.length === 0) {
+            container.innerHTML = `<span style="color:#757575;">Seleccionar etiquetas...</span>`;
+            return;
+        }
+
+        container.innerHTML = this.tagsSeleccionados.map(idTag => {
+            const tagObj = this.tags.find(t => String(t.id_tag) === String(idTag));
+            const nombre = tagObj ? tagObj.nombre : 'Tag';
+            return `
+                <span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; border-radius:12px; padding:2px 8px; font-size:11px; font-weight:600; display:inline-flex; align-items:center; gap:4px;">
+                    ${this._escapeHtml(nombre)}
+                    <span class="btn-remove-tag-chip" data-id="${idTag}" style="cursor:pointer; color:#2e7d32; font-weight:bold;">&times;</span>
+                </span>
+            `;
+        }).join('');
+    }
+
     _handleOutsideClick(e) {
-        const container = document.getElementById('dropdown-tipos-container');
-        const panel = document.getElementById('dropdown-panel');
-        if (container && panel && !container.contains(e.target)) {
-            panel.style.display = 'none';
+        const containerTipos = document.getElementById('dropdown-tipos-container');
+        const panelTipos = document.getElementById('dropdown-panel');
+        if (containerTipos && panelTipos && !containerTipos.contains(e.target)) {
+            panelTipos.style.display = 'none';
+        }
+
+        const containerTags = document.getElementById('dropdown-tags-container');
+        const panelTags = document.getElementById('dropdown-tags-panel');
+        if (containerTags && panelTags && !containerTags.contains(e.target)) {
+            panelTags.style.display = 'none';
         }
     }
 
     bindEvents() {
         const toggleBtn = document.getElementById('dropdown-toggle-btn');
         const panel = document.getElementById('dropdown-panel');
-        
         if (toggleBtn && panel) {
             toggleBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+            });
+        }
+
+        const toggleTagsBtn = document.getElementById('dropdown-tags-toggle-btn');
+        const panelTags = document.getElementById('dropdown-tags-panel');
+        if (toggleTagsBtn && panelTags) {
+            toggleTagsBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panelTags.style.display = panelTags.style.display === 'block' ? 'none' : 'block';
             });
         }
 
@@ -159,6 +262,35 @@ export class CreateActivo {
                     this.tipoSeleccionado = item.getAttribute('data-id');
                     this.renderSelectTipos();
                     if (panel) panel.style.display = 'none';
+                }
+            });
+        }
+
+        const tagsOptionsList = document.getElementById('dropdown-tags-options-list');
+        if (tagsOptionsList) {
+            tagsOptionsList.addEventListener('click', (e) => {
+                const item = e.target.closest('.dropdown-tag-option-item');
+                if (item) {
+                    const tagId = item.getAttribute('data-id');
+                    if (this.tagsSeleccionados.includes(tagId)) {
+                        this.tagsSeleccionados = this.tagsSeleccionados.filter(id => id !== tagId);
+                    } else {
+                        this.tagsSeleccionados.push(tagId);
+                    }
+                    this.renderSelectTags();
+                }
+            });
+        }
+
+        const tagsPlaceholder = document.getElementById('dropdown-tags-placeholder');
+        if (tagsPlaceholder) {
+            tagsPlaceholder.addEventListener('click', (e) => {
+                const removeBtn = e.target.closest('.btn-remove-tag-chip');
+                if (removeBtn) {
+                    e.stopPropagation();
+                    const tagId = removeBtn.getAttribute('data-id');
+                    this.tagsSeleccionados = this.tagsSeleccionados.filter(id => id !== tagId);
+                    this.renderSelectTags();
                 }
             });
         }
@@ -187,7 +319,8 @@ export class CreateActivo {
                     modelo: modeloVal && modeloVal.trim() !== '' ? modeloVal.trim() : null,
                     costo: parseFloat(formData.get('costo')),
                     fecha_adquisicion: fechaVal && fechaVal.trim() !== '' ? fechaVal.trim() : null,
-                    tipos_ids: [this.tipoSeleccionado]
+                    tipos_ids: [this.tipoSeleccionado],
+                    tags_ids: this.tagsSeleccionados
                 };
 
                 try {
@@ -206,7 +339,9 @@ export class CreateActivo {
                     alert('Activo indexado exitosamente.');
                     form.reset();
                     this.tipoSeleccionado = null;
+                    this.tagsSeleccionados = [];
                     this.renderSelectTipos();
+                    this.renderSelectTags();
                     if (this.onSuccess) this.onSuccess();
                 } catch (err) {
                     alert('Error: ' + (err.response?.data?.detail || err.message));

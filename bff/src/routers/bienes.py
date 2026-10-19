@@ -12,6 +12,11 @@ router = APIRouter()
 MS_BIENES_URL = os.getenv("MS_BIENES_URL", "http://ms_bienes_api:8000").rstrip("/")
 MS_BIENES_ROUTE = f"{MS_BIENES_URL}/bienes"
 MS_TIPOS_ROUTE  = f"{MS_BIENES_URL}/bienes/tipos-bien" 
+MS_TAGS_ROUTE   = f"{MS_BIENES_URL}/bienes/tags-bien"
+
+# ==========================================
+# ENDPOINTS: TIPOS DE BIEN
+# ==========================================
 
 @router.get("/tipos-bien", response_model=schemas_bienes.TipoBienPaginatedOutBFF, status_code=status.HTTP_200_OK)
 async def listar_tipos_bien_revisor(
@@ -108,6 +113,110 @@ async def dar_de_baja_tipo_bien(
         return
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+# ==========================================
+# ENDPOINTS: TAGS / ETIQUETAS DE BIEN
+# ==========================================
+
+@router.get("/tags-bien", response_model=schemas_bienes.TagBienPaginatedOutBFF, status_code=status.HTTP_200_OK)
+async def listar_tags_bien_revisor(
+    request: Request,
+    limit: int = Query(10, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    incluir_inactivos: bool = Query(False),
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:leer"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+    
+    params = {
+        "limit": limit,
+        "offset": offset,
+        "incluir_inactivos": "true" if incluir_inactivos else "false"
+    }
+    
+    try:
+        response = await client.get(MS_TAGS_ROUTE, headers=headers, params=params)
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+@router.get("/tags-bien/{id_tag}", response_model=schemas_bienes.TagBienOutBFF, status_code=status.HTTP_200_OK)
+async def obtener_tag_bien_por_id(
+    request: Request, 
+    id_tag: UUID,
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:leer"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+
+    try:
+        response = await client.get(f"{MS_TAGS_ROUTE}/{id_tag}", headers=headers)
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+@router.post("/tags-bien", response_model=schemas_bienes.TagBienOutBFF, status_code=status.HTTP_201_CREATED)
+async def crear_tag_bien(
+    request: Request, 
+    tag_in: schemas_bienes.TagBienCreateBFF,
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:crear"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+
+    try:
+        payload = tag_in.model_dump(mode="json")
+        response = await client.post(MS_TAGS_ROUTE, headers=headers, json=payload)
+        if response.status_code != status.HTTP_201_CREATED:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+@router.patch("/tags-bien/{id_tag}", response_model=schemas_bienes.TagBienOutBFF, status_code=status.HTTP_200_OK)
+async def modificar_tag_bien(
+    request: Request, 
+    id_tag: UUID, 
+    tag_in: schemas_bienes.TagBienUpdateBFF,
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:editar"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+
+    try:
+        payload = tag_in.model_dump(mode="json", exclude_unset=True)
+        response = await client.patch(f"{MS_TAGS_ROUTE}/{id_tag}", headers=headers, json=payload)
+        if response.status_code != status.HTTP_200_OK:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return response.json()
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+@router.delete("/tags-bien/{id_tag}", status_code=status.HTTP_204_NO_CONTENT)
+async def dar_de_baja_tag_bien(
+    request: Request, 
+    id_tag: UUID,
+    token_payload: TokenPayload = Depends(RequireCapabilityBFF("bienes:borrar"))
+):
+    client: httpx.AsyncClient = request.app.state.http_client
+    headers = {"Authorization": f"Bearer {token_payload.raw_token}"}
+
+    try:
+        response = await client.delete(f"{MS_TAGS_ROUTE}/{id_tag}", headers=headers)
+        if response.status_code != status.HTTP_204_NO_CONTENT:
+            raise HTTPException(status_code=response.status_code, detail=response.json().get("detail"))
+        return
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
+
+# ==========================================
+# ENDPOINTS: BIENES (ACTIVOS FIJOS)
+# ==========================================
 
 @router.get("/", response_model=schemas_bienes.BienPaginatedOutBFF, status_code=status.HTTP_200_OK)
 async def listar_bienes_revisor(
@@ -231,7 +340,10 @@ async def dar_de_baja_bien(
     except httpx.RequestError as e:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(e))
 
-# ENDPOINTS DE ORQUESTACIÓN PARA GESTIÓN FOTOGRÁFICA (MULTIMEDIA)
+# ==========================================
+# ENDPOINTS: GESTIÓN FOTOGRÁFICA (MULTIMEDIA)
+# ==========================================
+
 @router.post(
     "/{id_bien}/imagenes", 
     response_model=List[schemas_bienes.ImagenBienOutBFF], 

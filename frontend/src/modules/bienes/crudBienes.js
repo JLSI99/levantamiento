@@ -122,8 +122,11 @@ export class CrudBienes {
         this.crudActivos = new CrudActivos('wrapper-form-activos', 'wrapper-tabla-activos', permisos);
         this.crudTagsBien = new CrudTagsBien('wrapper-form-tags', 'wrapper-tabla-tags', permisos);
 
+        // Sincronización de Tipos de Bien -> Formulario de Activos
         this.crudTiposBien.onTiposLoaded = (tipos) => {
-            this.crudActivos.actualizarSelectTipos(tipos);
+            if (this.crudActivos?.actualizarSelectTipos) {
+                this.crudActivos.actualizarSelectTipos(tipos);
+            }
         };
 
         this.crudTiposBien.onTiposChanged = () => {
@@ -131,8 +134,16 @@ export class CrudBienes {
             this.crudActivos.cargarDatos();
         };
 
+        // Sincronización de Etiquetas (Tags) -> Formulario de Activos
+        this.crudTagsBien.onTagsLoaded = (tags) => {
+            if (this.crudActivos?.actualizarSelectTags) {
+                this.crudActivos.actualizarSelectTags(tags);
+            }
+        };
+
         this.crudTagsBien.onTagsChanged = () => {
             this.crudTagsBien.cargarDatos();
+            this.crudActivos.cargarDatos();
         };
 
         this.crudTiposBien.render();

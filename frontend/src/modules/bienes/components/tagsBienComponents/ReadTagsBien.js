@@ -1,6 +1,6 @@
 import { bienesService } from '/src/services/bienes.js';
 
-export class ReadTagsbien {
+export class ReadTagsBien {
     constructor(containerId, permisos, onEdit, onDelete, onLoaded) {
         this.containerId = containerId;
         this.permisos = permisos;
@@ -63,11 +63,11 @@ export class ReadTagsbien {
         if (!tbody) return;
         try {
             const resp = await bienesService.listarTagsBien(100, 0, false);
-            const data = resp.data || [];
+            const data = Array.isArray(resp) ? resp : (resp?.data || []);
 
             this._cache.clear();
             data.forEach(d => {
-                const tagId = d.id_tag || d.id_tipo;
+                const tagId = String(d.id_tag || d.id_tipo);
                 this._cache.set(tagId, d);
             });
 
@@ -79,10 +79,10 @@ export class ReadTagsbien {
             }
 
             tbody.innerHTML = data.map(d => {
-                const tagId = d.id_tag || d.id_tipo;
+                const tagId = String(d.id_tag || d.id_tipo);
                 return `
                     <tr style="border-bottom:1px solid #e0e0e0; ${d.esta_activo ? '' : 'opacity:0.5;'}">
-                        <td style="padding:8px; font-weight:600;">${d.nombre}</td>
+                        <td style="padding:8px; font-weight:600;">${this._escapeHtml(d.nombre)}</td>
                         <td style="padding:8px;">${d.esta_activo ? '<span style="color:green;">Activa</span>' : '<span style="color:red;">Inactiva</span>'}</td>
                         <td style="padding:8px; text-align:center;">
                             <div style="display:flex; gap:4px; justify-content:center;">
@@ -94,8 +94,16 @@ export class ReadTagsbien {
                 `;
             }).join('');
         } catch (error) {
+            console.error('Error al cargar catálogo de etiquetas:', error);
             tbody.innerHTML = '<tr><td colspan="3" style="color:red; text-align:center; padding:15px;">Error al cargar datos</td></tr>';
         }
+    }
+
+    _escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
 
     unmount() {

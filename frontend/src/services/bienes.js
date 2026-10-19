@@ -1,9 +1,10 @@
 import bffClient from '/src/core/api/client.js';
 
 export const bienesService = {
+    // TIPOS DE BIEN
     async listarTiposBien(limit = 10, offset = 0, incluirInactivos = false) {
         try {
-            const response = await bffClient.get('/bienes/tipos-bien/', {
+            const response = await bffClient.get('/bienes/tipos-bien', {
                 params: { limit, offset, incluir_inactivos: incluirInactivos }
             });
             return response.data;
@@ -53,6 +54,60 @@ export const bienesService = {
         }
     },
 
+    // TAGS / ETIQUETAS DE BIEN
+    async listarTagsBien(limit = 10, offset = 0, incluirInactivos = false) {
+        try {
+            const response = await bffClient.get('/bienes/tags-bien', {
+                params: { limit, offset, incluir_inactivos: incluirInactivos }
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Error al recuperar el catálogo de etiquetas (tags):', error);
+            throw error;
+        }
+    },
+
+    async obtenerTagBienPorId(idTag) {
+        try {
+            const response = await bffClient.get(`/bienes/tags-bien/${idTag}`);
+            return response.data;
+        } catch (error) {
+            console.error(`Error al recuperar la etiqueta [ID: ${idTag}]:`, error);
+            throw error;
+        }
+    },
+
+    async crearTagBien(tagData) {
+        try {
+            const response = await bffClient.post('/bienes/tags-bien', tagData);
+            return response.data;
+        } catch (error) {
+            console.error('Error de persistencia al crear etiqueta (tag):', error);
+            throw error;
+        }
+    },
+
+    async modificarTagBien(idTag, camposModificados) {
+        try {
+            const response = await bffClient.patch(`/bienes/tags-bien/${idTag}`, camposModificados);
+            return response.data;
+        } catch (error) {
+            console.error(`Fallo en la modificación de la etiqueta [ID: ${idTag}]:`, error);
+            throw error;
+        }
+    },
+
+    async darDeBajaTagBien(idTag) {
+        try {
+            await bffClient.delete(`/bienes/tags-bien/${idTag}`);
+            return true;
+        } catch (error) {
+            console.error(`Error al dar de baja la etiqueta [ID: ${idTag}]:`, error);
+            throw error;
+        }
+    },
+
+    // BIENES (ACTIVOS FIJOS)
     async listarBienes(limit = 100, offset = 0, incluirInactivos = false) {
         try {
             const response = await bffClient.get('/bienes/', {
@@ -123,6 +178,7 @@ export const bienesService = {
         }
     },
 
+    // GESTIÓN FOTOGRÁFICA (MULTIMEDIA)
     async subirImagenBien(idBien, fileOrFiles) {
         try {
             const formData = new FormData();
