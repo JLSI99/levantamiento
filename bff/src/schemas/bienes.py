@@ -4,6 +4,7 @@ from uuid import UUID
 from decimal import Decimal
 from datetime import date, datetime
 
+# --- TIPOS DE BIEN BFF ---
 class TipoBienOutBFF(BaseModel):
     id_tipo: UUID
     nombre: str = Field(..., description="Nombre de la categoría del bien")
@@ -46,6 +47,49 @@ class TipoBienUpdateBFF(BaseModel):
                 raise ValueError('La actualización del nombre no puede ser una cadena vacía.')
         return v
 
+
+# --- TAGS / ETIQUETAS BFF ---
+class TagBienOutBFF(BaseModel):
+    id_tag: UUID
+    nombre: str = Field(..., description="Nombre de la etiqueta")
+    esta_activo: bool = Field(..., description="Estado lógico del registro")
+
+    model_config = {
+        "from_attributes": True,
+        "populate_by_name": True
+    }
+
+class TagBienPaginatedOutBFF(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[TagBienOutBFF]
+
+class TagBienCreateBFF(BaseModel):
+    nombre: str = Field(..., min_length=2, max_length=100)
+
+    @field_validator('nombre')
+    @classmethod
+    def limpiar_nombre_tag(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('El nombre de la etiqueta no puede estar vacío.')
+        return v
+
+class TagBienUpdateBFF(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=2, max_length=100)
+
+    @field_validator('nombre')
+    @classmethod
+    def verificar_nombre_tag(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError('La actualización del nombre no puede ser una cadena vacía.')
+        return v
+
+
+# --- IMÁGENES DE BIEN BFF ---
 class ImagenBienOutBFF(BaseModel):
     id_imagen: UUID
     id_bien: UUID
@@ -61,6 +105,8 @@ class ImagenBienOutBFF(BaseModel):
         "from_attributes": True
     }
 
+
+# --- BIENES BFF ---
 class BienOutBFF(BaseModel):
     id_bien: UUID
     numero_inventario: str = Field(..., description="Número de inventario institucional único")
@@ -73,6 +119,7 @@ class BienOutBFF(BaseModel):
     esta_activo: bool
     meses_uso: int = Field(..., description="Cálculo dinámico provisto por el microservicio")
     tipos: List[TipoBienOutBFF] = []
+    tags: List[TagBienOutBFF] = Field(default_factory=list, description="Listado de etiquetas asociadas")
     imagenes: List[ImagenBienOutBFF] = Field(default_factory=list, description="Listado de imágenes adjuntas asociadas")
 
     model_config = {
@@ -94,6 +141,7 @@ class BienCreateBFF(BaseModel):
     costo: Decimal = Field(..., gt=Decimal("0.00"))
     fecha_adquisicion: Optional[date] = None
     tipos_ids: List[UUID] = Field(..., min_length=1, description="Asociación obligatoria M2M")
+    tags_ids: Optional[List[UUID]] = Field(default_factory=list, description="Lista opcional de IDs de etiquetas asociadas")
 
     @field_validator('numero_inventario', 'descripcion')
     @classmethod
@@ -120,6 +168,7 @@ class BienUpdateBFF(BaseModel):
     costo: Optional[Decimal] = Field(None, gt=Decimal("0.00"))
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None
+    tags_ids: Optional[List[UUID]] = None
 
     @field_validator('numero_inventario', 'descripcion')
     @classmethod

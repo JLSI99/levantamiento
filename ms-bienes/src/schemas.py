@@ -4,6 +4,7 @@ from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
 
+# --- TIPOS DE BIEN ---
 class TipoBienBase(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=100, description="Denominación de la categoría")
     tasa_depreciacion_anual: Decimal = Field(Decimal("0.00"), ge=Decimal("0.00"), le=Decimal("100.00"))
@@ -46,6 +47,50 @@ class TipoBienPaginatedOut(BaseModel):
     offset: int
     data: List[TipoBienOut]
 
+
+# --- TAGS / ETIQUETAS ---
+class TagBienBase(BaseModel):
+    nombre: str = Field(..., min_length=2, max_length=100, description="Nombre de la etiqueta")
+
+    @field_validator('nombre')
+    @classmethod
+    def limpiar_espacios_tag(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('El campo nombre de la etiqueta no puede consistir únicamente en espacios vacíos.')
+        return v
+
+class TagBienCreate(TagBienBase):
+    pass
+
+class TagBienUpdate(BaseModel):
+    nombre: Optional[str] = Field(None, min_length=2, max_length=100)
+
+    @field_validator('nombre')
+    @classmethod
+    def limpiar_espacios_update_tag(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError('El campo modificado no puede ser una cadena vacía.')
+        return v
+
+class TagBienOut(TagBienBase):
+    id_tag: UUID
+    esta_activo: bool = Field(..., description="Estado de activación lógica")
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class TagBienPaginatedOut(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[TagBienOut]
+
+
+# --- IMÁGENES DE BIEN ---
 class ImagenBienOut(BaseModel):
     id_imagen: UUID
     id_bien: UUID
@@ -65,13 +110,15 @@ class ImagenBienOut(BaseModel):
         "from_attributes": True
     }
 
+
+# --- BIENES ---
 class BienBase(BaseModel):
     numero_inventario: str = Field(..., min_length=1, max_length=50, description="Número de inventario institucional único")
     serie: Optional[str] = Field(None, max_length=50)
     modelo: Optional[str] = Field(None, max_length=100)
     marca: Optional[str] = Field(None, max_length=100)
     descripcion: str = Field(..., min_length=3, max_length=255)
-    costo: Decimal = Field(..., gt=Decimal("0.00"), description="El valor base debe ser strictly positivo")
+    costo: Decimal = Field(..., gt=Decimal("0.00"), description="El valor base debe ser estrictamente positivo")
     fecha_adquisicion: Optional[date] = None
 
     @field_validator('numero_inventario', 'descripcion')
@@ -92,6 +139,7 @@ class BienBase(BaseModel):
 
 class BienCreate(BienBase):
     tipos_ids: List[UUID] = Field(..., min_length=1, description="Se requiere al menos un tipo de bien asignado")
+    tags_ids: Optional[List[UUID]] = Field(default_factory=list, description="Lista opcional de IDs de etiquetas")
 
 class BienUpdate(BaseModel):
     numero_inventario: Optional[str] = Field(None, min_length=1, max_length=50)
@@ -102,6 +150,7 @@ class BienUpdate(BaseModel):
     costo: Optional[Decimal] = Field(None, gt=Decimal("0.00"))
     fecha_adquisicion: Optional[date] = None
     tipos_ids: Optional[List[UUID]] = None 
+    tags_ids: Optional[List[UUID]] = None
 
     @field_validator('numero_inventario', 'descripcion')
     @classmethod
@@ -125,6 +174,7 @@ class BienOut(BienBase):
     esta_activo: bool
     meses_uso: int 
     tipos: List[TipoBienOut] = []
+    tags: List[TagBienOut] = []
     imagenes: List[ImagenBienOut] = []
     
     model_config = {

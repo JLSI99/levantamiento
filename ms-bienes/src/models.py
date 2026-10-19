@@ -6,12 +6,22 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.hybrid import hybrid_property 
 from src.database import Base
 
+# Tabla intermedia Bienes <-> Tipos de Bien
 bien_tipo_bien = Table(
     "bien_tipo_bien",
     Base.metadata,
     Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), primary_key=True),
     Column("id_tipo", UUID(as_uuid=True), ForeignKey("tipos_bien.id_tipo", ondelete="CASCADE"), primary_key=True),
 )
+
+# Tabla intermedia Bienes <-> Tags (Etiquetas)
+bien_tag_bien = Table(
+    "bien_tag_bien",
+    Base.metadata,
+    Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), primary_key=True),
+    Column("id_tag", UUID(as_uuid=True), ForeignKey("tags_bien.id_tag", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Bien(Base):
     __tablename__ = "bienes"
@@ -31,6 +41,13 @@ class Bien(Base):
     tipos = relationship(
         "TipoBien",
         secondary=bien_tipo_bien,
+        back_populates="bienes",
+        lazy="selectin",
+    )
+
+    tags = relationship(
+        "TagBien",
+        secondary=bien_tag_bien,
         back_populates="bienes",
         lazy="selectin",
     )
@@ -79,5 +96,20 @@ class TipoBien(Base):
         "Bien",
         secondary=bien_tipo_bien,
         back_populates="tipos",
+        lazy="selectin",
+    )
+
+
+class TagBien(Base):
+    __tablename__ = "tags_bien"
+
+    id_tag = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    nombre = Column(String(100), unique=True, nullable=False, index=True)
+    esta_activo = Column(Boolean, default=True, nullable=False)
+
+    bienes = relationship(
+        "Bien",
+        secondary=bien_tag_bien,
+        back_populates="tags",
         lazy="selectin",
     )
