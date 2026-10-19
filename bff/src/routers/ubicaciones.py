@@ -1,6 +1,7 @@
 import os
 import asyncio
 import httpx
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from uuid import UUID
 from typing import Optional, List, Any, Dict
@@ -9,21 +10,86 @@ from src.dependencies.auth import RequireCapabilityBFF, TokenPayload
 from src.schemas import ubicaciones as schemas
 
 router = APIRouter()
+logger = logging.getLogger("bff.routers.ubicaciones")
 
 MS_UBICACIONES_URL = os.getenv("MS_UBICACIONES_URL", "http://ms_ubicaciones_api:8000").rstrip("/")
+MS_PERSONAS_ROUTE = f"{os.getenv('MS_PERSONAS_URL', 'http://ms_personas_api:8000').rstrip('/')}/personas"
 
 def extraer_detalle_error(response: httpx.Response) -> str:
     try:
         content_type = response.headers.get("content-type", "")
         if "application/json" in content_type:
             detail = response.json().get("detail")
-            
             if isinstance(detail, list):
                 return str(detail)
             return str(detail or response.text)
         return f"Error upstream no estructurado ({response.status_code}): {response.text[:200]}"
     except Exception:
         return f"Error de comunicación remota con código de estado: {response.status_code}"
+
+# FUNCIÓN AUXILIAR DE HIDRATACIÓN ASÍNCRONA PARA EL JEFE DE DEPARTAMENTO
+async def hidratar_un_departamento(
+    depto: dict, 
+    headers: dict, 
+    client: httpx.AsyncClient
+) -> schemas.DepartamentoOutBFF:
+    curp_objetivo = depto.get("curp_jefe_departamento")
+    
+    if not curp_objetivo:
+        return schemas.DepartamentoOutBFF(
+            id_departamento=depto["id_departamento"],
+            nombre=depto["nombre"],
+            curp_jefe_departamento="",
+            is_active=depto["is_active"],
+            jefe_departamento=None
+        )
+
+    personas_params = {
+        "curp": curp_objetivo.upper().strip(),
+        "limit": 1,
+        "incluir_inactivos": "true"
+    }
+
+    nombres_final = "Desconocido"
+    apellidos_final = "Desconocido"
+    email_final = None
+
+    try:
+        response = await client.get(MS_PERSONAS_ROUTE, params=personas_params, headers=headers)
+        if response.status_code == 200:
+            personas_paginated_data = response.json()
+            lista_personas = personas_paginated_data.get("data", [])
+            if lista_personas and len(lista_personas) > 0:
+                p = lista_personas[0]
+                nombres_final = p.get("nombres", "Desconocido")
+                apellidos_final = p.get("apellidos", "Desconocido")
+                email_final = p.get("email")
+            else:
+                nombres_final = "No encontrado"
+                apellidos_final = ""
+        else:
+            logger.warning(f"ms-personas retornó código {response.status_code} al buscar CURP {curp_objetivo}")
+            nombres_final = "Error de servicio"
+            apellidos_final = ""
+    except Exception as e:
+        logger.error(f"Fallo de red al conectar con ms-personas durante hidratación de departamento: {str(e)}")
+        nombres_final = "Sin conexión"
+        apellidos_final = ""
+
+    persona_info = schemas.JefeDepartamentoInfoOutBFF(
+        curp=curp_objetivo,
+        nombres=nombres_final,
+        apellidos=apellidos_final,
+        email=email_final
+    )
+
+    return schemas.DepartamentoOutBFF(
+        id_departamento=depto["id_departamento"],
+        nombre=depto["nombre"],
+        curp_jefe_departamento=curp_objetivo,
+        is_active=depto["is_active"],
+        jefe_departamento=persona_info
+    )
 
 # SEARCH & DROPDOWNS: AGREGACIÓN DE CATÁLOGOS UNIFICADOS
 @router.get("/catalogos", response_model=schemas.CatalogosUbicacionesOutBFF, status_code=status.HTTP_200_OK)
@@ -93,7 +159,7 @@ async def obtener_todos_los_catalogos_form(
         departamentos=lista_deptos
     )
 
-# CRUD SUB-DOMINIO: EDIFICIOS (Montado en /api/v1/ubicaciones/edificios)
+# CRUD SUB-DOMINIO: EDIFICIOS
 @router.post("/edificios", response_model=schemas.EdificioOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_edificio(
     request: Request,
@@ -177,7 +243,7 @@ async def borrar_edificio(
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
     return
 
-# CRUD SUB-DOMINIO: AULAS (Montado en /api/v1/ubicaciones/...)
+# CRUD SUB-DOMINIO: AULAS
 @router.post("/edificios/{id_edificio}/aulas", response_model=schemas.AulaOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_aula(
     request: Request,
@@ -247,11 +313,8 @@ async def borrar_aula(
     headers = {"Authorization": f"Bearer {jwt_crudo}"}
     
     try:
-        # Aseguramos que la ruta coincida exactamente con la expuesta por ms-ubicaciones (/ubicaciones/aulas/{id_aula})
         url_destino = f"{MS_UBICACIONES_URL}/ubicaciones/aulas/{id_aula}"
-        
         response = await client.delete(url_destino, headers=headers)
-        
         if response.status_code not in [status.HTTP_204_NO_CONTENT, status.HTTP_200_OK]:
             raise HTTPException(
                 status_code=response.status_code, 
@@ -262,10 +325,9 @@ async def borrar_aula(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Error de comunicación con el microservicio de ubicaciones: {str(exc)}"
         )
-    
     return
 
-# CRUD SUB-DOMINIO: DEPARTAMENTOS (Montado bajo /api/v1/ubicaciones/departamentos)
+# CRUD SUB-DOMINIO: DEPARTAMENTOS (Con hidratación concurrente de personas)
 @router.post("/departamentos", response_model=schemas.DepartamentoOutBFF, status_code=status.HTTP_201_CREATED)
 async def crear_departamento(
     request: Request,
@@ -279,7 +341,9 @@ async def crear_departamento(
     response = await client.post(f"{MS_UBICACIONES_URL}/departamentos", json=body.model_dump(), headers=headers)
     if response.status_code != 201:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
-    return response.json()
+    
+    depto_raw = response.json()
+    return await hidratar_un_departamento(depto_raw, headers, client)
 
 @router.get("/departamentos", response_model=schemas.DepartamentoPaginatedOutBFF)
 async def listar_departamentos(
@@ -297,7 +361,24 @@ async def listar_departamentos(
     response = await client.get(f"{MS_UBICACIONES_URL}/departamentos", params=params, headers=headers)
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
-    return response.json()
+    
+    data_ubicaciones = response.json()
+    departamentos = data_ubicaciones.get("data", [])
+
+    # Orquestación concurrente de hidratación para todos los departamentos de la página
+    tareas_hidratacion = [
+        hidratar_un_departamento(depto, headers, client) 
+        for depto in departamentos
+    ]
+    
+    departamentos_hidratados = await asyncio.gather(*tareas_hidratacion)
+
+    return schemas.DepartamentoPaginatedOutBFF(
+        total=data_ubicaciones.get("total", len(departamentos_hidratados)),
+        limit=data_ubicaciones.get("limit", limit),
+        offset=data_ubicaciones.get("offset", offset),
+        data=departamentos_hidratados
+    )
 
 @router.get("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOutBFF)
 async def obtener_departamento(
@@ -312,7 +393,9 @@ async def obtener_departamento(
     response = await client.get(f"{MS_UBICACIONES_URL}/departamentos/{id_departamento}", headers=headers)
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
-    return response.json()
+    
+    depto_raw = response.json()
+    return await hidratar_un_departamento(depto_raw, headers, client)
 
 @router.patch("/departamentos/{id_departamento}", response_model=schemas.DepartamentoOutBFF)
 async def actualizar_departamento(
@@ -332,7 +415,9 @@ async def actualizar_departamento(
     )
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=extraer_detalle_error(response))
-    return response.json()
+    
+    depto_raw = response.json()
+    return await hidratar_un_departamento(depto_raw, headers, client)
 
 @router.delete("/departamentos/{id_departamento}", status_code=status.HTTP_204_NO_CONTENT)
 async def borrar_departamento(

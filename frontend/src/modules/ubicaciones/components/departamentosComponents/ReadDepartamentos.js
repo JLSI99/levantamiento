@@ -14,7 +14,7 @@ export class ReadDepartamentos {
                 <thead>
                     <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
                         <th style="padding:8px;">Nombre del Departamento</th>
-                        <th style="padding:8px;">CURP Jefe Adscrito</th>
+                        <th style="padding:8px;">Jefe Adscrito (Responsable)</th>
                         <th style="padding:8px;">Estado</th>
                         <th style="padding:8px; text-align:center;">Acciones</th>
                     </tr>
@@ -42,29 +42,39 @@ export class ReadDepartamentos {
                 return;
             }
 
-            tbody.innerHTML = deptos.map(d => `
-                <tr style="border-bottom:1px solid #e0e0e0;">
-                    <td style="padding:8px; font-weight:600; color:#212121;">${d.nombre}</td>
-                    <td style="padding:8px; font-family:monospace; color:#37474f;">${d.curp_jefe_departamento}</td>
-                    <td style="padding:8px;">${d.is_active ? '<span style="color:green; font-weight:600;">Activo</span>' : '<span style="color:red; font-weight:600;">Inactivo</span>'}</td>
-                    <td style="padding:8px; text-align:center;">
-                        <div style="display:flex; gap:4px; justify-content:center;">
-                            ${this.puedeEditar ? `
-                                <button class="btn-editar-depto" data-id="${d.id_departamento}" 
-                                    style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
-                                    Editar
-                                </button>
-                            ` : ''}
-                            ${d.is_active && this.puedeBorrar ? `
-                                <button class="btn-borrar-depto" data-id="${d.id_departamento}" 
-                                    style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
-                                    Dar Baja
-                                </button>
-                            ` : ''}
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = deptos.map(d => {
+                const jefe = d.jefe_departamento;
+                const nombreJefe = jefe 
+                    ? `${jefe.nombres || ''} ${jefe.apellidos || ''}`.trim() 
+                    : 'Sin asignar';
+
+                return `
+                    <tr style="border-bottom:1px solid #e0e0e0;">
+                        <td style="padding:8px; font-weight:600; color:#212121;">${d.nombre}</td>
+                        <td style="padding:8px; color:#37474f;">
+                            <div style="font-weight:600; color:#1a237e;">${nombreJefe}</div>
+                            <small style="font-family:monospace; color:#757575;">CURP: ${d.curp_jefe_departamento || 'N/D'}</small>
+                        </td>
+                        <td style="padding:8px;">${d.is_active ? '<span style="color:green; font-weight:600;">Activo</span>' : '<span style="color:red; font-weight:600;">Inactivo</span>'}</td>
+                        <td style="padding:8px; text-align:center;">
+                            <div style="display:flex; gap:4px; justify-content:center;">
+                                ${this.puedeEditar ? `
+                                    <button class="btn-editar-depto" data-id="${d.id_departamento}" 
+                                        style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                        Editar
+                                    </button>
+                                ` : ''}
+                                ${d.is_active && this.puedeBorrar ? `
+                                    <button class="btn-borrar-depto" data-id="${d.id_departamento}" 
+                                        style="background:#c62828; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                        Dar Baja
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
         } catch (error) {
             tbody.innerHTML = '<tr><td colspan="4" style="color:red; padding:15px; text-align:center;">Error al recuperar organigrama departamental</td></tr>';
         }

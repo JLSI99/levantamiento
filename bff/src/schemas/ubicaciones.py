@@ -71,17 +71,28 @@ class AulaOutBFF(BaseModel):
 # SUB-DOMINIO: DEPARTAMENTOS
 class DepartamentoCreateBFF(BaseModel):
     nombre: str = Field(..., min_length=2, max_length=150, description="Nombre oficial del departamento")
-    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
 
 class DepartamentoUpdateBFF(BaseModel):
     nombre: Optional[str] = Field(None, min_length=2, max_length=150)
-    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
+
+class JefeDepartamentoInfoOutBFF(BaseModel):
+    curp: str = Field(..., description="CURP del jefe adscrito")
+    nombres: Optional[str] = Field(None, description="Nombres de la persona")
+    apellidos: Optional[str] = Field(None, description="Apellidos de la persona")
+    email: Optional[str] = Field(None, description="Correo electrónico institucional")
+
+    model_config = {
+        "from_attributes": True
+    }
 
 class DepartamentoOutBFF(BaseModel):
     id_departamento: UUID
     nombre: str
-    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable",min_length=18,max_length=18)
+    curp_jefe_departamento: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
     is_active: bool
+    jefe_departamento: Optional[JefeDepartamentoInfoOutBFF] = Field(None, description="Datos hidratados del jefe adscrito")
 
     model_config = {
         "from_attributes": True
