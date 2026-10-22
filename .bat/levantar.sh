@@ -41,6 +41,6 @@ echo "--- Levantando BFF (Puerta de enlace) ---"
 cd bff && docker compose up --build -d && cd ..
 
 echo "--- Levantando Frontend (Entorno de Integración) ---"
-cd frontend && docker compose up --build -d && cd ..
+cd frontend && docker compose up --build -d && cd .. 
 
 echo "=== SISTEMA COMPLETO DESPLEGADO CONFIGURADO ==="

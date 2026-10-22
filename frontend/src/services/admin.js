@@ -21,9 +21,10 @@ export const adminService = {
         }
     },
 
-    async listarPersonas(limit = 50, offset = 0, incluirInactivos = false, curp = null) {
+    async listarPersonas(limit = 50, offset = 0, incluirInactivos = false, curp = null, search = null) {
         const params = { limit, offset, incluir_inactivos: incluirInactivos };
         if (curp) params['curp'] = curp.trim().toUpperCase();
+        if (search) params['search'] = search.trim();
 
         try {
             const response = await bffClient.get('/admin/personas', { params });

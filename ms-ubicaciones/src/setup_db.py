@@ -12,14 +12,14 @@ UBICACIONES_SEMILLA = {
     "edificios": [
         {
             "id_edificio": "a0e1b2c3-d4e5-4f6a-bf7a-9e8d7c6b5a41",
-            "nombre": "Edificio K (Sistemas Computacionales)",
+            "nombre": "Edificio K",
             "clave": "ED-K"
         }
     ],
     "aulas": [
         {
             "id_aula": "e9d8c7b6-a5f4-4e3d-2c1b-0a9f8e7d6c5b",
-            "nombre": "Laboratorio de Cómputo Móvil (K-4)",
+            "nombre": "Laboratorio de Cómputo(K-4)",
             "id_edificio": "a0e1b2c3-d4e5-4f6a-bf7a-9e8d7c6b5a41"
         }
     ],

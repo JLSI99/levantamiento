@@ -1,5 +1,6 @@
 import { resguardosService } from '/src/services/resguardos.js';
 import { bienesService } from '/src/services/bienes.js';
+import { adminService } from '/src/services/admin.js';
 
 export class CreateResguardo {
     constructor() {
@@ -22,9 +23,14 @@ export class CreateResguardo {
                             </div>
                             <div id="preview-bien-info" style="margin-top:4px; font-size:11px; min-height:16px;"></div>
                         </div>
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">CURP del Responsable *</label>
-                            <input type="text" id="input-curp" name="curp" required maxlength="18" minlength="18" class="input-monospace" placeholder="18 caracteres" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; text-transform:uppercase;">
+
+                        <!-- Buscador predictivo por nombre -->
+                        <div style="flex:1; position:relative;">
+                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Responsable (Búsqueda por Nombre) *</label>
+                            <input type="text" id="input-busqueda-persona-resguardo" placeholder="Escriba el nombre del responsable..." autocomplete="off" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px; margin-bottom:4px;">
+                            <div id="dropdown-resultados-resguardo" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; border-radius:0 0 4px 4px; max-height:150px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                            
+                            <input type="text" id="input-curp" name="curp" required maxlength="18" minlength="18" readonly class="input-monospace" placeholder="CURP de 18 caracteres" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; text-transform:uppercase; background:#f5f5f5; font-size:11px;">
                         </div>
                     </div>
                     
@@ -61,6 +67,66 @@ export class CreateResguardo {
         const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
         const btnCamara = containerElement.querySelector('#btn-camara-qr-resguardo');
         const btnCerrarScanner = containerElement.querySelector('#btn-cerrar-scanner-resguardo');
+
+        // Lógica de autocompletado para el responsable
+        const inputBusqueda = containerElement.querySelector('#input-busqueda-persona-resguardo');
+        const inputCurp = containerElement.querySelector('#input-curp');
+        const dropdown = containerElement.querySelector('#dropdown-resultados-resguardo');
+
+        if (inputBusqueda && dropdown && inputCurp) {
+            let debounceTimer = null;
+            inputBusqueda.addEventListener('input', (e) => {
+                const query = e.target.value.trim();
+                clearTimeout(debounceTimer);
+
+                if (query.length < 2) {
+                    dropdown.style.display = 'none';
+                    dropdown.innerHTML = '';
+                    return;
+                }
+
+                debounceTimer = setTimeout(async () => {
+                    try {
+                        const resp = await adminService.listarPersonas(10, 0, false, null, query);
+                        const personas = Array.isArray(resp) ? resp : (resp?.data || []);
+
+                        if (personas.length === 0) {
+                            dropdown.innerHTML = '<div style="padding:8px; color:#757575; font-size:11px;">No se encontraron personas registradas.</div>';
+                            dropdown.style.display = 'block';
+                            return;
+                        }
+
+                        dropdown.innerHTML = personas.map(p => `
+                            <div class="item-persona-sugerida" data-curp="${p.curp}" data-nombre="${p.nombres} ${p.apellidos}"
+                                style="padding:8px; font-size:11px; border-bottom:1px solid #f0f0f0; cursor:pointer;"
+                                onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
+                                <div style="font-weight:600; color:#212121;">${p.nombres} ${p.apellidos}</div>
+                                <div style="font-family:monospace; color:#0288d1;">CURP: ${p.curp}</div>
+                            </div>
+                        `).join('');
+                        dropdown.style.display = 'block';
+
+                        dropdown.querySelectorAll('.item-persona-sugerida').forEach(item => {
+                            item.addEventListener('click', () => {
+                                const curp = item.getAttribute('data-curp');
+                                const nombre = item.getAttribute('data-nombre');
+                                inputCurp.value = curp;
+                                inputBusqueda.value = `${nombre} (${curp})`;
+                                dropdown.style.display = 'none';
+                            });
+                        });
+                    } catch (err) {
+                        console.error("Error en búsqueda autocompletada de resguardo:", err);
+                    }
+                }, 300);
+            });
+
+            document.addEventListener('click', (ev) => {
+                if (!inputBusqueda.contains(ev.target) && !dropdown.contains(ev.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+        }
 
         if (btnCamara) {
             btnCamara.addEventListener('click', () => this.iniciarEscanerCamara(containerElement));

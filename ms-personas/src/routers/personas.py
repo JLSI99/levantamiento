@@ -86,6 +86,7 @@ async def list_personas(
     offset: int = Query(0, ge=0, description="Registros a saltar (paginación)"),
     incluir_inactivos: bool = Query(False, description="Si es True, devuelve todos los registros, incluyendo dados de baja"),
     curp: Optional[str] = Query(None, description="Filtrar por curp exacto"),
+    search: Optional[str] = Query(None, description="Filtrar por coincidencia parcial en nombres o apellidos"),
     jwt_payload: dict = Depends(require_capability("personas:leer"))
 ):
     total_stmt = select(func.count(models.Persona.id_persona))
@@ -99,6 +100,12 @@ async def list_personas(
         curp_target = curp.upper().strip()
         total_stmt = total_stmt.where(models.Persona.curp == curp_target)
         stmt = stmt.where(models.Persona.curp == curp_target)
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        search_filter = (models.Persona.nombres.ilike(search_term)) | (models.Persona.apellidos.ilike(search_term))
+        total_stmt = total_stmt.where(search_filter)
+        stmt = stmt.where(search_filter)
 
     total = await db.scalar(total_stmt)
     stmt = stmt.offset(offset).limit(limit)

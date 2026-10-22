@@ -150,6 +150,7 @@ async def listar_personas(
     offset: int = Query(0, ge=0),
     incluir_inactivos: bool = Query(False),
     curp: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
     token_payload: TokenPayload = Depends(RequireCapabilityBFF("personas:leer"))
 ):
     client: httpx.AsyncClient = request.app.state.http_client
@@ -157,6 +158,8 @@ async def listar_personas(
     params = {"limit": limit, "offset": offset, "incluir_inactivos": incluir_inactivos}
     if curp:
         params["curp"] = curp.upper().strip()
+    if search:
+        params["search"] = search.strip()
         
     response = await client.get(MS_PERSONAS_ROUTE, params=params, headers=headers)
     if response.status_code != 200:

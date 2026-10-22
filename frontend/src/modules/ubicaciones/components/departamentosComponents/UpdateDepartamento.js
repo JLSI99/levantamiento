@@ -4,12 +4,23 @@ export class UpdateDepartamento {
 
         const inputNombre = document.getElementById('input-depto-nombre');
         const inputCurp = document.getElementById('input-depto-curp');
+        const inputBusqueda = document.getElementById('input-busqueda-persona-depto');
         const titulo = document.getElementById('form-depto-titulo');
         const btnSubmit = document.getElementById('btn-submit-depto');
         const btnCancelar = document.getElementById('btn-cancelar-depto');
 
         if (inputNombre) inputNombre.value = depto.nombre;
         if (inputCurp) inputCurp.value = depto.curp_jefe_departamento;
+        
+        // Si el objeto depto trae la información de la persona asociada, la mostramos en el input de búsqueda
+        if (inputBusqueda) {
+            if (depto.persona) {
+                inputBusqueda.value = `${depto.persona.nombres} ${depto.persona.apellidos} (${depto.persona.curp})`;
+            } else {
+                inputBusqueda.value = depto.curp_jefe_departamento; // Fallback si solo viene la CURP
+            }
+        }
+
         if (titulo) titulo.textContent = 'Editar Departamento';
         if (btnSubmit) {
             btnSubmit.textContent = 'Actualizar Departamento';
@@ -20,11 +31,13 @@ export class UpdateDepartamento {
 
     static desactivar() {
         const form = document.getElementById('form-departamento');
+        const inputBusqueda = document.getElementById('input-busqueda-persona-depto');
         const titulo = document.getElementById('form-depto-titulo');
         const btnSubmit = document.getElementById('btn-submit-depto');
         const btnCancelar = document.getElementById('btn-cancelar-depto');
 
         if (form) form.reset();
+        if (inputBusqueda) inputBusqueda.value = '';
         if (titulo) titulo.textContent = 'Alta de Departamento';
         if (btnSubmit) {
             btnSubmit.textContent = 'Registrar Departamento';

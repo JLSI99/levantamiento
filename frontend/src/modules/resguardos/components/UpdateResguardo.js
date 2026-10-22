@@ -8,12 +8,20 @@ export class UpdateResguardo {
 
         const inputNumeroInventario = document.getElementById('input-numero-inventario');
         const inputCurp = document.getElementById('input-curp');
+        const inputBusqueda = document.getElementById('input-busqueda-persona-resguardo');
 
         if (inputNumeroInventario && item.bien) {
             inputNumeroInventario.value = item.bien.numero_inventario || '';
         }
+        
         if (inputCurp && item.persona) {
             inputCurp.value = item.persona.curp || '';
+        }
+
+        if (inputBusqueda && item.persona) {
+            inputBusqueda.value = `${item.persona.nombres} ${item.persona.apellidos} (${item.persona.curp})`;
+        } else if (inputBusqueda && item.curp) {
+            inputBusqueda.value = item.curp;
         }
 
         if (inputNumeroInventario && item.bien && item.bien.numero_inventario) {
@@ -26,6 +34,9 @@ export class UpdateResguardo {
     limpiarFormulario() {
         const form = document.getElementById('form-crear-resguardo');
         if (form) form.reset();
+
+        const inputBusqueda = document.getElementById('input-busqueda-persona-resguardo');
+        if (inputBusqueda) inputBusqueda.value = '';
 
         const previewInfo = document.getElementById('preview-bien-info');
         if (previewInfo) previewInfo.innerHTML = '';
