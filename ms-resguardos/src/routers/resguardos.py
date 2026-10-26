@@ -246,6 +246,7 @@ async def cerrar_resguardo(
          )
 
     resguardo.fecha_fin = date.today()
+    resguardo.esta_activo = False  # <--- CORRECCIÓN CLAVE: Inactiva el registro para liberar el índice único parcial
     
     try:
         await db.commit()

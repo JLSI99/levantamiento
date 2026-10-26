@@ -1,10 +1,21 @@
 import { resguardosService } from '/src/services/resguardos.js';
 import { bienesService } from '/src/services/bienes.js';
 import { adminService } from '/src/services/admin.js';
+import { QrScannerModal } from './QrScannerModal.js';
 
 export class CreateResguardo {
     constructor() {
-        this._html5QrCodeScanner = null;
+        this.qrScanner = new QrScannerModal('reader-qr-resguardo', 'modal-scanner-resguardo', (decodedText) => {
+            const containerElement = this._containerActual;
+            if (containerElement) {
+                const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
+                if (inputNumeroInventario) {
+                    inputNumeroInventario.value = decodedText;
+                    this.validarYMostrarBien(decodedText, containerElement);
+                }
+            }
+        });
+        this._containerActual = null;
     }
 
     obtenerPlantillaFormulario() {
@@ -47,26 +58,15 @@ export class CreateResguardo {
                     <div id="resguardo-error-feedback" style="color:#c62828; font-size:11px; margin-top:5px;"></div>
                 </form>
             </div>
-
-            <!-- Modal Escáner QR de Cámara -->
-            <div id="modal-scanner-resguardo" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-                <div style="background:white; padding:20px; border-radius:8px; max-width:400px; width:90%; text-align:center;">
-                    <h4 style="margin-top:0; color:#0288d1;">Escanear Código QR del Bien</h4>
-                    <div id="reader-qr-resguardo" style="width:100%; min-height:250px; background:#000; margin:10px 0; border-radius:4px;"></div>
-                    <button type="button" id="btn-cerrar-scanner-resguardo" style="background:#c62828; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">
-                        Cancelar Escaneo
-                    </button>
-                </div>
-            </div>
         `;
     }
 
     bindEvents(containerElement) {
         if (!containerElement) return;
+        this._containerActual = containerElement;
 
         const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
         const btnCamara = containerElement.querySelector('#btn-camara-qr-resguardo');
-        const btnCerrarScanner = containerElement.querySelector('#btn-cerrar-scanner-resguardo');
 
         // Lógica de autocompletado para el responsable
         const inputBusqueda = containerElement.querySelector('#input-busqueda-persona-resguardo');
@@ -129,11 +129,7 @@ export class CreateResguardo {
         }
 
         if (btnCamara) {
-            btnCamara.addEventListener('click', () => this.iniciarEscanerCamara(containerElement));
-        }
-
-        if (btnCerrarScanner) {
-            btnCerrarScanner.addEventListener('click', () => this.detenerEscanerCamara(containerElement));
+            btnCamara.addEventListener('click', () => this.qrScanner.iniciar());
         }
 
         if (inputNumeroInventario) {
@@ -178,53 +174,12 @@ export class CreateResguardo {
         if (preview) preview.innerHTML = '';
     }
 
-    iniciarEscanerCamara(containerElement) {
-        if (!window.Html5Qrcode) {
-            alert('Librería de escáner QR no disponible.');
-            return;
-        }
-
-        const modalScanner = containerElement.querySelector('#modal-scanner-resguardo');
-        if (modalScanner) modalScanner.style.display = 'flex';
-
-        this._html5QrCodeScanner = new window.Html5Qrcode("reader-qr-resguardo");
-        this._html5QrCodeScanner.start(
-            { facingMode: "environment" },
-            { fps: 10, qrbox: { width: 220, height: 220 } },
-            (decodedText) => {
-                this.detenerEscanerCamara(containerElement);
-                const inputNumeroInventario = containerElement.querySelector('#input-numero-inventario');
-                if (inputNumeroInventario) {
-                    inputNumeroInventario.value = decodedText;
-                    this.validarYMostrarBien(decodedText, containerElement);
-                }
-            },
-            () => {}
-        ).catch(err => {
-            alert('No se pudo acceder a la cámara: ' + err);
-            this.detenerEscanerCamara(containerElement);
-        });
-    }
-
-    detenerEscanerCamara(containerElement) {
-        const modalScanner = containerElement?.querySelector('#modal-scanner-resguardo') || document.getElementById('modal-scanner-resguardo');
-        if (this._html5QrCodeScanner) {
-            this._html5QrCodeScanner.stop().then(() => {
-                this._html5QrCodeScanner = null;
-                if (modalScanner) modalScanner.style.display = 'none';
-            }).catch(() => {
-                if (modalScanner) modalScanner.style.display = 'none';
-            });
-        } else if (modalScanner) {
-            modalScanner.style.display = 'none';
-        }
-    }
-
     async crear(payload) {
         return await resguardosService.crearAsignacion(payload);
     }
 
-    unmount(containerElement) {
-        this.detenerEscanerCamara(containerElement);
+    unmount() {
+        this.qrScanner.detener();
+        this._containerActual = null;
     }
 }
