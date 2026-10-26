@@ -1,4 +1,5 @@
 import { resguardosService } from '/src/services/resguardos.js';
+import { ubicacionesService } from '/src/services/ubicaciones.js';
 import { QrScannerModal } from './QrScannerModal.js';
 import { DevolucionModal } from './DevolucionModal.js';
 
@@ -13,7 +14,22 @@ export class ReadResguardos {
         this.estaDesmontado = false;
         
         this.asignacionesMemoria = new Map();
+        this.datosOriginales = [];
         this.paginacion = { limit: 100, offset: 0 };
+
+        // Catálogos auxiliares cargados desde el servicio de ubicaciones
+        this._departamentosCatalogo = [];
+        this._edificiosCatalogo = [];
+
+        // Filtros de multiselección
+        this._departamentosFiltroSeleccionados = [];
+        this._edificiosFiltroSeleccionados = [];
+
+        // Estado de ordenamiento activo ('custodio' o null)
+        this.criterioOrden = null;
+        this.ordenAscendente = true;
+
+        this.handleOutsideClick = this._handleOutsideClick.bind(this);
 
         // Inicializar submódulos modales
         this.devolucionModal = new DevolucionModal(
@@ -48,13 +64,53 @@ export class ReadResguardos {
         this.container.innerHTML = this._obtenerPlantillaLectura();
         this._vincularEventos();
         
+        if (this.capacidadGlobal) {
+            await this.cargarCatalogosUbicaciones();
+        }
+
         await this.cargarTabla();
     }
 
     _obtenerPlantillaLectura() {
         return `
             <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, No de Inventario, Serie o Descripción..." style="flex: 1; min-width: 220px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace;">
+                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, No. Inventario, Serie..." style="flex: 1; min-width: 200px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace; box-sizing:border-box;">
+                
+                ${this.capacidadGlobal ? `
+                    <!-- BOTÓN DE ORDENAMIENTO POR CUSTODIO -->
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button type="button" id="btn-orden-custodio" style="background: #f5f5f5; color: #333; border: 1px solid #bdbdbd; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">
+                            Ordenar por Custodio ↕
+                        </button>
+                    </div>
+
+                    <!-- DROPDOWN MULTISELECCIÓN DE DEPARTAMENTOS -->
+                    <div style="position:relative; width: 190px;" id="dropdown-filtro-deptos-container">
+                        <div id="dropdown-filtro-deptos-toggle-btn" style="height:32px; padding:0 8px; border:1px solid #bdbdbd; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box; overflow:hidden;">
+                            <div id="dropdown-filtro-deptos-placeholder" style="display:flex; gap:4px; align-items:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1;">
+                                <span style="color:#757575;">-- Filtrar Deptos --</span>
+                            </div>
+                            <span style="font-size:10px; color:#555; margin-left:6px; flex-shrink:0;">▼</span>
+                        </div>
+                        <div id="dropdown-filtro-deptos-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
+                            <div id="dropdown-filtro-deptos-options-list" style="padding:4px 0;"></div>
+                        </div>
+                    </div>
+
+                    <!-- DROPDOWN MULTISELECCIÓN DE EDIFICIOS -->
+                    <div style="position:relative; width: 180px;" id="dropdown-filtro-edificios-container">
+                        <div id="dropdown-filtro-edificios-toggle-btn" style="height:32px; padding:0 8px; border:1px solid #bdbdbd; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box; overflow:hidden;">
+                            <div id="dropdown-filtro-edificios-placeholder" style="display:flex; gap:4px; align-items:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1;">
+                                <span style="color:#757575;">-- Filtrar Edificios --</span>
+                            </div>
+                            <span style="font-size:10px; color:#555; margin-left:6px; flex-shrink:0;">▼</span>
+                        </div>
+                        <div id="dropdown-filtro-edificios-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
+                            <div id="dropdown-filtro-edificios-options-list" style="padding:4px 0;"></div>
+                        </div>
+                    </div>
+                ` : ''}
+
                 ${this.puedeModificar ? `
                     <button type="button" id="btn-qr-devolucion-rapida" style="background-color: #0288d1; color: white; border: none; padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
                         📷 Devolución / Escanear QR
@@ -83,7 +139,112 @@ export class ReadResguardos {
         `;
     }
 
-    async cargarTabla(filtroBusqueda = '') {
+    async cargarCatalogosUbicaciones() {
+        try {
+            const [respDeptos, respEdificios] = await Promise.all([
+                ubicacionesService.listarDepartamentos(100, 0, true).catch(() => []),
+                ubicacionesService.listarEdificios(100, 0, true).catch(() => [])
+            ]);
+
+            this._departamentosCatalogo = Array.isArray(respDeptos) ? respDeptos : (respDeptos?.data || []);
+            this._edificiosCatalogo = Array.isArray(respEdificios) ? respEdificios : (respEdificios?.data || []);
+
+            this.renderizarOpcionesFiltros();
+        } catch (e) {
+            console.error("Error al cargar catálogos de ubicaciones:", e);
+        }
+    }
+
+    renderizarOpcionesFiltros() {
+        // 1. Renderizar opciones de Departamentos
+        const listDeptos = this.container.querySelector('#dropdown-filtro-deptos-options-list');
+        if (listDeptos) {
+            if (this._departamentosCatalogo.length === 0) {
+                listDeptos.innerHTML = `<div style="padding:8px 12px; font-size:12px; color:#757575;">No hay departamentos</div>`;
+            } else {
+                listDeptos.innerHTML = this._departamentosCatalogo.map(d => {
+                    const deptoId = String(d.id_departamento || d.id);
+                    const isSelected = this._departamentosFiltroSeleccionados.includes(deptoId);
+                    return `
+                        <div class="dropdown-filtro-depto-item" data-id="${deptoId}" style="padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:${isSelected ? '#e8f5e9' : 'transparent'}; color:${isSelected ? '#2e7d32' : '#212121'}; font-weight:${isSelected ? '600' : 'normal'};">
+                            <span>${this._escapeHtml(d.nombre)}</span>
+                            ${isSelected ? '<span style="font-size:11px; color:#2e7d32;">✓</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        const placeholderDeptos = this.container.querySelector('#dropdown-filtro-deptos-placeholder');
+        if (placeholderDeptos) {
+            if (this._departamentosFiltroSeleccionados.length === 0) {
+                placeholderDeptos.innerHTML = `<span style="color:#757575;">-- Filtrar Deptos --</span>`;
+            } else {
+                const nombres = this._departamentosFiltroSeleccionados.map(id => {
+                    const obj = this._departamentosCatalogo.find(d => String(d.id_departamento || d.id) === String(id));
+                    return obj ? obj.nombre : 'Depto';
+                });
+                placeholderDeptos.innerHTML = `
+                    <span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; border-radius:10px; padding:1px 6px; font-size:11px; font-weight:600; white-space:nowrap;">
+                        Deptos (${this._departamentosFiltroSeleccionados.length}): ${this._escapeHtml(nombres.join(', '))}
+                    </span>
+                `;
+            }
+        }
+
+        // 2. Renderizar opciones de Edificios
+        const listEdificios = this.container.querySelector('#dropdown-filtro-edificios-options-list');
+        if (listEdificios) {
+            if (this._edificiosCatalogo.length === 0) {
+                listEdificios.innerHTML = `<div style="padding:8px 12px; font-size:12px; color:#757575;">No hay edificios</div>`;
+            } else {
+                listEdificios.innerHTML = this._edificiosCatalogo.map(e => {
+                    const edifId = String(e.id_edificio || e.id);
+                    const isSelected = this._edificiosFiltroSeleccionados.includes(edifId);
+                    return `
+                        <div class="dropdown-filtro-edificio-item" data-id="${edifId}" style="padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:${isSelected ? '#e8f5e9' : 'transparent'}; color:${isSelected ? '#2e7d32' : '#212121'}; font-weight:${isSelected ? '600' : 'normal'};">
+                            <span>${this._escapeHtml(e.nombre)}</span>
+                            ${isSelected ? '<span style="font-size:11px; color:#2e7d32;">✓</span>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        const placeholderEdificios = this.container.querySelector('#dropdown-filtro-edificios-placeholder');
+        if (placeholderEdificios) {
+            if (this._edificiosFiltroSeleccionados.length === 0) {
+                placeholderEdificios.innerHTML = `<span style="color:#757575;">-- Filtrar Edificios --</span>`;
+            } else {
+                const nombres = this._edificiosFiltroSeleccionados.map(id => {
+                    const obj = this._edificiosCatalogo.find(e => String(e.id_edificio || e.id) === String(id));
+                    return obj ? obj.nombre : 'Edificio';
+                });
+                placeholderEdificios.innerHTML = `
+                    <span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; border-radius:10px; padding:1px 6px; font-size:11px; font-weight:600; white-space:nowrap;">
+                        Edificios (${this._edificiosFiltroSeleccionados.length}): ${this._escapeHtml(nombres.join(', '))}
+                    </span>
+                `;
+            }
+        }
+    }
+
+    _handleOutsideClick(e) {
+        if (!this.container) return;
+        const containerDeptos = this.container.querySelector('#dropdown-filtro-deptos-container');
+        const panelDeptos = this.container.querySelector('#dropdown-filtro-deptos-panel');
+        if (containerDeptos && panelDeptos && !containerDeptos.contains(e.target)) {
+            panelDeptos.style.display = 'none';
+        }
+
+        const containerEdif = this.container.querySelector('#dropdown-filtro-edificios-container');
+        const panelEdif = this.container.querySelector('#dropdown-filtro-edificios-panel');
+        if (containerEdif && panelEdif && !containerEdif.contains(e.target)) {
+            panelEdif.style.display = 'none';
+        }
+    }
+
+    async cargarTabla() {
         const tbody = this.container.querySelector('#tabla-resguardos-personales tbody');
         if (!tbody) return;
 
@@ -104,43 +265,83 @@ export class ReadResguardos {
             
             if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
 
-            let asignaciones = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
-
-            if (filtroBusqueda.trim() !== '') {
-                const query = filtroBusqueda.toUpperCase().trim();
-                asignaciones = asignaciones.filter(item => {
-                    const idAsignacion = String(item.id_asignacion || '').toUpperCase();
-                    const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
-                    const bienSerie = String(item.bien?.serie || '').toUpperCase();
-                    const bienDesc = String(item.bien?.descripcion || '').toUpperCase();
-                    const curp = String(item.persona?.curp || '').toUpperCase();
-                    const nombreCompleto = `${item.persona?.nombres || ''} ${item.persona?.apellidos || ''}`.toUpperCase();
-                    
-                    return idAsignacion.includes(query) || 
-                           numeroInventario.includes(query) || 
-                           bienSerie.includes(query) || 
-                           bienDesc.includes(query) || 
-                           curp.includes(query) || 
-                           nombreCompleto.includes(query);
-                });
-            }
-
-            this.asignacionesMemoria.clear();
-
-            if (asignaciones.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="${columnasTotales}" style="text-align:center; padding:15px; color:#757575; font-weight:500;">No se encontraron registros de asignación vigentes.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = asignaciones.map(item => {
-                this.asignacionesMemoria.set(String(item.id_asignacion), item);
-                return this._generarFilaTabla(item);
-            }).join('');
+            this.datosOriginales = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
+            this.procesarYRenderizarTabla();
             
         } catch (error) {
             if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
             tbody.innerHTML = `<tr><td colspan="${columnasTotales}" style="text-align:center; padding:15px; color:#c62828; font-weight:600;">Error crítico: No se logró resolver la matriz de resguardos.</td></tr>`;
         }
+    }
+
+    procesarYRenderizarTabla() {
+        const tbody = this.container.querySelector('#tabla-resguardos-personales tbody');
+        if (!tbody) return;
+
+        const columnasTotales = this.capacidadGlobal ? 5 : (this.puedeModificar ? 4 : 3);
+        const filtroBusqueda = this.container.querySelector('#filtro-busqueda-curp')?.value || '';
+
+        let asignaciones = [...this.datosOriginales];
+
+        // 1. Filtrado por texto libre
+        if (filtroBusqueda.trim() !== '') {
+            const query = filtroBusqueda.toUpperCase().trim();
+            asignaciones = asignaciones.filter(item => {
+                const idAsignacion = String(item.id_asignacion || '').toUpperCase();
+                const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
+                const bienSerie = String(item.bien?.serie || '').toUpperCase();
+                const bienDesc = String(item.bien?.descripcion || '').toUpperCase();
+                const curp = String(item.persona?.curp || '').toUpperCase();
+                const nombreCompleto = `${item.persona?.nombres || ''} ${item.persona?.apellidos || ''}`.toUpperCase();
+                
+                return idAsignacion.includes(query) || 
+                       numeroInventario.includes(query) || 
+                       bienSerie.includes(query) || 
+                       bienDesc.includes(query) || 
+                       curp.includes(query) || 
+                       nombreCompleto.includes(query);
+            });
+        }
+
+        // 2. Filtrado múltiple por Departamentos
+        if (this._departamentosFiltroSeleccionados.length > 0) {
+            asignaciones = asignaciones.filter(item => {
+                const deptoId = String(item.id_departamento || item.ubicacion?.id_departamento || '');
+                return this._departamentosFiltroSeleccionados.includes(deptoId);
+            });
+        }
+
+        // 3. Filtrado múltiple por Edificios
+        if (this._edificiosFiltroSeleccionados.length > 0) {
+            asignaciones = asignaciones.filter(item => {
+                const edifId = String(item.id_edificio || item.ubicacion?.id_edificio || '');
+                return this._edificiosFiltroSeleccionados.includes(edifId);
+            });
+        }
+
+        // 4. Ordenamiento por Custodio Activo
+        if (this.criterioOrden === 'custodio') {
+            asignaciones.sort((a, b) => {
+                const valorA = `${a.persona?.apellidos || ''} ${a.persona?.nombres || ''}`.toUpperCase();
+                const valorB = `${b.persona?.apellidos || ''} ${b.persona?.nombres || ''}`.toUpperCase();
+
+                if (valorA < valorB) return this.ordenAscendente ? -1 : 1;
+                if (valorA > valorB) return this.ordenAscendente ? 1 : -1;
+                return 0;
+            });
+        }
+
+        this.asignacionesMemoria.clear();
+
+        if (asignaciones.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="${columnasTotales}" style="text-align:center; padding:15px; color:#757575; font-weight:500;">No se encontraron registros de asignación vigentes.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = asignaciones.map(item => {
+            this.asignacionesMemoria.set(String(item.id_asignacion), item);
+            return this._generarFilaTabla(item);
+        }).join('');
     }
 
     _generarFilaTabla(item) {
@@ -180,6 +381,69 @@ export class ReadResguardos {
             filtroInput.addEventListener('input', this.handleBusqueda);
         }
 
+        // Toggle dropdowns multiselección
+        const toggleDeptosBtn = this.container.querySelector('#dropdown-filtro-deptos-toggle-btn');
+        const panelDeptos = this.container.querySelector('#dropdown-filtro-deptos-panel');
+        if (toggleDeptosBtn && panelDeptos) {
+            toggleDeptosBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panelDeptos.style.display = panelDeptos.style.display === 'block' ? 'none' : 'block';
+            });
+        }
+
+        const toggleEdifBtn = this.container.querySelector('#dropdown-filtro-edificios-toggle-btn');
+        const panelEdif = this.container.querySelector('#dropdown-filtro-edificios-panel');
+        if (toggleEdifBtn && panelEdif) {
+            toggleEdifBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                panelEdif.style.display = panelEdif.style.display === 'block' ? 'none' : 'block';
+            });
+        }
+
+        document.addEventListener('click', this.handleOutsideClick);
+
+        // Selección dentro del panel de departamentos
+        const listDeptos = this.container.querySelector('#dropdown-filtro-deptos-options-list');
+        if (listDeptos) {
+            listDeptos.addEventListener('click', (e) => {
+                const item = e.target.closest('.dropdown-filtro-depto-item');
+                if (item) {
+                    const deptoId = item.getAttribute('data-id');
+                    if (this._departamentosFiltroSeleccionados.includes(deptoId)) {
+                        this._departamentosFiltroSeleccionados = this._departamentosFiltroSeleccionados.filter(id => id !== deptoId);
+                    } else {
+                        this._departamentosFiltroSeleccionados.push(deptoId);
+                    }
+                    this.renderizarOpcionesFiltros();
+                    this.procesarYRenderizarTabla();
+                }
+            });
+        }
+
+        // Selección dentro del panel de edificios
+        const listEdif = this.container.querySelector('#dropdown-filtro-edificios-options-list');
+        if (listEdif) {
+            listEdif.addEventListener('click', (e) => {
+                const item = e.target.closest('.dropdown-filtro-edificio-item');
+                if (item) {
+                    const edifId = item.getAttribute('data-id');
+                    if (this._edificiosFiltroSeleccionados.includes(edifId)) {
+                        this._edificiosFiltroSeleccionados = this._edificiosFiltroSeleccionados.filter(id => id !== edifId);
+                    } else {
+                        this._edificiosFiltroSeleccionados.push(edifId);
+                    }
+                    this.renderizarOpcionesFiltros();
+                    this.procesarYRenderizarTabla();
+                }
+            });
+        }
+
+        // Vincular evento del botón de ordenamiento por custodio
+        const btnCustodio = this.container.querySelector('#btn-orden-custodio');
+        if (btnCustodio) {
+            btnCustodio.addEventListener('click', () => this.alternarOrdenCustodio(btnCustodio));
+        }
+
         const btnQr = this.container.querySelector('#btn-qr-devolucion-rapida');
         if (btnQr) {
             btnQr.addEventListener('click', () => this.qrScanner.iniciar());
@@ -189,7 +453,34 @@ export class ReadResguardos {
         if (tabla && this.puedeModificar) tabla.addEventListener('click', this.handleEventosTabla);
     }
 
+    alternarOrdenCustodio(botonElemento) {
+        if (this.criterioOrden === 'custodio') {
+            if (this.ordenAscendente) {
+                this.ordenAscendente = false;
+                botonElemento.textContent = `Ordenar por Custodio 🔽`;
+            } else {
+                this.criterioOrden = null;
+                this.ordenAscendente = true;
+                botonElemento.textContent = `Ordenar por Custodio ↕`;
+                botonElemento.style.background = '#f5f5f5';
+                botonElemento.style.color = '#333';
+                this.procesarYRenderizarTabla();
+                return;
+            }
+        } else {
+            this.criterioOrden = 'custodio';
+            this.ordenAscendente = true;
+
+            botonElemento.style.background = '#0288d1';
+            botonElemento.style.color = 'white';
+            botonElemento.textContent = `Ordenar por Custodio 🔼`;
+        }
+
+        this.procesarYRenderizarTabla();
+    }
+
     _limpiarEventos() {
+        document.removeEventListener('click', this.handleOutsideClick);
         if (!this.container) return;
         const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
         if (filtroInput) filtroInput.removeEventListener('input', this.handleBusqueda);
@@ -199,7 +490,7 @@ export class ReadResguardos {
     }
 
     _handleBusqueda(e) {
-        this.cargarTabla(e.target.value);
+        this.procesarYRenderizarTabla();
     }
 
     procesarCodigoEscaneado(codigo) {
@@ -222,7 +513,7 @@ export class ReadResguardos {
         } else {
             const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
             if (filtroInput) filtroInput.value = codigo;
-            this.cargarTabla(codigo);
+            this.procesarYRenderizarTabla();
             alert(`Filtro aplicado para el código escaneado: "${codigo}".`);
         }
     }

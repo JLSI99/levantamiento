@@ -27,10 +27,11 @@ export class CreateResguardo {
                         <div style="flex:1;">
                             <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">No de Inventario</label>
                             <div style="display:flex; gap:6px;">
-                                <input type="text" id="input-numero-inventario" name="numero_inventario" required placeholder="Número de inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                                <!-- BOTÓN DE ESCANEAR QR AL INICIO -->
                                 <button type="button" id="btn-camara-qr-resguardo" style="background:#0288d1; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
                                     📷 Escanear QR
                                 </button>
+                                <input type="text" id="input-numero-inventario" name="numero_inventario" required placeholder="Número de inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
                             </div>
                             <div id="preview-bien-info" style="margin-top:4px; font-size:11px; min-height:16px;"></div>
                         </div>

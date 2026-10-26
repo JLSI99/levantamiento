@@ -36,22 +36,42 @@ export class DevolucionModal {
         document.getElementById('btn-cerrar-modal-devolucion')?.addEventListener('click', () => this.cerrar());
 
         document.getElementById('btn-confirmar-devolucion-rapida')?.addEventListener('click', async () => {
-            if (this._itemActual && this.onConfirmarDevolucion) {
+            // Validación defensiva para evitar el error si el item es null
+            if (!this._itemActual || !this._itemActual.id_asignacion) {
+                console.warn("Intento de devolución sin un resguardo seleccionado en memoria.");
                 this.cerrar();
-                await this.onConfirmarDevolucion(String(this._itemActual.id_asignacion));
+                return;
+            }
+
+            const idAsignacion = String(this._itemActual.id_asignacion);
+            const callback = this.onConfirmarDevolucion;
+            
+            this.cerrar();
+
+            if (callback) {
+                await callback(idAsignacion);
             }
         });
 
         document.getElementById('btn-editar-desde-devolucion')?.addEventListener('click', () => {
-            if (this._itemActual && this.onEditarResguardo) {
-                const item = this._itemActual;
+            if (!this._itemActual) {
                 this.cerrar();
-                this.onEditarResguardo(item);
+                return;
+            }
+
+            const item = this._itemActual;
+            const callback = this.onEditarResguardo;
+            
+            this.cerrar();
+
+            if (callback) {
+                callback(item);
             }
         });
     }
 
     abrir(item) {
+        if (!item) return;
         this._itemActual = item;
         const modalAccion = document.getElementById('modal-accion-devolucion');
         const contenedorContenido = document.getElementById('modal-devolucion-contenido');
