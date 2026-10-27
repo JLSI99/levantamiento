@@ -1,0 +1,103 @@
+.btn-primary {
+    background-color: var(--primary);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+@media (min-width: 600px) {
+    .btn-primary {
+        width: auto;
+        padding: 8px 16px;
+        align-self: flex-end;
+    }
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--primary-light);
+}
+
+.btn-primary:disabled {
+    background-color: var(--text-muted);
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-secondary {
+    background-color: var(--secondary);
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+@media (min-width: 600px) {
+    .btn-secondary {
+        width: auto;
+        padding: 8px 16px;
+        align-self: flex-end;
+    }
+}
+
+.btn-secondary:hover {
+    background-color: var(--secondary-hover);
+}
+
+.btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--secondary-light);
+}
+
+.btn-revocacion,
+.btn-liberar-resguardo {
+    background-color: var(--warning);
+    color: #ffffff;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: background-color var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
+    white-space: nowrap;
+}
+
+@media (min-width: 768px) {
+    .btn-revocacion,
+    .btn-liberar-resguardo {
+        padding: 4px 8px;
+    }
+}
+
+.btn-revocacion:hover,
+.btn-liberar-resguardo:hover {
+    background-color: #bf360c;
+}
+
+.btn-revocacion:focus,
+.btn-liberar-resguardo:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(230, 81, 0, 0.4);
+}

@@ -1,0 +1,26 @@
+:root {
+    --bg-main: #f4f6f9;
+    --bg-card: #ffffff;
+    --border-color: #e0e0e0;
+    --text-main: #212121;
+    --text-muted: #757575;
+    
+    --primary: #1a237e;
+    --primary-hover: #0d125a;
+    --primary-light: rgba(26, 35, 126, 0.08);
+    
+    --secondary: #00796b;
+    --secondary-hover: #004d40;
+    --secondary-light: rgba(0, 121, 107, 0.08);
+    
+    --text-error: #c62828;
+    --bg-error: #ffebee;
+    --success: #00796b;
+    --success-bg: #e0f2f1;
+    --warning: #e65100;
+    --warning-light: rgba(230, 81, 0, 0.1);
+    
+    --sidebar-width: 260px;
+    --header-height: 60px;
+    --transition-speed: 0.2s;
+}
