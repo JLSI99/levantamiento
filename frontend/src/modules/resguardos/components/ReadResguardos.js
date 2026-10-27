@@ -2,6 +2,9 @@ import { resguardosService } from '/src/services/resguardos.js';
 import { ubicacionesService } from '/src/services/ubicaciones.js';
 import { QrScannerModal } from './QrScannerModal.js';
 import { DevolucionModal } from './DevolucionModal.js';
+import { ResguardosTemplate } from './ResguardosTemplate.js';
+import { ResguardosFiltros } from './ResguardosFiltros.js';
+import { MultiSelectDropdown } from './MultiSelectDropdown.js';
 
 export class ReadResguardos {
     constructor() {
@@ -12,131 +15,63 @@ export class ReadResguardos {
         
         this.tokenConcurrenciaId = 0;
         this.estaDesmontado = false;
-        
         this.asignacionesMemoria = new Map();
         this.datosOriginales = [];
         this.paginacion = { limit: 100, offset: 0 };
 
-        // Catálogos auxiliares cargados desde el servicio de ubicaciones
+        this.filtros = new ResguardosFiltros();
         this._departamentosCatalogo = [];
         this._edificiosCatalogo = [];
 
-        // Filtros de multiselección
-        this._departamentosFiltroSeleccionados = [];
-        this._edificiosFiltroSeleccionados = [];
+        this.dropdownDeptos = null;
+        this.dropdownEdificios = null;
 
-        // Estado de ordenamiento activo ('custodio' o null)
-        this.criterioOrden = null;
-        this.ordenAscendente = true;
+        this.handleOutsideClick = (e) => {
+            ['deptos', 'edificios'].forEach(tipo => {
+                const cont = this.container?.querySelector(`#dropdown-filtro-${tipo}-container`);
+                const panel = this.container?.querySelector(`#dropdown-filtro-${tipo}-panel`);
+                if (cont && panel && !cont.contains(e.target)) panel.style.display = 'none';
+            });
+        };
 
-        this.handleOutsideClick = this._handleOutsideClick.bind(this);
-
-        // Inicializar submódulos modales
         this.devolucionModal = new DevolucionModal(
-            async (idAsignacion) => {
-                if (this.callbacks.onRelease) {
-                    await this.callbacks.onRelease(idAsignacion);
-                }
-            },
-            (item) => {
-                if (this.callbacks.onEdit) {
-                    this.callbacks.onEdit(item);
-                }
-            }
+            async (id) => this.callbacks.onRelease?.(id),
+            (item) => this.callbacks.onEdit?.(item)
         );
 
-        this.qrScanner = new QrScannerModal('reader-qr-devolucion', 'modal-scanner-devolucion', (decodedText) => {
-            this.procesarCodigoEscaneado(decodedText);
-        });
-
-        this.handleEventosTabla = this._handleEventosTabla.bind(this);
-        this.handleBusqueda = this._handleBusqueda.bind(this);
+        this.qrScanner = new QrScannerModal('reader-qr-devolucion', 'modal-scanner-devolucion', (txt) => this.procesarCodigoEscaneado(txt));
     }
 
     async inicializar(container, capacidadGlobal, puedeModificar, callbacks) {
         this._limpiarEventos();
-        
         this.container = container;
         this.capacidadGlobal = capacidadGlobal;
         this.puedeModificar = puedeModificar;
         this.callbacks = callbacks;
 
-        this.container.innerHTML = this._obtenerPlantillaLectura();
+        this.container.innerHTML = ResguardosTemplate.obtenerEstructuraPrincipal(capacidadGlobal, puedeModificar);
         this._vincularEventos();
         
         if (this.capacidadGlobal) {
+            this._inicializarDropdowns();
             await this.cargarCatalogosUbicaciones();
         }
 
         await this.cargarTabla();
     }
 
-    _obtenerPlantillaLectura() {
-        return `
-            <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="text" id="filtro-busqueda-curp" placeholder="Filtrar por CURP, Custodio, No. Inventario, Serie..." style="flex: 1; min-width: 200px; padding: 6px 10px; border: 1px solid #bdbdbd; border-radius: 4px; font-size: 12px; font-family: monospace; box-sizing:border-box;">
-                
-                ${this.capacidadGlobal ? `
-                    <!-- BOTÓN DE ORDENAMIENTO POR CUSTODIO -->
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <button type="button" id="btn-orden-custodio" style="background: #f5f5f5; color: #333; border: 1px solid #bdbdbd; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">
-                            Ordenar por Custodio ↕
-                        </button>
-                    </div>
+    _inicializarDropdowns() {
+        this.dropdownDeptos = new MultiSelectDropdown(
+            this.container, 'dropdown-filtro-deptos', 'Filtrar Deptos', 
+            (ids) => { this.filtros.departamentosSeleccionados = ids; this.procesarYRenderizarTabla(); }
+        );
+        this.dropdownDeptos.vincularEventos();
 
-                    <!-- DROPDOWN MULTISELECCIÓN DE DEPARTAMENTOS -->
-                    <div style="position:relative; width: 190px;" id="dropdown-filtro-deptos-container">
-                        <div id="dropdown-filtro-deptos-toggle-btn" style="height:32px; padding:0 8px; border:1px solid #bdbdbd; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box; overflow:hidden;">
-                            <div id="dropdown-filtro-deptos-placeholder" style="display:flex; gap:4px; align-items:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1;">
-                                <span style="color:#757575;">-- Filtrar Deptos --</span>
-                            </div>
-                            <span style="font-size:10px; color:#555; margin-left:6px; flex-shrink:0;">▼</span>
-                        </div>
-                        <div id="dropdown-filtro-deptos-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
-                            <div id="dropdown-filtro-deptos-options-list" style="padding:4px 0;"></div>
-                        </div>
-                    </div>
-
-                    <!-- DROPDOWN MULTISELECCIÓN DE EDIFICIOS -->
-                    <div style="position:relative; width: 180px;" id="dropdown-filtro-edificios-container">
-                        <div id="dropdown-filtro-edificios-toggle-btn" style="height:32px; padding:0 8px; border:1px solid #bdbdbd; border-radius:4px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:space-between; font-size:12px; box-sizing:border-box; overflow:hidden;">
-                            <div id="dropdown-filtro-edificios-placeholder" style="display:flex; gap:4px; align-items:center; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; flex:1;">
-                                <span style="color:#757575;">-- Filtrar Edificios --</span>
-                            </div>
-                            <span style="font-size:10px; color:#555; margin-left:6px; flex-shrink:0;">▼</span>
-                        </div>
-                        <div id="dropdown-filtro-edificios-panel" style="display:none; position:absolute; top:100%; left:0; width:100%; max-height:180px; overflow-y:auto; background:#fff; border:1px solid #ccc; border-top:none; border-radius:0 0 4px 4px; z-index:100; box-shadow:0 4px 6px rgba(0,0,0,0.1); box-sizing:border-box;">
-                            <div id="dropdown-filtro-edificios-options-list" style="padding:4px 0;"></div>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${this.puedeModificar ? `
-                    <button type="button" id="btn-qr-devolucion-rapida" style="background-color: #0288d1; color: white; border: none; padding: 7px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
-                        📷 Devolución / Escanear QR
-                    </button>
-                ` : ''}
-            </div>
-
-            <div style="overflow-x:auto; border: 1px solid #e0e0e0; border-radius:4px;">
-                <table style="width:100%; border-collapse:collapse; font-size:12px; text-align:left;" id="tabla-resguardos-personales">
-                    <thead>
-                        <tr style="background-color:#f5f5f5; border-bottom: 1px solid #e0e0e0;">
-                            ${this.capacidadGlobal ? '<th style="padding:10px; color: #424242; font-weight:700;">Custodio / Responsable</th>' : ''}
-                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Descripción del Bien Fijo</th>
-                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Ubicación Topológica</th>
-                            <th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Fecha Asignación</th>
-                            ${this.puedeModificar ? '<th style="padding:10px; color: #424242; font-weight:700; text-align:center;">Operaciones</th>' : ''}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td colspan="${this.capacidadGlobal ? '5' : (this.puedeModificar ? '4' : '3')}" style="text-align:center; padding:15px; color:#757575;">Estableciendo canal seguro y recuperando asignaciones...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        `;
+        this.dropdownEdificios = new MultiSelectDropdown(
+            this.container, 'dropdown-filtro-edificios', 'Filtrar Edificios', 
+            (ids) => { this.filtros.edificiosSeleccionados = ids; this.procesarYRenderizarTabla(); }
+        );
+        this.dropdownEdificios.vincularEventos();
     }
 
     async cargarCatalogosUbicaciones() {
@@ -149,98 +84,10 @@ export class ReadResguardos {
             this._departamentosCatalogo = Array.isArray(respDeptos) ? respDeptos : (respDeptos?.data || []);
             this._edificiosCatalogo = Array.isArray(respEdificios) ? respEdificios : (respEdificios?.data || []);
 
-            this.renderizarOpcionesFiltros();
+            this.dropdownDeptos?.actualizarCatalogo(this._departamentosCatalogo);
+            this.dropdownEdificios?.actualizarCatalogo(this._edificiosCatalogo);
         } catch (e) {
-            console.error("Error al cargar catálogos de ubicaciones:", e);
-        }
-    }
-
-    renderizarOpcionesFiltros() {
-        // 1. Renderizar opciones de Departamentos
-        const listDeptos = this.container.querySelector('#dropdown-filtro-deptos-options-list');
-        if (listDeptos) {
-            if (this._departamentosCatalogo.length === 0) {
-                listDeptos.innerHTML = `<div style="padding:8px 12px; font-size:12px; color:#757575;">No hay departamentos</div>`;
-            } else {
-                listDeptos.innerHTML = this._departamentosCatalogo.map(d => {
-                    const deptoId = String(d.id_departamento || d.id);
-                    const isSelected = this._departamentosFiltroSeleccionados.includes(deptoId);
-                    return `
-                        <div class="dropdown-filtro-depto-item" data-id="${deptoId}" style="padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:${isSelected ? '#e8f5e9' : 'transparent'}; color:${isSelected ? '#2e7d32' : '#212121'}; font-weight:${isSelected ? '600' : 'normal'};">
-                            <span>${this._escapeHtml(d.nombre)}</span>
-                            ${isSelected ? '<span style="font-size:11px; color:#2e7d32;">✓</span>' : ''}
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        const placeholderDeptos = this.container.querySelector('#dropdown-filtro-deptos-placeholder');
-        if (placeholderDeptos) {
-            if (this._departamentosFiltroSeleccionados.length === 0) {
-                placeholderDeptos.innerHTML = `<span style="color:#757575;">-- Filtrar Deptos --</span>`;
-            } else {
-                const nombres = this._departamentosFiltroSeleccionados.map(id => {
-                    const obj = this._departamentosCatalogo.find(d => String(d.id_departamento || d.id) === String(id));
-                    return obj ? obj.nombre : 'Depto';
-                });
-                placeholderDeptos.innerHTML = `
-                    <span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; border-radius:10px; padding:1px 6px; font-size:11px; font-weight:600; white-space:nowrap;">
-                        Deptos (${this._departamentosFiltroSeleccionados.length}): ${this._escapeHtml(nombres.join(', '))}
-                    </span>
-                `;
-            }
-        }
-
-        // 2. Renderizar opciones de Edificios
-        const listEdificios = this.container.querySelector('#dropdown-filtro-edificios-options-list');
-        if (listEdificios) {
-            if (this._edificiosCatalogo.length === 0) {
-                listEdificios.innerHTML = `<div style="padding:8px 12px; font-size:12px; color:#757575;">No hay edificios</div>`;
-            } else {
-                listEdificios.innerHTML = this._edificiosCatalogo.map(e => {
-                    const edifId = String(e.id_edificio || e.id);
-                    const isSelected = this._edificiosFiltroSeleccionados.includes(edifId);
-                    return `
-                        <div class="dropdown-filtro-edificio-item" data-id="${edifId}" style="padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:${isSelected ? '#e8f5e9' : 'transparent'}; color:${isSelected ? '#2e7d32' : '#212121'}; font-weight:${isSelected ? '600' : 'normal'};">
-                            <span>${this._escapeHtml(e.nombre)}</span>
-                            ${isSelected ? '<span style="font-size:11px; color:#2e7d32;">✓</span>' : ''}
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
-
-        const placeholderEdificios = this.container.querySelector('#dropdown-filtro-edificios-placeholder');
-        if (placeholderEdificios) {
-            if (this._edificiosFiltroSeleccionados.length === 0) {
-                placeholderEdificios.innerHTML = `<span style="color:#757575;">-- Filtrar Edificios --</span>`;
-            } else {
-                const nombres = this._edificiosFiltroSeleccionados.map(id => {
-                    const obj = this._edificiosCatalogo.find(e => String(e.id_edificio || e.id) === String(id));
-                    return obj ? obj.nombre : 'Edificio';
-                });
-                placeholderEdificios.innerHTML = `
-                    <span style="background:#e8f5e9; color:#1b5e20; border:1px solid #a5d6a7; border-radius:10px; padding:1px 6px; font-size:11px; font-weight:600; white-space:nowrap;">
-                        Edificios (${this._edificiosFiltroSeleccionados.length}): ${this._escapeHtml(nombres.join(', '))}
-                    </span>
-                `;
-            }
-        }
-    }
-
-    _handleOutsideClick(e) {
-        if (!this.container) return;
-        const containerDeptos = this.container.querySelector('#dropdown-filtro-deptos-container');
-        const panelDeptos = this.container.querySelector('#dropdown-filtro-deptos-panel');
-        if (containerDeptos && panelDeptos && !containerDeptos.contains(e.target)) {
-            panelDeptos.style.display = 'none';
-        }
-
-        const containerEdif = this.container.querySelector('#dropdown-filtro-edificios-container');
-        const panelEdif = this.container.querySelector('#dropdown-filtro-edificios-panel');
-        if (containerEdif && panelEdif && !containerEdif.contains(e.target)) {
-            panelEdif.style.display = 'none';
+            console.error("Error al cargar catálogos:", e);
         }
     }
 
@@ -250,27 +97,20 @@ export class ReadResguardos {
 
         this.tokenConcurrenciaId++;
         const currentTokenId = this.tokenConcurrenciaId;
-        const columnasTotales = this.capacidadGlobal ? 5 : (this.puedeModificar ? 4 : 3);
+        const totalCols = this.capacidadGlobal ? 5 : (this.puedeModificar ? 4 : 3);
 
         try {
-            let respuestaBFF;
-            if (this.capacidadGlobal) {
-                respuestaBFF = await resguardosService.listarTodosLosResguardosInstitucionales({ 
-                    limit: this.paginacion.limit, 
-                    offset: this.paginacion.offset 
-                });
-            } else {
-                respuestaBFF = await resguardosService.listarMisResguardos(this.paginacion.limit, this.paginacion.offset);
-            }
+            const resp = this.capacidadGlobal 
+                ? await resguardosService.listarTodosLosResguardosInstitucionales(this.paginacion)
+                : await resguardosService.listarMisResguardos(this.paginacion.limit, this.paginacion.offset);
             
             if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
 
-            this.datosOriginales = Array.isArray(respuestaBFF) ? respuestaBFF : (respuestaBFF?.data || []);
+            this.datosOriginales = Array.isArray(resp) ? resp : (resp?.data || []);
             this.procesarYRenderizarTabla();
-            
         } catch (error) {
             if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
-            tbody.innerHTML = `<tr><td colspan="${columnasTotales}" style="text-align:center; padding:15px; color:#c62828; font-weight:600;">Error crítico: No se logró resolver la matriz de resguardos.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:#c62828; font-weight:600;">Error al recuperar asignaciones.</td></tr>`;
         }
     }
 
@@ -278,219 +118,71 @@ export class ReadResguardos {
         const tbody = this.container.querySelector('#tabla-resguardos-personales tbody');
         if (!tbody) return;
 
-        const columnasTotales = this.capacidadGlobal ? 5 : (this.puedeModificar ? 4 : 3);
-        const filtroBusqueda = this.container.querySelector('#filtro-busqueda-curp')?.value || '';
+        const totalCols = this.capacidadGlobal ? 5 : (this.puedeModificar ? 4 : 3);
+        const textoBusqueda = this.container.querySelector('#filtro-busqueda-curp')?.value || '';
 
-        let asignaciones = [...this.datosOriginales];
-
-        // 1. Filtrado por texto libre
-        if (filtroBusqueda.trim() !== '') {
-            const query = filtroBusqueda.toUpperCase().trim();
-            asignaciones = asignaciones.filter(item => {
-                const idAsignacion = String(item.id_asignacion || '').toUpperCase();
-                const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
-                const bienSerie = String(item.bien?.serie || '').toUpperCase();
-                const bienDesc = String(item.bien?.descripcion || '').toUpperCase();
-                const curp = String(item.persona?.curp || '').toUpperCase();
-                const nombreCompleto = `${item.persona?.nombres || ''} ${item.persona?.apellidos || ''}`.toUpperCase();
-                
-                return idAsignacion.includes(query) || 
-                       numeroInventario.includes(query) || 
-                       bienSerie.includes(query) || 
-                       bienDesc.includes(query) || 
-                       curp.includes(query) || 
-                       nombreCompleto.includes(query);
-            });
-        }
-
-        // 2. Filtrado múltiple por Departamentos
-        if (this._departamentosFiltroSeleccionados.length > 0) {
-            asignaciones = asignaciones.filter(item => {
-                const deptoId = String(item.id_departamento || item.ubicacion?.id_departamento || '');
-                return this._departamentosFiltroSeleccionados.includes(deptoId);
-            });
-        }
-
-        // 3. Filtrado múltiple por Edificios
-        if (this._edificiosFiltroSeleccionados.length > 0) {
-            asignaciones = asignaciones.filter(item => {
-                const edifId = String(item.id_edificio || item.ubicacion?.id_edificio || '');
-                return this._edificiosFiltroSeleccionados.includes(edifId);
-            });
-        }
-
-        // 4. Ordenamiento por Custodio Activo
-        if (this.criterioOrden === 'custodio') {
-            asignaciones.sort((a, b) => {
-                const valorA = `${a.persona?.apellidos || ''} ${a.persona?.nombres || ''}`.toUpperCase();
-                const valorB = `${b.persona?.apellidos || ''} ${b.persona?.nombres || ''}`.toUpperCase();
-
-                if (valorA < valorB) return this.ordenAscendente ? -1 : 1;
-                if (valorA > valorB) return this.ordenAscendente ? 1 : -1;
-                return 0;
-            });
-        }
+        const catalogos = { departamentosCatalogo: this._departamentosCatalogo, edificiosCatalogo: this._edificiosCatalogo };
+        const asignaciones = this.filtros.aplicar(this.datosOriginales, textoBusqueda, catalogos);
 
         this.asignacionesMemoria.clear();
 
         if (asignaciones.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${columnasTotales}" style="text-align:center; padding:15px; color:#757575; font-weight:500;">No se encontraron registros de asignación vigentes.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:#757575; font-weight:500;">No se encontraron registros vigentes.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = asignaciones.map(item => {
             this.asignacionesMemoria.set(String(item.id_asignacion), item);
-            return this._generarFilaTabla(item);
+            return ResguardosTemplate.generarFila(item, this.capacidadGlobal, this.puedeModificar);
         }).join('');
-    }
-
-    _generarFilaTabla(item) {
-        const idStr = String(item.id_asignacion);
-        const numeroInv = item.bien?.numero_inventario ? `[Inv: ${item.bien.numero_inventario}]` : '';
-        const bienDesc = item.bien ? `${item.bien.descripcion} ${numeroInv} [Marca: ${item.bien.marca || 'N/A'}, Modelo: ${item.bien.modelo || 'N/A'}]` : 'Sin descripción física';
-        
-        const ubicacionFisica = item.ubicacion ? `Edif. ${item.ubicacion.edificio} | Aula: ${item.ubicacion.aula}` : 'Ubicación no asignada';
-        const fechaParseada = item.fecha_inicio ? new Date(item.fecha_inicio).toLocaleDateString('es-MX', {timeZone: 'UTC'}) : 'No timbrada';
-        const custodioNombre = item.persona ? `${item.persona.apellidos}, ${item.persona.nombres} [${item.persona.curp}]` : 'No asignado';
-        
-        let html = `
-            <tr style="border-bottom: 1px solid #e0e0e0;">
-                ${this.capacidadGlobal ? `<td style="padding:10px; font-weight:500; color:#37474f;">${this._escapeHtml(custodioNombre)}</td>` : ''}
-                <td style="padding:10px; font-weight:600; color: #212121;">${this._escapeHtml(bienDesc)}</td>
-                <td style="padding:10px; color: #37474f;">${this._escapeHtml(ubicacionFisica)}</td>
-                <td style="padding:10px; color: #616161;">${this._escapeHtml(fechaParseada)}</td>
-        `;
-
-        if (this.puedeModificar) {
-            html += `
-                <td style="padding:10px; text-align:center;">
-                    <button class="btn-editar-resguardo" data-id="${this._escapeHtml(idStr)}" style="background-color:#1976d2; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px; font-weight:600; margin-right:4px;">Editar</button>
-                    <button class="btn-liberar-resguardo" data-id="${this._escapeHtml(idStr)}" style="background-color:#f57c00; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px; font-weight:600; margin-right:4px;">Liberar</button>
-                    <button class="btn-eliminar-resguardo" data-id="${this._escapeHtml(idStr)}" style="background-color:#c62828; color:white; border:none; padding:4px 8px; border-radius:3px; cursor:pointer; font-size:11px; font-weight:600;">Borrar</button>
-                </td>
-            `;
-        }
-
-        html += '</tr>';
-        return html;
     }
 
     _vincularEventos() {
         const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
-        if (filtroInput) {
-            filtroInput.addEventListener('input', this.handleBusqueda);
-        }
-
-        // Toggle dropdowns multiselección
-        const toggleDeptosBtn = this.container.querySelector('#dropdown-filtro-deptos-toggle-btn');
-        const panelDeptos = this.container.querySelector('#dropdown-filtro-deptos-panel');
-        if (toggleDeptosBtn && panelDeptos) {
-            toggleDeptosBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                panelDeptos.style.display = panelDeptos.style.display === 'block' ? 'none' : 'block';
-            });
-        }
-
-        const toggleEdifBtn = this.container.querySelector('#dropdown-filtro-edificios-toggle-btn');
-        const panelEdif = this.container.querySelector('#dropdown-filtro-edificios-panel');
-        if (toggleEdifBtn && panelEdif) {
-            toggleEdifBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                panelEdif.style.display = panelEdif.style.display === 'block' ? 'none' : 'block';
-            });
-        }
+        if (filtroInput) filtroInput.addEventListener('input', () => this.procesarYRenderizarTabla());
 
         document.addEventListener('click', this.handleOutsideClick);
 
-        // Selección dentro del panel de departamentos
-        const listDeptos = this.container.querySelector('#dropdown-filtro-deptos-options-list');
-        if (listDeptos) {
-            listDeptos.addEventListener('click', (e) => {
-                const item = e.target.closest('.dropdown-filtro-depto-item');
-                if (item) {
-                    const deptoId = item.getAttribute('data-id');
-                    if (this._departamentosFiltroSeleccionados.includes(deptoId)) {
-                        this._departamentosFiltroSeleccionados = this._departamentosFiltroSeleccionados.filter(id => id !== deptoId);
-                    } else {
-                        this._departamentosFiltroSeleccionados.push(deptoId);
-                    }
-                    this.renderizarOpcionesFiltros();
-                    this.procesarYRenderizarTabla();
-                }
-            });
-        }
-
-        // Selección dentro del panel de edificios
-        const listEdif = this.container.querySelector('#dropdown-filtro-edificios-options-list');
-        if (listEdif) {
-            listEdif.addEventListener('click', (e) => {
-                const item = e.target.closest('.dropdown-filtro-edificio-item');
-                if (item) {
-                    const edifId = item.getAttribute('data-id');
-                    if (this._edificiosFiltroSeleccionados.includes(edifId)) {
-                        this._edificiosFiltroSeleccionados = this._edificiosFiltroSeleccionados.filter(id => id !== edifId);
-                    } else {
-                        this._edificiosFiltroSeleccionados.push(edifId);
-                    }
-                    this.renderizarOpcionesFiltros();
-                    this.procesarYRenderizarTabla();
-                }
-            });
-        }
-
-        // Vincular evento del botón de ordenamiento por custodio
         const btnCustodio = this.container.querySelector('#btn-orden-custodio');
         if (btnCustodio) {
-            btnCustodio.addEventListener('click', () => this.alternarOrdenCustodio(btnCustodio));
+            btnCustodio.addEventListener('click', () => {
+                if (this.filtros.criterioOrden === 'custodio') {
+                    if (this.filtros.ordenAscendente) {
+                        this.filtros.ordenAscendente = false;
+                        btnCustodio.textContent = `Ordenar por Custodio 🔽`;
+                    } else {
+                        this.filtros.criterioOrden = null;
+                        this.filtros.ordenAscendente = true;
+                        btnCustodio.textContent = `Ordenar por Custodio ↕`;
+                        btnCustodio.style.background = '#f5f5f5';
+                        btnCustodio.style.color = '#333';
+                    }
+                } else {
+                    this.filtros.criterioOrden = 'custodio';
+                    this.filtros.ordenAscendente = true;
+                    btnCustodio.style.background = '#0288d1';
+                    btnCustodio.style.color = 'white';
+                    btnCustodio.textContent = `Ordenar por Custodio 🔼`;
+                }
+                this.procesarYRenderizarTabla();
+            });
         }
 
         const btnQr = this.container.querySelector('#btn-qr-devolucion-rapida');
-        if (btnQr) {
-            btnQr.addEventListener('click', () => this.qrScanner.iniciar());
-        }
+        if (btnQr) btnQr.addEventListener('click', () => this.qrScanner.iniciar());
 
         const tabla = this.container.querySelector('#tabla-resguardos-personales');
-        if (tabla && this.puedeModificar) tabla.addEventListener('click', this.handleEventosTabla);
-    }
+        if (tabla && this.puedeModificar) {
+            tabla.addEventListener('click', (e) => {
+                const target = e.target;
+                const idStr = target.getAttribute('data-id');
+                if (!idStr) return;
 
-    alternarOrdenCustodio(botonElemento) {
-        if (this.criterioOrden === 'custodio') {
-            if (this.ordenAscendente) {
-                this.ordenAscendente = false;
-                botonElemento.textContent = `Ordenar por Custodio 🔽`;
-            } else {
-                this.criterioOrden = null;
-                this.ordenAscendente = true;
-                botonElemento.textContent = `Ordenar por Custodio ↕`;
-                botonElemento.style.background = '#f5f5f5';
-                botonElemento.style.color = '#333';
-                this.procesarYRenderizarTabla();
-                return;
-            }
-        } else {
-            this.criterioOrden = 'custodio';
-            this.ordenAscendente = true;
-
-            botonElemento.style.background = '#0288d1';
-            botonElemento.style.color = 'white';
-            botonElemento.textContent = `Ordenar por Custodio 🔼`;
+                if (target.classList.contains('btn-editar-resguardo')) this.callbacks.onEdit?.(this.asignacionesMemoria.get(idStr));
+                if (target.classList.contains('btn-liberar-resguardo')) this.callbacks.onRelease?.(idStr);
+                if (target.classList.contains('btn-eliminar-resguardo')) this.callbacks.onDelete?.(idStr);
+            });
         }
-
-        this.procesarYRenderizarTabla();
-    }
-
-    _limpiarEventos() {
-        document.removeEventListener('click', this.handleOutsideClick);
-        if (!this.container) return;
-        const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
-        if (filtroInput) filtroInput.removeEventListener('input', this.handleBusqueda);
-        
-        const tabla = this.container.querySelector('#tabla-resguardos-personales');
-        if (tabla) tabla.removeEventListener('click', this.handleEventosTabla);
-    }
-
-    _handleBusqueda(e) {
-        this.procesarYRenderizarTabla();
     }
 
     procesarCodigoEscaneado(codigo) {
@@ -498,11 +190,9 @@ export class ReadResguardos {
         let match = null;
 
         for (const [id, item] of this.asignacionesMemoria.entries()) {
-            const idAsignacion = String(item.id_asignacion || '').toUpperCase();
-            const numeroInventario = String(item.bien?.numero_inventario || '').toUpperCase();
-            const bienSerie = String(item.bien?.serie || '').toUpperCase();
-
-            if (idAsignacion === query || numeroInventario === query || bienSerie === query) {
+            if (String(item.id_asignacion || '').toUpperCase() === query || 
+                String(item.bien?.numero_inventario || '').toUpperCase() === query || 
+                String(item.bien?.serie || '').toUpperCase() === query) {
                 match = item;
                 break;
             }
@@ -511,38 +201,15 @@ export class ReadResguardos {
         if (match) {
             this.devolucionModal.abrir(match);
         } else {
-            const filtroInput = this.container.querySelector('#filtro-busqueda-curp');
-            if (filtroInput) filtroInput.value = codigo;
+            const input = this.container.querySelector('#filtro-busqueda-curp');
+            if (input) input.value = codigo;
             this.procesarYRenderizarTabla();
             alert(`Filtro aplicado para el código escaneado: "${codigo}".`);
         }
     }
 
-    _handleEventosTabla(e) {
-        const target = e.target;
-        const idStr = target.getAttribute('data-id');
-        if (!idStr) return;
-
-        if (target.classList.contains('btn-editar-resguardo')) {
-            const item = this.asignacionesMemoria.get(idStr);
-            if (item) this.callbacks.onEdit(item);
-        } 
-        else if (target.classList.contains('btn-liberar-resguardo')) {
-            this.callbacks.onRelease(idStr);
-        }
-        else if (target.classList.contains('btn-eliminar-resguardo')) {
-            this.callbacks.onDelete(idStr);
-        }
-    }
-
-    _escapeHtml(str) {
-        if (!str) return '';
-        return String(str)
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
+    _limpiarEventos() {
+        document.removeEventListener('click', this.handleOutsideClick);
     }
 
     unmount() {
