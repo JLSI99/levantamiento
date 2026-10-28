@@ -5,6 +5,7 @@
     border: 1px solid var(--border-color);
     border-radius: 4px;
     width: 100%;
+    -webkit-overflow-scrolling: touch; /* Desplazamiento fluido por inercia en iOS */
 }
 
 table {
@@ -13,7 +14,7 @@ table {
     font-size: 12px;
     text-align: left;
     background-color: var(--bg-card);
-    min-width: 600px;
+    min-width: 650px; /* Asegura el scroll horizontal correcto en pantallas móviles */
 }
 
 table thead tr {
@@ -34,6 +35,7 @@ table td {
     padding: 10px;
     border-bottom: 1px solid var(--border-color);
     vertical-align: middle;
+    white-space: nowrap; /* Evita que los textos largos o botones dentro de tablas se partan feo en móvil */
 }
 
 table tbody tr {

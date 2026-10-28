@@ -42,8 +42,8 @@ form input[type="date"],
 form select,
 form textarea {
     width: 100%;
-    padding: 8px 10px;
-    font-size: 12px;
+    padding: 10px; /* Mayor área táctil en celular */
+    font-size: 16px; /* CRÍTICO: Evita el zoom automático inoportuno en iOS/Android al enfocar */
     border: 1px solid var(--border-color);
     border-radius: 4px;
     background-color: var(--bg-card);
@@ -64,6 +64,7 @@ form textarea {
     form select,
     form textarea {
         padding: 6px 10px;
+        font-size: 12px; /* Tamaño compacto estándar para PC */
     }
 }
 
@@ -71,7 +72,7 @@ form input[name="curp"],
 form input.input-monospace,
 .text-monospace {
     font-family: monospace;
-    font-size: 12px;
+    font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
