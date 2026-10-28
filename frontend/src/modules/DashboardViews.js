@@ -63,23 +63,28 @@ export class DashboardView {
     if (!root) throw new Error(`DOM Inválido: Contenedor ${this.containerId} no existe.`);
 
     root.innerHTML = `
-      <div style="display:flex; min-height:100vh;">
-          <aside style="width:var(--sidebar-width, 260px); background-color:var(--primary, #1a365d); color:white; display:flex; flex-direction:column; padding:15px; box-sizing:border-box;">
+      <div class="dashboard-layout">
+          <aside id="app-sidebar" class="dashboard-sidebar">
               <div style="padding-bottom:15px; border-bottom:1px solid rgba(255,255,255,0.2); margin-bottom:20px;">
-                  <h3 style="margin:0; font-size:16px;">Sitema de Bienes</h3>
+                  <h3 style="margin:0; font-size:16px;">Sistema de Bienes</h3>
                   <p style="margin:5px 0 0 0; font-size:11px; color:rgba(255,255,255,0.7);" id="user-display-profile">Cargando identidad...</p>
               </div>
               <nav style="display:flex; flex-direction:column; gap:8px; flex-grow:1;" id="sidebar-nav"></nav>
-              <button id="btn-logout" style="background:transparent; border:1px solid rgba(255,255,255,0.4); color:white; padding:8px; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px; margin-top:auto;">
+              <button id="btn-logout" style="background:transparent; border:1px solid rgba(255,255,255,0.4); color:white; padding:10px; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px; margin-top:auto;">
                   Cerrar Sesión
               </button>
           </aside>
           
-          <main style="flex-grow:1; display:flex; flex-direction:column; background-color:var(--bg-main, #f7fafc);">
+          <main class="dashboard-main">
               <header style="background-color:white; padding:15px 20px; border-bottom:1px solid var(--border-color, #e2e8f0); display:flex; justify-content:space-between; align-items:center;">
-                  <h2 id="workspace-title" style="margin:0; font-size:18px; color:var(--primary, #1a365d);">Inicializando Workspace...</h2>
+                  <div style="display: flex; align-items: center; gap: 12px;">
+                      <button id="btn-toggle-sidebar" class="mobile-menu-toggle" aria-label="Abrir Menú">
+                          ☰
+                      </button>
+                      <h2 id="workspace-title" style="margin:0; font-size:18px; color:var(--primary, #1a365d);">Inicializando Workspace...</h2>
+                  </div>
               </header>
-              <section id="workspace-content" style="padding:20px; flex-grow:1; box-sizing:border-box; overflow-y:auto;"></section>
+              <section id="workspace-content" style="padding:15px; flex-grow:1; box-sizing:border-box; overflow-y:auto;"></section>
           </main>
       </div>
     `;
@@ -128,12 +133,17 @@ export class DashboardView {
       const btn = document.createElement('button');
       btn.id = `nav-link-${config.id}`;
       btn.textContent = config.label;
-      btn.style.cssText = 'background:transparent; border:none; color:rgba(255,255,255,0.7); text-align:left; padding:10px 12px; border-radius:6px; cursor:pointer; font-size:14px; font-weight:500; width:100%; transition: all 0.2s ease;';
+      btn.style.cssText = 'background:transparent; border:none; color:rgba(255,255,255,0.7); text-align:left; padding:12px; border-radius:6px; cursor:pointer; font-size:14px; font-weight:500; width:100%; transition: all 0.2s ease;';
 
       btn.onmouseover = () => { if (this.activeRouteId !== config.id) btn.style.background = 'rgba(255,255,255,0.1)'; };
       btn.onmouseout = () => { if (this.activeRouteId !== config.id) btn.style.background = 'transparent'; };
 
-      btn.onclick = () => this.cargarModulo(config);
+      btn.onclick = () => {
+        this.cargarModulo(config);
+        // Cierra automáticamente el menú en dispositivos móviles al seleccionar una opción
+        const sidebar = document.getElementById('app-sidebar');
+        if (sidebar) sidebar.classList.remove('sidebar-open');
+      };
 
       nav.appendChild(btn);
     });
@@ -203,7 +213,7 @@ export class DashboardView {
     const content = document.getElementById('workspace-content');
     if (content) {
       content.innerHTML = `
-        <div style="background-color:#fed7d7; border-left:4px solid #e53e3e; padding:15px; color:#c53030; border-radius:4px;">
+        <div class="forbidden-container">
             <strong>Error de Autorización:</strong> Su cuenta no tiene asignado un rol operativo válido en la matriz de acceso. Contacte al administrador del sistema.
         </div>
       `;
@@ -224,6 +234,15 @@ export class DashboardView {
 
   vincularGlobales() {
     const logoutBtn = document.getElementById('btn-logout');
+    const toggleBtn = document.getElementById('btn-toggle-sidebar');
+    const sidebar = document.getElementById('app-sidebar');
+
+    if (toggleBtn && sidebar) {
+      toggleBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('sidebar-open');
+      });
+    }
+
     if (!logoutBtn) return;
 
     this.onLogoutBound = async () => {

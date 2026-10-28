@@ -41,7 +41,7 @@ export class CrudUsuariosPersonas {
 
     _renderAccesoDenegado(container) {
         container.innerHTML = `
-            <div style="padding:20px; background:#ffebee; border:1px solid #ef9a9a; color:#c62828; border-radius:4px;">
+            <div class="forbidden-container">
                 <strong>Acceso Denegado:</strong> Su perfil no cuenta con capacidades para administrar identidades o credenciales.
             </div>
         `;
@@ -49,11 +49,11 @@ export class CrudUsuariosPersonas {
 
     _renderLayout(container, verPersonas, verUsuarios) {
         container.innerHTML = `
-            <div style="background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px;">
-                <!-- Navegación de Pestañas -->
-                <div style="display: flex; gap: 10px; border-bottom: 1px solid #e0e0e0; margin-bottom: 20px;">
-                    ${verPersonas ? `<button class="tab-btn active" data-target="container-crud-personas" style="padding: 10px 15px; border:none; background:none; border-bottom: 3px solid #1a237e; color:#1a237e; font-weight:bold; cursor:pointer;">Gestión de Personas (Demografía)</button>` : ''}
-                    ${verUsuarios ? `<button class="tab-btn ${!verPersonas ? 'active' : ''}" data-target="container-crud-usuarios" style="padding: 10px 15px; border:none; background:none; border-bottom: ${!verPersonas ? '3px solid #1a237e' : '3px solid transparent'}; color:${!verPersonas ? '#1a237e' : '#757575'}; font-weight:${!verPersonas ? 'bold' : 'normal'}; cursor:pointer;">Gestión de Usuarios (Credenciales)</button>` : ''}
+            <div class="module-card">
+                <!-- Navegación de Pestañas Adaptativa -->
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
+                    ${verPersonas ? `<button class="tab-btn active" data-target="container-crud-personas" style="padding: 10px 15px; border:none; background:none; border-bottom: 3px solid var(--primary); color:var(--primary); font-weight:bold; cursor:pointer;">Gestión de Personas (Demografía)</button>` : ''}
+                    ${verUsuarios ? `<button class="tab-btn ${!verPersonas ? 'active' : ''}" data-target="container-crud-usuarios" style="padding: 10px 15px; border:none; background:none; border-bottom: ${!verPersonas ? '3px solid var(--primary)' : '3px solid transparent'}; color:${!verPersonas ? 'var(--primary)' : 'var(--text-muted)'}; font-weight:${!verPersonas ? 'bold' : 'normal'}; cursor:pointer;">Gestión de Usuarios (Credenciales)</button>` : ''}
                 </div>
 
                 <!-- Contenedores de los CRUDs -->
@@ -71,14 +71,14 @@ export class CrudUsuariosPersonas {
             btn.addEventListener('click', (e) => {
                 botones.forEach(b => {
                     b.style.borderBottom = '3px solid transparent';
-                    b.style.color = '#757575';
+                    b.style.color = 'var(--text-muted)';
                     b.style.fontWeight = 'normal';
                 });
                 contenidos.forEach(c => c.style.display = 'none');
 
                 const targetId = e.target.getAttribute('data-target');
-                e.target.style.borderBottom = '3px solid #1a237e';
-                e.target.style.color = '#1a237e';
+                e.target.style.borderBottom = '3px solid var(--primary)';
+                e.target.style.color = 'var(--primary)';
                 e.target.style.fontWeight = 'bold';
                 document.getElementById(targetId).style.display = 'block';
             });

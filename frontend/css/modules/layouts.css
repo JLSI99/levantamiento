@@ -219,3 +219,68 @@
     color: var(--primary);
     margin-bottom: 8px;
 }
+
+/* ==========================================================================
+   MENÚ COLAPSABLE PARA DISPOSITIVOS MÓVILES (DASHBOARD)
+   ========================================================================== */
+
+/* Botón Hamburguesa (Oculto por defecto en Escritorio) */
+.mobile-menu-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--primary, #1a365d);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ==========================================================================
+   MENÚ COLAPSABLE Y DESLIZANTE PARA DISPOSITIVOS MÓVILES (DASHBOARD)
+   ========================================================================== */
+
+/* Botón Hamburguesa (Oculto por defecto en Escritorio) */
+.mobile-menu-toggle {
+    display: none;
+    background: transparent;
+    border: none;
+    color: var(--primary, #1a365d);
+    font-size: 20px;
+    cursor: pointer;
+    padding: 5px;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 768px) {
+    /* Muestra el botón hamburguesa solo en móviles */
+    .mobile-menu-toggle {
+        display: inline-flex;
+    }
+
+    /* Configuración base y deslizamiento suave para el menú en móvil */
+    .dashboard-sidebar {
+        position: absolute;
+        top: var(--header-height, 60px);
+        left: 0;
+        width: 100% !important;
+        height: calc(100vh - 60px);
+        z-index: 1000;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        
+        /* Propiedades iniciales para ocultar y animar el deslizamiento */
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-15px);
+        transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    }
+
+    /* Cuando la clase 'sidebar-open' está activa, se desliza suavemente a su posición */
+    .dashboard-sidebar.sidebar-open {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+}

@@ -84,12 +84,12 @@ export class HistorialResguardos {
         const subtitulo = this.capacidadGlobal ? 'Consola global de fiscalización, liberación, devolución y timbrado de actas de resguardo.' : 'Listado oficial de activos asignados bajo su responsabilidad legal.';
 
         return `
-            <div class="module-card" style="padding:20px; background:white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                <h3 style="margin-top:0; color:#1a237e; font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px; font-weight:700;">${titulo}</h3>
-                <p style="font-size:12px; color:#546e7a; margin:8px 0 15px 0; font-weight: 500;">${subtitulo}</p>
+            <div class="module-card">
+                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px; font-weight:700;">${titulo}</h3>
+                <p style="font-size:12px; color:var(--text-muted); margin:8px 0 15px 0; font-weight: 500;">${subtitulo}</p>
                 
-                <div id="resguardos-form-container"></div>
-                <div id="resguardos-table-container"></div>
+                <div id="resguardos-form-container" style="width: 100%; margin-bottom: 15px;"></div>
+                <div id="resguardos-table-container" style="width: 100%;"></div>
             </div>
         `;
     }
@@ -173,15 +173,13 @@ export class HistorialResguardos {
     }
 
     _renderizarMensaje(container, mensaje, esError = false) {
-        const bg = esError ? '#ffebee' : '#e8f5e9';
-        const border = esError ? '#ffcdd2' : '#c8e6c9';
-        const text = esError ? '#c62828' : '#2e7d32';
+        const contenedorClase = esError ? 'forbidden-container' : 'module-card';
         const titulo = esError ? 'Acceso Restringido (403 Forbidden)' : 'Mensaje del Sistema';
         
         container.innerHTML = `
-            <div style="padding:30px; background:${bg}; border:1px solid ${border}; border-radius:6px; color:${text}; font-family:sans-serif;">
-                <h4 style="margin:0 0 10px 0; font-size:14px; font-weight:700; text-transform:uppercase;">${titulo}</h4>
-                <p style="margin:0; font-size:12px;">${mensaje}</p>
+            <div class="${contenedorClase}" style="margin-top: 20px;">
+                <h4 style="margin:0 0 10px 0; font-size:13px; font-weight:700; text-transform:uppercase;">${titulo}</h4>
+                <p style="margin:0; font-size:11px;">${mensaje}</p>
             </div>
         `;
     }
