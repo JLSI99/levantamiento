@@ -20,12 +20,16 @@ export class CrudTagsBien {
         if (!formContainer || !tableContainer) return;
 
         formContainer.innerHTML = `
-            <div id="create-tag-container"></div>
-            <div id="update-tag-container" style="display:none;"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="create-tag-container"></div>
+                <div id="update-tag-container" style="display:none;"></div>
+            </div>
         `;
 
         tableContainer.innerHTML = `
-            <div id="read-tag-container"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="read-tag-container"></div>
+            </div>
         `;
 
         this.deleteTagsBien = new DeleteTagsBien(() => {

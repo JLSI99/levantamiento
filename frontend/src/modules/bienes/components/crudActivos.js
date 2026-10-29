@@ -19,12 +19,16 @@ export class CrudActivos {
         if (!formContainer || !tableContainer) return;
 
         formContainer.innerHTML = `
-            <div id="create-activo-container"></div>
-            <div id="update-activo-container" style="display:none;"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="create-activo-container"></div>
+                <div id="update-activo-container" style="display:none;"></div>
+            </div>
         `;
 
         tableContainer.innerHTML = `
-            <div id="read-activo-container"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="read-activo-container"></div>
+            </div>
         `;
 
         this.deleteActivo = new DeleteActivo(() => {

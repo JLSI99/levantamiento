@@ -22,13 +22,13 @@ export class CrudDepartamentos {
 
         container.innerHTML = `
             <!-- Formulario de Departamentos -->
-            <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background: #ffffff;">
-                <h4 id="form-depto-titulo" style="margin-top:0; color:#424242;">Alta de Departamento</h4>
+            <div class="module-card">
+                <h4 id="form-depto-titulo" style="margin-top:0; color:var(--text-main);">Alta de Departamento</h4>
                 ${this.createComp.renderFormHTML()}
             </div>
 
             <!-- Tabla de Departamentos -->
-            <div>
+            <div class="module-card">
                 ${this.readComp.renderTableHTML()}
             </div>
         `;

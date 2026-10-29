@@ -20,12 +20,16 @@ export class CrudTiposBien {
         if (!formContainer || !tableContainer) return;
 
         formContainer.innerHTML = `
-            <div id="create-tipo-container"></div>
-            <div id="update-tipo-container" style="display:none;"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="create-tipo-container"></div>
+                <div id="update-tipo-container" style="display:none;"></div>
+            </div>
         `;
 
         tableContainer.innerHTML = `
-            <div id="read-tipo-container"></div>
+            <div class="module-card" style="margin-bottom: 0;">
+                <div id="read-tipo-container"></div>
+            </div>
         `;
 
         this.deleteTipoBien = new DeleteTipoBien(() => {

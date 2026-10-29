@@ -20,7 +20,7 @@ export class CrudUsuarios {
         if (!container) return;
 
         container.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 20px;">
+            <div class="grid-dos-columnas">
                 <div>
                     <div id="create-usuario-container"></div>
                     <div id="update-usuario-container" style="display:none;"></div>
