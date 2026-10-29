@@ -1,13 +1,14 @@
+import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CreateTagsBien } from '/src/modules/bienes/components/tagsBienComponents/CreateTagsBien.js';
 import { ReadTagsBien } from '/src/modules/bienes/components/tagsBienComponents/ReadTagsBien.js';
 import { UpdateTagsBien } from '/src/modules/bienes/components/tagsBienComponents/UpdateTagsBien.js';
 import { DeleteTagsBien } from '/src/modules/bienes/components/tagsBienComponents/DeleteTagsBien.js';
 
 export class CrudTagsBien {
-    constructor(formContainerId, tableContainerId, permisos) {
+    constructor(formContainerId, tableContainerId) {
         this.formContainerId = formContainerId;
         this.tableContainerId = tableContainerId;
-        this.permisos = permisos;
         this._abortController = new AbortController();
 
         this.onTagsLoaded = null;
@@ -18,6 +19,16 @@ export class CrudTagsBien {
         const formContainer = document.getElementById(this.formContainerId);
         const tableContainer = document.getElementById(this.tableContainerId);
         if (!formContainer || !tableContainer) return;
+
+        const state = authStore.getSnapshot();
+
+        // Evaluación unificada de permisos por capacidades (CapBAC)
+        const permisos = {
+            crear: checkAccess('bienes:crear', state),
+            editar: checkAccess('bienes:editar', state),
+            borrar: checkAccess('bienes:borrar', state),
+            leer: checkAccess('bienes:leer', state)
+        };
 
         formContainer.innerHTML = `
             <div class="module-card" style="margin-bottom: 0;">
@@ -38,7 +49,7 @@ export class CrudTagsBien {
 
         this.readTagsBien = new ReadTagsBien(
             'read-tag-container',
-            this.permisos,
+            permisos,
             (id, item) => this.activarEdicion(id, item),
             (id) => this.deleteTagsBien.darDeBaja(id),
             (data) => {
@@ -48,7 +59,7 @@ export class CrudTagsBien {
 
         this.createTagsBien = new CreateTagsBien(
             'create-tag-container',
-            this.permisos,
+            permisos,
             () => {
                 if (this.onTagsChanged) this.onTagsChanged();
             }
@@ -56,7 +67,7 @@ export class CrudTagsBien {
 
         this.updateTagsBien = new UpdateTagsBien(
             'update-tag-container',
-            this.permisos,
+            permisos,
             () => {
                 this.desactivarEdicion();
                 if (this.onTagsChanged) this.onTagsChanged();

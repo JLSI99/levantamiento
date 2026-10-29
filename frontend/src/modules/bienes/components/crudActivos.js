@@ -1,13 +1,14 @@
+import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CreateActivo } from '/src/modules/bienes/components/activosComponents/CreateActivo.js';
 import { ReadActivos } from '/src/modules/bienes/components/activosComponents/ReadActivos.js';
 import { UpdateActivo } from '/src/modules/bienes/components/activosComponents/UpdateActivo.js';
 import { DeleteActivo } from '/src/modules/bienes/components/activosComponents/DeleteActivo.js';
 
 export class CrudActivos {
-    constructor(formContainerId, tableContainerId, permisos) {
+    constructor(formContainerId, tableContainerId) {
         this.formContainerId = formContainerId;
         this.tableContainerId = tableContainerId;
-        this.permisos = permisos;
         this._abortController = new AbortController();
 
         this.onActivosChanged = null;
@@ -17,6 +18,16 @@ export class CrudActivos {
         const formContainer = document.getElementById(this.formContainerId);
         const tableContainer = document.getElementById(this.tableContainerId);
         if (!formContainer || !tableContainer) return;
+
+        const state = authStore.getSnapshot();
+
+        // Evaluación unificada de permisos por capacidades (CapBAC)
+        const permisos = {
+            crear: checkAccess('bienes:crear', state),
+            editar: checkAccess('bienes:editar', state),
+            borrar: checkAccess('bienes:borrar', state),
+            leer: checkAccess('bienes:leer', state)
+        };
 
         formContainer.innerHTML = `
             <div class="module-card" style="margin-bottom: 0;">
@@ -38,14 +49,14 @@ export class CrudActivos {
 
         this.readActivos = new ReadActivos(
             'read-activo-container',
-            this.permisos,
+            permisos,
             (id, item) => this.activarEdicion(id, item),
             (id) => this.deleteActivo.darDeBaja(id)
         );
 
         this.createActivo = new CreateActivo(
             'create-activo-container',
-            this.permisos,
+            permisos,
             () => {
                 this.cargarDatos();
                 if (this.onActivosChanged) this.onActivosChanged();
@@ -54,7 +65,7 @@ export class CrudActivos {
 
         this.updateActivo = new UpdateActivo(
             'update-activo-container',
-            this.permisos,
+            permisos,
             () => {
                 this.desactivarEdicion();
                 this.cargarDatos();

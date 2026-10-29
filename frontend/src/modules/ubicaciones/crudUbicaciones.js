@@ -1,4 +1,5 @@
 import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CrudEdificios } from '/src/modules/ubicaciones/components/crudEdificios.js';
 import { CrudAulas } from '/src/modules/ubicaciones/components/crudAulas.js';
 import { CrudDepartamentos } from '/src/modules/ubicaciones/components/crudDepartamentos.js';
@@ -17,17 +18,14 @@ export class CrudUbicaciones {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        const estadoAuth = authStore.getSnapshot();
-        const usuario = estadoAuth?.user;
-        const capabilities = estadoAuth?.capabilities || [];
-        const permisosRaw = usuario?.permisos || [];
-        const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
+        const state = authStore.getSnapshot();
 
+        // Evaluación unificada y robusta utilizando CapBAC a través de CanRender.js
         const permisos = {
-            crear: esAdmin || permisosRaw.includes('ubicaciones:crear') || capabilities.includes('ubicaciones:crear'),
-            editar: esAdmin || permisosRaw.includes('ubicaciones:editar') || capabilities.includes('ubicaciones:editar'),
-            borrar: esAdmin || permisosRaw.includes('ubicaciones:borrar') || capabilities.includes('ubicaciones:borrar'),
-            leer: esAdmin || permisosRaw.includes('ubicaciones:leer') || capabilities.includes('ubicaciones:leer')
+            crear: checkAccess('ubicaciones:crear', state),
+            editar: checkAccess('ubicaciones:editar', state),
+            borrar: checkAccess('ubicaciones:borrar', state),
+            leer: checkAccess('ubicaciones:leer', state)
         };
 
         if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {

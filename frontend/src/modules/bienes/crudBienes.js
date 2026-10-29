@@ -1,4 +1,5 @@
 import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CrudTiposBien } from '/src/modules/bienes/components/crudTiposBien.js';
 import { CrudActivos } from '/src/modules/bienes/components/crudActivos.js';
 import { CrudTagsBien } from '/src/modules/bienes/components/crudTagsBien.js';
@@ -17,17 +18,14 @@ export class CrudBienes {
         const container = document.getElementById(this.containerId);
         if (!container) return;
 
-        const estadoAuth = authStore.getSnapshot();
-        const usuario = estadoAuth?.user;
-        const capabilities = estadoAuth?.capabilities || [];
-        const permisosRaw = usuario?.permisos || [];
-        const esAdmin = usuario && (usuario.rol === 1 || usuario.rol_id === 1);
+        const state = authStore.getSnapshot();
 
+        // Evaluación unificada utilizando exclusivamente CapBAC a través de CanRender.js
         const permisos = {
-            crear: esAdmin || permisosRaw.includes('bienes:crear') || capabilities.includes('bienes:crear'),
-            editar: esAdmin || permisosRaw.includes('bienes:editar') || capabilities.includes('bienes:editar'),
-            borrar: esAdmin || permisosRaw.includes('bienes:borrar') || capabilities.includes('bienes:borrar'),
-            leer: esAdmin || permisosRaw.includes('bienes:leer') || capabilities.includes('bienes:leer')
+            crear: checkAccess('bienes:crear', state),
+            editar: checkAccess('bienes:editar', state),
+            borrar: checkAccess('bienes:borrar', state),
+            leer: checkAccess('bienes:leer', state)
         };
 
         if (!permisos.crear && !permisos.editar && !permisos.borrar && !permisos.leer) {
@@ -122,7 +120,6 @@ export class CrudBienes {
         this.crudActivos = new CrudActivos('wrapper-form-activos', 'wrapper-tabla-activos', permisos);
         this.crudTagsBien = new CrudTagsBien('wrapper-form-tags', 'wrapper-tabla-tags', permisos);
 
-        // Sincronización de Tipos de Bien -> Formulario de Activos
         this.crudTiposBien.onTiposLoaded = (tipos) => {
             if (this.crudActivos?.actualizarSelectTipos) {
                 this.crudActivos.actualizarSelectTipos(tipos);
@@ -134,7 +131,6 @@ export class CrudBienes {
             this.crudActivos.cargarDatos();
         };
 
-        // Sincronización de Etiquetas (Tags) -> Formulario de Activos
         this.crudTagsBien.onTagsLoaded = (tags) => {
             if (this.crudActivos?.actualizarSelectTags) {
                 this.crudActivos.actualizarSelectTags(tags);

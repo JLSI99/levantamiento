@@ -13,6 +13,12 @@ const ROUTE_REGISTRY = [
     view: CrudUsuariosPersonas,
   },
   {
+    id: 'ubicaciones',
+    label: 'Ubicaciones',
+    roles: ['ADMINISTRADOR'],
+    view: CrudUbicaciones,
+  },
+  {
     id: 'bienes',
     label: 'Gestión de Bienes',
     roles: ['ADMINISTRADOR', 'REGISTRADOR','REVISOR'],
@@ -23,13 +29,8 @@ const ROUTE_REGISTRY = [
     label: 'Resguardos y Custodia',
     roles: ['ADMINISTRADOR', 'LEVANTADOR', 'RESGUARDANTE'],
     view: HistorialResguardos,
-  },
-  {
-    id: 'ubicaciones',
-    label: 'Ubicaciones',
-    roles: ['ADMINISTRADOR'],
-    view: CrudUbicaciones,
   }
+  
 ];
 
 export class DashboardView {
@@ -140,7 +141,6 @@ export class DashboardView {
 
       btn.onclick = () => {
         this.cargarModulo(config);
-        // Cierra automáticamente el menú en dispositivos móviles al seleccionar una opción
         const sidebar = document.getElementById('app-sidebar');
         if (sidebar) sidebar.classList.remove('sidebar-open');
       };

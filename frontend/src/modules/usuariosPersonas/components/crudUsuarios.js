@@ -1,12 +1,13 @@
+import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CreateUsuario } from '/src/modules/usuariosPersonas/components/UsuariosComponents/CreateUsuario.js';
 import { ReadUsuarios } from '/src/modules/usuariosPersonas/components/UsuariosComponents/ReadUsuarios.js';
 import { UpdateUsuario } from '/src/modules/usuariosPersonas/components/UsuariosComponents/UpdateUsuario.js';
 import { DeleteUsuario } from '/src/modules/usuariosPersonas/components/UsuariosComponents/DeleteUsuario.js';
 
 export class CrudUsuarios {
-    constructor(containerId, permisos) {
+    constructor(containerId) {
         this.containerId = containerId;
-        this.permisos = permisos || [];
         this._abortController = new AbortController();
 
         this.readUsuarios = null;
@@ -18,6 +19,16 @@ export class CrudUsuarios {
     render() {
         const container = document.getElementById(this.containerId);
         if (!container) return;
+
+        const state = authStore.getSnapshot();
+
+        // Evaluación estandarizada de permisos por capacidades (CapBAC)
+        const permisos = {
+            crear: checkAccess('usuarios:crear', state),
+            editar: checkAccess('usuarios:editar', state),
+            borrar: checkAccess('usuarios:borrar', state),
+            leer: checkAccess('usuarios:leer', state)
+        };
 
         container.innerHTML = `
             <div class="grid-dos-columnas">
@@ -35,14 +46,14 @@ export class CrudUsuarios {
 
         this.readUsuarios = new ReadUsuarios(
             'read-usuario-container',
-            this.permisos,
+            permisos,
             (id, usuario) => this.activarEdicion(id, usuario),
             (id) => this.deleteUsuario.darDeBaja(id)
         );
 
         this.createUsuario = new CreateUsuario(
             'create-usuario-container',
-            this.permisos,
+            permisos,
             () => {
                 if (this.readUsuarios) this.readUsuarios.cargarDatos();
             }
@@ -50,7 +61,7 @@ export class CrudUsuarios {
 
         this.updateUsuario = new UpdateUsuario(
             'update-usuario-container',
-            this.permisos,
+            permisos,
             () => {
                 this.desactivarEdicion();
                 if (this.readUsuarios) this.readUsuarios.cargarDatos();
@@ -63,15 +74,19 @@ export class CrudUsuarios {
     }
 
     activarEdicion(id, usuario) {
-        document.getElementById('create-usuario-container').style.display = 'none';
-        document.getElementById('update-usuario-container').style.display = 'block';
-        this.updateUsuario.render(usuario);
+        const createContainer = document.getElementById('create-usuario-container');
+        const updateContainer = document.getElementById('update-usuario-container');
+        if (createContainer) createContainer.style.display = 'none';
+        if (updateContainer) updateContainer.style.display = 'block';
+        if (this.updateUsuario) this.updateUsuario.render(usuario);
     }
 
     desactivarEdicion() {
-        document.getElementById('update-usuario-container').style.display = 'none';
-        document.getElementById('create-usuario-container').style.display = 'block';
-        this.updateUsuario.limpiar();
+        const createContainer = document.getElementById('create-usuario-container');
+        const updateContainer = document.getElementById('update-usuario-container');
+        if (updateContainer) updateContainer.style.display = 'none';
+        if (createContainer) createContainer.style.display = 'block';
+        if (this.updateUsuario) this.updateUsuario.limpiar();
     }
 
     unmount() {

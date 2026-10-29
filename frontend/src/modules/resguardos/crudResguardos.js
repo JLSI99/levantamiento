@@ -1,4 +1,5 @@
 import authStore from '/src/core/store/authStore.js';
+import { checkAccess } from '/src/core/security/CanRender.js';
 import { CreateResguardo } from '/src/modules/resguardos/components/CreateResguardo.js';
 import { ReadResguardos } from '/src/modules/resguardos/components/ReadResguardos.js';
 import { UpdateResguardo } from '/src/modules/resguardos/components/UpdateResguardo.js';
@@ -34,12 +35,11 @@ export class HistorialResguardos {
             return;
         }
 
-        const permisos = state.capabilities || [];
+        // Evaluación unificada utilizando exclusivamente CapBAC a través de CanRender.js
+        this.capacidadGlobal = checkAccess('resguardos:leer', state);
+        const puedeListarPropios = checkAccess('MisResguardos:leer', state);
         
-        this.capacidadGlobal = permisos.includes('resguardos:leer');
-        const puedeListarPropios = permisos.includes('MisResguardos:leer');
-        
-        this.puedeModificar = permisos.includes('resguardos:editar') || permisos.includes('resguardos:crear');
+        this.puedeModificar = checkAccess(['resguardos:editar', 'resguardos:crear'], state, false);
 
         if (!this.capacidadGlobal && !puedeListarPropios) {
             this._renderizarMensaje(container, "Acceso Denegado: Su perfil no cuenta con capacidades explícitas de lectura en la matriz de resguardos patrimoniales.", true);
