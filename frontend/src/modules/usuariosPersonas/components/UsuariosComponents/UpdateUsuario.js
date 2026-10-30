@@ -3,8 +3,13 @@ import { adminService } from '/src/services/admin.js';
 export class UpdateUsuario {
     constructor(containerId, permisos, onSuccess, onCancel) {
         this.containerId = containerId;
-        this.permisos = Array.isArray(permisos) ? permisos : [];
-        this.puedeEditar = this.permisos.includes('usuarios:editar') || this.permisos.includes('usuarios:editar');
+        this.permisos = permisos || {};
+        
+        const isObj = typeof this.permisos === 'object' && !Array.isArray(this.permisos);
+        this.puedeEditar = isObj 
+            ? Boolean(this.permisos.editar) 
+            : Array.isArray(this.permisos) && this.permisos.includes('usuarios:editar');
+
         this.onSuccess = onSuccess;
         this.onCancel = onCancel;
         this._abortController = new AbortController();
@@ -17,7 +22,7 @@ export class UpdateUsuario {
         if (!container) return;
 
         if (!this.puedeEditar) {
-            container.innerHTML = `<div style="color:#757575; font-style:italic; padding:15px; border:1px solid #e0e0e0; border-radius:4px;">No tiene permisos para editar usuarios.</div>`;
+            container.innerHTML = `<div class="forbidden-container" style="padding:15px; font-size:12px;">No cuenta con permisos para editar usuarios.</div>`;
             return;
         }
 
@@ -26,42 +31,52 @@ export class UpdateUsuario {
         const currentRoleId = (usuario?.roles && usuario.roles.length > 0) ? usuario.roles[0].id_rol : '1';
 
         container.innerHTML = `
-            <div style="padding: 15px; border: 1px solid #ffb74d; border-radius: 4px; background: #fff8e1;">
-                <h4 style="margin-top:0; color:#e65100;">Editar Cuenta Digital</h4>
-                <form id="form-update-usuario">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">CURP (No modificable)</label>
-                    <input type="text" name="curp" value="${usuario?.curp || ''}" readonly 
-                        style="width:100%; margin-bottom:10px; padding:8px; text-transform: uppercase; background:#e0e0e0; border:1px solid #ccc; border-radius:4px;">
+            <div class="module-card" style="padding: 15px; width:100%; box-sizing:border-box; border: 1px solid var(--warning, #ffb74d); background: var(--bg-card-warning, #fff8e1);">
+                <h4 style="margin-top:0; color:var(--warning-dark, #e65100); font-size:14px; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Editar Cuenta Digital</h4>
+                <form id="form-update-usuario" style="display:flex; flex-direction:column; gap:12px; width:100%;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">CURP (No modificable)</label>
+                        <input type="text" name="curp" value="${usuario?.curp || ''}" readonly 
+                            style="width:100%; box-sizing:border-box; margin-bottom:0; padding:8px; text-transform: uppercase; background:var(--bg-disabled, #e0e0e0); border:1px solid var(--border-color); border-radius:4px; color:var(--text-main);">
+                    </div>
                         
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Username *</label>
-                    <input type="text" name="username" value="${usuario?.username || ''}" required 
-                        pattern="${regexUsername}" minlength="3" maxlength="50"
-                        title="Solo letras, números y guiones bajos"
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Username *</label>
+                        <input type="text" name="username" value="${usuario?.username || ''}" required 
+                            pattern="${regexUsername}" minlength="3" maxlength="50"
+                            title="Solo letras, números y guiones bajos"
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Correo Electrónico *</label>
-                    <input type="email" name="email" value="${usuario?.email || ''}" required 
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Correo Electrónico *</label>
+                        <input type="email" name="email" value="${usuario?.email || ''}" required 
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Nueva Contraseña (Opcional)</label>
-                    <input type="password" name="password" placeholder="Dejar en blanco para mantener actual" 
-                        pattern="${regexPassword}" minlength="8"
-                        title="Debe contener al menos 8 caracteres, una mayúscula, una minúscula y un número"
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Nueva Contraseña (Opcional)</label>
+                        <input type="password" name="password" placeholder="Dejar en blanco para mantener actual" 
+                            pattern="${regexPassword}" minlength="8"
+                            title="Debe contener al menos 8 caracteres, una mayúscula, una minúscula y un número"
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Rol del Usuario *</label>
-                    <select name="role_id" required style="width:100%; margin-bottom:15px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <option value="1" ${currentRoleId == 1 ? 'selected' : ''}>Administrador General del Sistema</option>
-                        <option value="2" ${currentRoleId == 2 ? 'selected' : ''}>Levantador Físico / Operador</option>
-                        <option value="3" ${currentRoleId == 3 ? 'selected' : ''}>Registrador de Bienes Patrimoniales</option>
-                        <option value="4" ${currentRoleId == 4 ? 'selected' : ''}>Revisor Central de Activos</option>
-                        <option value="5" ${currentRoleId == 5 ? 'selected' : ''}>Resguardante / Jefe de Departamento</option>
-                    </select>
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Rol del Usuario *</label>
+                        <select name="role_id" required style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                            <option value="1" ${currentRoleId == 1 ? 'selected' : ''}>Administrador General del Sistema</option>
+                            <option value="2" ${currentRoleId == 2 ? 'selected' : ''}>Levantador Físico / Operador</option>
+                            <option value="3" ${currentRoleId == 3 ? 'selected' : ''}>Registrador de Bienes Patrimoniales</option>
+                            <option value="4" ${currentRoleId == 4 ? 'selected' : ''}>Revisor Central de Activos</option>
+                            <option value="5" ${currentRoleId == 5 ? 'selected' : ''}>Resguardante / Jefe de Departamento</option>
+                        </select>
+                    </div>
                     
-                    <button type="submit" style="width:100%; padding:8px; background:#e65100; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                    <button type="submit" style="width:100%; padding:10px; background:var(--warning-dark, #e65100); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Actualizar Cuenta
                     </button>
-                    <button type="button" id="btn-cancelar-update-usuario" style="width:100%; margin-top:8px; padding:8px; background:#757575; color:white; border:none; border-radius:4px; cursor:pointer;">
+                    <button type="button" id="btn-cancelar-update-usuario" style="width:100%; padding:10px; background:var(--text-muted, #757575); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Cancelar Edición
                     </button>
                 </form>

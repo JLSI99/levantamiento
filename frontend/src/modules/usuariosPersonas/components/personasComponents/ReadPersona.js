@@ -3,9 +3,16 @@ import { adminService } from '/src/services/admin.js';
 export class ReadPersona {
     constructor(containerId, permisos, onEdit, onDelete) {
         this.containerId = containerId;
-        this.permisos = Array.isArray(permisos) ? permisos : [];
-        this.puedeEditar = this.permisos.includes('personas:actualizar') || this.permisos.includes('personas:editar');
-        this.puedeEliminar = this.permisos.includes('personas:eliminar') || this.permisos.includes('personas:borrar');
+        this.permisos = permisos || {};
+        
+        const isObj = typeof this.permisos === 'object' && !Array.isArray(this.permisos);
+        this.puedeEditar = isObj 
+            ? Boolean(this.permisos.editar) 
+            : Array.isArray(this.permisos) && (this.permisos.includes('personas:actualizar') || this.permisos.includes('personas:editar'));
+        
+        this.puedeEliminar = isObj 
+            ? Boolean(this.permisos.borrar) 
+            : Array.isArray(this.permisos) && (this.permisos.includes('personas:eliminar') || this.permisos.includes('personas:borrar'));
 
         this.onEdit = onEdit;
         this.onDelete = onDelete;
@@ -19,20 +26,22 @@ export class ReadPersona {
         if (!container) return;
 
         container.innerHTML = `
-            <div style="background:white; border: 1px solid #e0e0e0; border-radius: 4px; padding:15px;">
-                <h4 style="margin-top:0; color:#424242;">Catálogo Demográfico</h4>
-                <table style="width:100%; border-collapse:collapse; font-size:12px;">
-                    <thead>
-                        <tr style="background:#f5f5f5; text-align:left; border-bottom:2px solid #e0e0e0;">
-                            <th style="padding:8px;">CURP</th>
-                            <th style="padding:8px;">Nombre Completo</th>
-                            <th style="padding:8px; text-align:center;">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tbody-personas">
-                        <tr><td colspan="3" style="padding:15px; text-align:center;">Cargando...</td></tr>
-                    </tbody>
-                </table>
+            <div class="module-card" style="padding:15px; width:100%; box-sizing:border-box;">
+                <h4 style="margin-top:0; color:var(--text-main, #424242); font-size:14px; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Catálogo Demográfico</h4>
+                <div style="width: 100%; overflow-x: auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; min-width: 320px;">
+                        <thead>
+                            <tr style="background:var(--table-header-bg, #f5f5f5); text-align:left; border-bottom:2px solid var(--border-color);">
+                                <th style="padding:8px; color:var(--text-main);">CURP</th>
+                                <th style="padding:8px; color:var(--text-main);">Nombre Completo</th>
+                                <th style="padding:8px; text-align:center; color:var(--text-main);">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-personas">
+                            <tr><td colspan="3" style="padding:15px; text-align:center; color:var(--text-muted);">Cargando...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         `;
 
@@ -72,25 +81,25 @@ export class ReadPersona {
             personas.forEach(p => this._personasCache.set(String(p.id_persona), p));
 
             if (personas.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px;">No existen personas registradas.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:var(--text-muted);">No existen personas registradas.</td></tr>';
                 return;
             }
 
             tbody.innerHTML = personas.map(p => `
-                <tr style="border-bottom:1px solid #e0e0e0;">
-                    <td style="padding:8px; font-family:monospace;">${p.curp}</td>
-                    <td style="padding:8px;">${p.apellidos}, ${p.nombres}</td>
+                <tr style="border-bottom:1px solid var(--border-color);">
+                    <td style="padding:8px; font-family:monospace; color:var(--text-main);">${p.curp}</td>
+                    <td style="padding:8px; color:var(--text-main);">${p.apellidos}, ${p.nombres}</td>
                     <td style="padding:8px; text-align:center;">
-                        <div style="display:flex; gap:4px; justify-content:center;">
+                        <div style="display:flex; gap:6px; justify-content:center; flex-wrap:wrap;">
                             ${this.puedeEditar ? `
                                 <button class="btn-editar-persona" data-id="${p.id_persona}" 
-                                    style="background:#f57c00; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    style="background:var(--warning, #f57c00); color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:3px; font-size:11px; font-weight:600;">
                                     Editar
                                 </button>
                             ` : ''}
                             ${this.puedeEliminar ? `
                                 <button class="btn-eliminar-persona" data-id="${p.id_persona}" 
-                                    style="background:#d32f2f; color:white; border:none; padding:4px 8px; cursor:pointer; border-radius:3px;">
+                                    style="background:var(--danger, #d32f2f); color:white; border:none; padding:5px 10px; cursor:pointer; border-radius:3px; font-size:11px; font-weight:600;">
                                     Eliminar
                                 </button>
                             ` : ''}
@@ -99,7 +108,7 @@ export class ReadPersona {
                 </tr>
             `).join('');
         } catch (error) {
-            tbody.innerHTML = '<tr><td colspan="3" style="color:red; text-align:center; padding:15px;">Error al cargar datos</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="3" style="color:var(--danger, red); text-align:center; padding:15px;">Error al cargar datos</td></tr>';
         }
     }
 

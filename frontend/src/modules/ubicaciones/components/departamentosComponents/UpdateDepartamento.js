@@ -12,19 +12,18 @@ export class UpdateDepartamento {
         if (inputNombre) inputNombre.value = depto.nombre;
         if (inputCurp) inputCurp.value = depto.curp_jefe_departamento;
         
-        // Si el objeto depto trae la información de la persona asociada, la mostramos en el input de búsqueda
         if (inputBusqueda) {
             if (depto.persona) {
                 inputBusqueda.value = `${depto.persona.nombres} ${depto.persona.apellidos} (${depto.persona.curp})`;
             } else {
-                inputBusqueda.value = depto.curp_jefe_departamento; // Fallback si solo viene la CURP
+                inputBusqueda.value = depto.curp_jefe_departamento;
             }
         }
 
         if (titulo) titulo.textContent = 'Editar Departamento';
         if (btnSubmit) {
             btnSubmit.textContent = 'Actualizar Departamento';
-            btnSubmit.style.background = '#e65100';
+            btnSubmit.style.background = 'var(--warning-dark, #e65100)';
         }
         if (btnCancelar) btnCancelar.style.display = 'block';
     }
@@ -41,7 +40,7 @@ export class UpdateDepartamento {
         if (titulo) titulo.textContent = 'Alta de Departamento';
         if (btnSubmit) {
             btnSubmit.textContent = 'Registrar Departamento';
-            btnSubmit.style.background = '#00796b';
+            btnSubmit.style.background = 'var(--success, #00796b)';
         }
         if (btnCancelar) btnCancelar.style.display = 'none';
     }

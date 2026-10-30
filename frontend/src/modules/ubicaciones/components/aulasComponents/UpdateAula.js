@@ -14,7 +14,7 @@ export class UpdateAula {
         if (titulo) titulo.textContent = 'Editar Nombre de Aula';
         if (btnSubmit) {
             btnSubmit.textContent = 'Actualizar Aula';
-            btnSubmit.style.background = '#e65100';
+            btnSubmit.style.background = 'var(--warning-dark, #e65100)';
         }
         if (btnCancelar) btnCancelar.style.display = 'block';
     }
@@ -31,7 +31,7 @@ export class UpdateAula {
         if (titulo) titulo.textContent = 'Agregar Aula / Espacio';
         if (btnSubmit) {
             btnSubmit.textContent = 'Anexar Aula';
-            btnSubmit.style.background = '#0288d1';
+            btnSubmit.style.background = 'var(--primary, #0288d1)';
         }
         if (btnCancelar) btnCancelar.style.display = 'none';
     }

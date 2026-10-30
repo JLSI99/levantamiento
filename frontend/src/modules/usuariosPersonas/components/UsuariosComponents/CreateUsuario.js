@@ -3,8 +3,13 @@ import { adminService } from '/src/services/admin.js';
 export class CreateUsuario {
     constructor(containerId, permisos, onSuccess) {
         this.containerId = containerId;
-        this.permisos = Array.isArray(permisos) ? permisos : [];
-        this.puedeCrear = this.permisos.includes('usuarios:crear');
+        this.permisos = permisos || {};
+        
+        const isObj = typeof this.permisos === 'object' && !Array.isArray(this.permisos);
+        this.puedeCrear = isObj 
+            ? Boolean(this.permisos.crear) 
+            : Array.isArray(this.permisos) && this.permisos.includes('usuarios:crear');
+
         this.onSuccess = onSuccess;
         this._abortController = new AbortController();
     }
@@ -14,7 +19,7 @@ export class CreateUsuario {
         if (!container) return;
 
         if (!this.puedeCrear) {
-            container.innerHTML = `<div style="color:#757575; font-style:italic; padding:15px; border:1px solid #e0e0e0; border-radius:4px;">No tiene permisos para crear usuarios.</div>`;
+            container.innerHTML = `<div class="forbidden-container" style="padding:15px; font-size:12px;">No cuenta con permisos para crear usuarios.</div>`;
             return;
         }
 
@@ -23,46 +28,61 @@ export class CreateUsuario {
         const regexPassword = "(?=.*\\d)(?=.*[a-z])(?=.*[A-Z]).{8,}";
 
         container.innerHTML = `
-            <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background:#ffffff;">
-                <h4 style="margin-top:0; color:#424242;">Aprovisionar Credenciales</h4>
-                <form id="form-create-usuario">
+            <div class="module-card" style="padding: 15px; width:100%; box-sizing:border-box; background:var(--bg-card, #ffffff);">
+                <h4 style="margin-top:0; color:var(--text-main, #424242); font-size:14px; font-weight:700; border-bottom:1px solid var(--border-color); padding-bottom:8px;">Aprovisionar Credenciales</h4>
+                <form id="form-create-usuario" style="display:flex; flex-direction:column; gap:12px; width:100%;">
                     <!-- Buscador predictivo por nombre -->
-                    <div style="position:relative; width:100%; margin-bottom:10px;">
-                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:#555;">Persona Asociada (Búsqueda por Nombre)</label>
+                    <div style="position:relative; width:100%;">
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Persona Asociada (Búsqueda por Nombre)</label>
                         <input type="text" id="input-busqueda-persona-usuario" placeholder="Escriba el nombre o apellido de la persona..." autocomplete="off"
-                            style="width:100%; padding:8px; box-sizing:border-box; border:1px solid #ccc; border-radius:4px; font-size:12px;">
+                            style="width:100%; padding:8px; box-sizing:border-box; border:1px solid var(--border-color); border-radius:4px; font-size:12px; background:var(--bg-input, #fff); color:var(--text-main);">
                         
-                        <div id="dropdown-resultados-usuario" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; border-radius:0 0 4px 4px; max-height:150px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                        <div id="dropdown-resultados-usuario" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card, white); border:1px solid var(--border-color); border-radius:0 0 4px 4px; max-height:150px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
                         </div>
                     </div>
 
-                    <input type="text" name="curp" id="input-usuario-curp" placeholder="CURP de la Persona" required 
-                        pattern="${regexCurp}" minlength="18" maxlength="18" readonly
-                        title="Se autocompleta al seleccionar una persona de la lista"
-                        style="width:100%; margin-bottom:10px; padding:8px; text-transform: uppercase; border:1px solid #ccc; border-radius:4px; background:#f5f5f5; font-family:monospace;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">CURP *</label>
+                        <input type="text" name="curp" id="input-usuario-curp" placeholder="CURP de la Persona" required 
+                            pattern="${regexCurp}" minlength="18" maxlength="18" readonly
+                            title="Se autocompleta al seleccionar una persona de la lista"
+                            style="width:100%; box-sizing:border-box; padding:8px; text-transform: uppercase; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-disabled, #f5f5f5); color:var(--text-main); font-family:monospace;">
+                    </div>
                         
-                    <input type="text" name="username" placeholder="Username" required 
-                        pattern="${regexUsername}" minlength="3" maxlength="50"
-                        title="Solo letras, números y guiones bajos"
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Username *</label>
+                        <input type="text" name="username" placeholder="Username" required 
+                            pattern="${regexUsername}" minlength="3" maxlength="50"
+                            title="Solo letras, números y guiones bajos"
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <input type="email" name="email" placeholder="Correo Electrónico" required 
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Correo Electrónico *</label>
+                        <input type="email" name="email" placeholder="Correo Electrónico" required 
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <input type="password" name="password" placeholder="Contraseña" required 
-                        pattern="${regexPassword}" minlength="8"
-                        title="Debe contener al menos 8 caracteres, una mayúscula, una minúscula y un número"
-                        style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Contraseña *</label>
+                        <input type="password" name="password" placeholder="Contraseña" required 
+                            pattern="${regexPassword}" minlength="8"
+                            title="Debe contener al menos 8 caracteres, una mayúscula, una minúscula y un número"
+                            style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                         
-                    <select name="role_id" required style="width:100%; margin-bottom:15px; padding:8px; border:1px solid #ccc; border-radius:4px;">
-                        <option value="1">Administrador General del Sistema</option>
-                        <option value="2">Levantador Físico / Operador</option>
-                        <option value="3">Registrador de Bienes Patrimoniales</option>
-                        <option value="4">Revisor Central de Activos</option>
-                        <option value="5">Resguardante / Jefe de Departamento</option>
-                    </select>
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Rol del Sistema *</label>
+                        <select name="role_id" required style="width:100%; box-sizing:border-box; padding:8px; border:1px solid var(--border-color); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main);">
+                            <option value="1">Administrador General del Sistema</option>
+                            <option value="2">Levantador Físico / Operador</option>
+                            <option value="3">Registrador de Bienes Patrimoniales</option>
+                            <option value="4">Revisor Central de Activos</option>
+                            <option value="5">Resguardante / Jefe de Departamento</option>
+                        </select>
+                    </div>
                     
-                    <button type="submit" style="width:100%; padding:8px; background:#00796b; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                    <button type="submit" style="width:100%; padding:10px; background:var(--success, #00796b); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Crear Cuenta Digital
                     </button>
                 </form>
@@ -96,17 +116,17 @@ export class CreateUsuario {
                         const personas = Array.isArray(resp) ? resp : (resp?.data || []);
 
                         if (personas.length === 0) {
-                            dropdown.innerHTML = '<div style="padding:8px; color:#757575; font-size:11px;">No se encontraron personas registradas.</div>';
+                            dropdown.innerHTML = '<div style="padding:8px; color:var(--text-muted, #757575); font-size:11px;">No se encontraron personas registradas.</div>';
                             dropdown.style.display = 'block';
                             return;
                         }
 
                         dropdown.innerHTML = personas.map(p => `
                             <div class="item-persona-sugerida" data-curp="${p.curp}" data-nombre="${p.nombres} ${p.apellidos}"
-                                style="padding:8px; font-size:11px; border-bottom:1px solid #f0f0f0; cursor:pointer;"
-                                onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
-                                <div style="font-weight:600; color:#212121;">${p.nombres} ${p.apellidos}</div>
-                                <div style="font-family:monospace; color:#0288d1;">CURP: ${p.curp}</div>
+                                style="padding:8px; font-size:11px; border-bottom:1px solid var(--border-color); cursor:pointer;"
+                                onmouseover="this.style.background='var(--hover-bg, #f5f5f5)'" onmouseout="this.style.background='var(--bg-card, #fff)'">
+                                <div style="font-weight:600; color:var(--text-main, #212121);">${p.nombres} ${p.apellidos}</div>
+                                <div style="font-family:monospace; color:var(--primary, #0288d1);">CURP: ${p.curp}</div>
                             </div>
                         `).join('');
                         dropdown.style.display = 'block';

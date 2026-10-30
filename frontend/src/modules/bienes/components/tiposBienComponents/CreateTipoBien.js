@@ -3,9 +3,14 @@ import { bienesService } from '/src/services/bienes.js';
 export class CreateTipoBien {
     constructor(containerId, permisos, onSuccess) {
         this.containerId = containerId;
-        this.permisos = permisos;
+        this.permisos = permisos || {};
         this.onSuccess = onSuccess;
         this._abortController = new AbortController();
+
+        const isObj = typeof this.permisos === 'object' && !Array.isArray(this.permisos);
+        this.puedeCrear = isObj 
+            ? Boolean(this.permisos.crear) 
+            : Array.isArray(this.permisos) && (this.permisos.includes('bienes:crear') || this.permisos.includes('tipos:crear'));
     }
 
     render() {
@@ -13,25 +18,29 @@ export class CreateTipoBien {
         if (!container) return;
 
         container.innerHTML = `
-            <div style="padding: 15px; border: 1px solid #e0e0e0; border-radius: 4px; background: #ffffff;">
-                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid #e0e0e0; padding-bottom:8px;">
+            <div class="module-card" style="padding: 15px; border: 1px solid var(--border-color, #e0e0e0); border-radius: 4px; background: var(--bg-card, #ffffff); width:100%; box-sizing:border-box;">
+                <h3 style="margin-top:0; color:var(--primary, #1a237e); font-size:16px; font-weight:700; border-bottom:1px solid var(--border-color, #e0e0e0); padding-bottom:8px;">
                     Registrar Tipo de Bien
                 </h3>
-                ${this.permisos.crear ? `
-                <form id="form-create-tipo-bien">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Nombre del Tipo *</label>
-                    <input type="text" name="nombre" placeholder="Ej. Equipo de Cómputo" required
-                        minlength="2" maxlength="100" style="width:100%; margin-bottom:10px; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                ${this.puedeCrear ? `
+                <form id="form-create-tipo-bien" style="display:flex; flex-direction:column; gap:12px; width:100%; box-sizing:border-box;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Nombre del Tipo *</label>
+                        <input type="text" name="nombre" placeholder="Ej. Equipo de Cómputo" required
+                            minlength="2" maxlength="100" style="width:100%; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; box-sizing:border-box; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
                     
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Tasa Depreciación Anual (%)</label>
-                    <input type="number" name="tasa_depreciacion_anual" placeholder="0.00" step="0.01" min="0" max="100" 
-                        style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Tasa Depreciación Anual (%)</label>
+                        <input type="number" name="tasa_depreciacion_anual" placeholder="0.00" step="0.01" min="0" max="100" 
+                            style="width:100%; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; box-sizing:border-box; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
 
-                    <button type="submit" style="width:100%; padding:8px; background:#1a237e; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                    <button type="submit" style="width:100%; padding:10px; background:var(--primary, #1a237e); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Crear Categoría
                     </button>
                 </form>
-                ` : '<div style="color:#757575; font-style:italic;">Sin permisos para crear tipos.</div>'}
+                ` : '<div class="forbidden-container" style="color:var(--text-muted, #757575); font-style:italic; font-size:12px;">Sin permisos para crear tipos.</div>'}
             </div>
         `;
 

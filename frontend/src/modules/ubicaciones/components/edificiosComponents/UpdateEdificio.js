@@ -14,7 +14,7 @@ export class UpdateEdificio {
         
         if (btnSubmit) {
             btnSubmit.textContent = 'Actualizar Edificio';
-            btnSubmit.style.background = '#e65100';
+            btnSubmit.style.background = 'var(--warning-dark, #e65100)';
         }
         if (btnCancelar) btnCancelar.style.display = 'block';
     }
@@ -29,7 +29,7 @@ export class UpdateEdificio {
         if (titulo) titulo.textContent = 'Registrar Edificio';
         if (btnSubmit) {
             btnSubmit.textContent = 'Crear Edificio';
-            btnSubmit.style.background = '#00796b';
+            btnSubmit.style.background = 'var(--success, #00796b)';
         }
         if (btnCancelar) btnCancelar.style.display = 'none';
     }

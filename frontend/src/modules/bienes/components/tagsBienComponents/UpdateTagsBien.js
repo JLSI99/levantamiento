@@ -3,11 +3,16 @@ import { bienesService } from '/src/services/bienes.js';
 export class UpdateTagsBien {
     constructor(containerId, permisos, onSuccess, onCancel) {
         this.containerId = containerId;
-        this.permisos = permisos;
+        this.permisos = permisos || {};
         this.onSuccess = onSuccess;
         this.onCancel = onCancel;
         this._abortController = new AbortController();
         this.item = null;
+
+        const isObj = typeof this.permisos === 'object' && !Array.isArray(this.permisos);
+        this.puedeEditar = isObj 
+            ? Boolean(this.permisos.editar) 
+            : Array.isArray(this.permisos) && (this.permisos.includes('bienes:actualizar') || this.permisos.includes('bienes:editar') || this.permisos.includes('tags:editar'));
     }
 
     render(item) {
@@ -16,24 +21,26 @@ export class UpdateTagsBien {
         if (!container) return;
 
         container.innerHTML = `
-            <div style="padding: 15px; border: 1px solid #ffb74d; border-radius: 4px; background: #fff8e1;">
-                <h3 style="margin-top:0; color:#e65100; font-size:16px; border-bottom:1px solid #ffe0b2; padding-bottom:8px;">
+            <div class="module-card" style="padding: 15px; border: 1px solid var(--warning, #ffb74d); border-radius: 4px; background: var(--bg-card-warning, #fff8e1); width:100%; box-sizing:border-box;">
+                <h3 style="margin-top:0; color:var(--warning-dark, #e65100); font-size:16px; font-weight:700; border-bottom:1px solid var(--border-color-warning, #ffe0b2); padding-bottom:8px;">
                     Editar Etiqueta (Tag)
                 </h3>
-                ${this.permisos.editar ? `
-                <form id="form-update-tag-bien">
-                    <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Nombre de la Etiqueta *</label>
-                    <input type="text" name="nombre" required value="${item?.nombre || ''}"
-                        minlength="2" maxlength="100" style="width:100%; margin-bottom:15px; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                ${this.puedeEditar ? `
+                <form id="form-update-tag-bien" style="display:flex; flex-direction:column; gap:12px; width:100%; box-sizing:border-box;">
+                    <div>
+                        <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Nombre de la Etiqueta *</label>
+                        <input type="text" name="nombre" required value="${item?.nombre || ''}"
+                            minlength="2" maxlength="100" style="width:100%; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; box-sizing:border-box; background:var(--bg-input, #fff); color:var(--text-main);">
+                    </div>
 
-                    <button type="submit" style="width:100%; padding:8px; background:#e65100; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600;">
+                    <button type="submit" style="width:100%; padding:10px; background:var(--warning-dark, #e65100); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Actualizar Etiqueta
                     </button>
-                    <button type="button" id="btn-cancelar-update-tag" style="width:100%; margin-top:8px; padding:8px; background:#757575; color:white; border:none; border-radius:4px; cursor:pointer;">
+                    <button type="button" id="btn-cancelar-update-tag" style="width:100%; padding:10px; background:var(--text-muted, #757575); color:white; border:none; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px;">
                         Cancelar Edición
                     </button>
                 </form>
-                ` : '<div style="color:#757575; font-style:italic;">Sin permisos para editar etiquetas.</div>'}
+                ` : '<div class="forbidden-container" style="color:var(--text-muted, #757575); font-style:italic; font-size:12px;">Sin permisos para editar etiquetas.</div>'}
             </div>
         `;
 

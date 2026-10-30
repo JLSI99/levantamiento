@@ -20,43 +20,43 @@ export class CreateResguardo {
 
     obtenerPlantillaFormulario() {
         return `
-            <div style="background:#f8f9fa; padding:15px; border:1px solid #e0e0e0; border-radius:4px; margin-bottom:20px;">
-                <h4 id="form-titulo" style="margin:0 0 10px 0; font-size:13px; color:#37474f;">Nueva Asignación de Resguardo</h4>
-                <form id="form-crear-resguardo">
-                    <div style="display:flex; gap:15px; margin-bottom:10px;">
-                        <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">No de Inventario</label>
-                            <div style="display:flex; gap:6px;">
+            <div class="module-card" style="background:var(--bg-card, #f8f9fa); padding:15px; border:1px solid var(--border-color, #e0e0e0); border-radius:4px; margin-bottom:20px; width:100%; box-sizing:border-box;">
+                <h4 id="form-titulo" style="margin:0 0 10px 0; font-size:14px; font-weight:700; color:var(--text-main, #37474f); border-bottom:1px solid var(--border-color, #e0e0e0); padding-bottom:8px;">Nueva Asignación de Resguardo</h4>
+                <form id="form-crear-resguardo" style="display:flex; flex-direction:column; gap:12px; width:100%; box-sizing:border-box;">
+                    <div style="display:flex; gap:15px; flex-wrap:wrap; width:100%;">
+                        <div style="flex:1; min-width:240px; box-sizing:border-box;">
+                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">No de Inventario *</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
                                 <!-- BOTÓN DE ESCANEAR QR AL INICIO -->
-                                <button type="button" id="btn-camara-qr-resguardo" style="background:#0288d1; color:white; border:none; padding:6px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
+                                <button type="button" id="btn-camara-qr-resguardo" style="background:var(--primary, #0288d1); color:white; border:none; padding:8px 10px; border-radius:4px; cursor:pointer; font-size:11px; font-weight:600; white-space:nowrap;">
                                     📷 Escanear QR
                                 </button>
-                                <input type="text" id="input-numero-inventario" name="numero_inventario" required placeholder="Número de inventario del bien" style="flex:1; padding:6px; border:1px solid #ccc; border-radius:4px;">
+                                <input type="text" id="input-numero-inventario" name="numero_inventario" required placeholder="Número de inventario del bien" style="flex:1; min-width:140px; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main); box-sizing:border-box;">
                             </div>
                             <div id="preview-bien-info" style="margin-top:4px; font-size:11px; min-height:16px;"></div>
                         </div>
 
                         <!-- Buscador predictivo por nombre -->
-                        <div style="flex:1; position:relative;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Responsable (Búsqueda por Nombre) *</label>
-                            <input type="text" id="input-busqueda-persona-resguardo" placeholder="Escriba el nombre del responsable..." autocomplete="off" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; font-size:12px; margin-bottom:4px;">
-                            <div id="dropdown-resultados-resguardo" style="display:none; position:absolute; top:100%; left:0; right:0; background:white; border:1px solid #ccc; border-radius:0 0 4px 4px; max-height:150px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
+                        <div style="flex:1; min-width:240px; position:relative; box-sizing:border-box;">
+                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px; color:var(--text-main);">Responsable (Búsqueda por Nombre) *</label>
+                            <input type="text" id="input-busqueda-persona-resguardo" placeholder="Escriba el nombre del responsable..." autocomplete="off" style="width:100%; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; font-size:12px; margin-bottom:6px; background:var(--bg-input, #fff); color:var(--text-main); box-sizing:border-box;">
+                            <div id="dropdown-resultados-resguardo" style="display:none; position:absolute; top:100%; left:0; right:0; background:var(--bg-card, white); border:1px solid var(--border-color, #ccc); border-radius:0 0 4px 4px; max-height:150px; overflow-y:auto; z-index:1000; box-shadow:0 4px 6px rgba(0,0,0,0.1);"></div>
                             
-                            <input type="text" id="input-curp" name="curp" required maxlength="18" minlength="18" readonly class="input-monospace" placeholder="CURP de 18 caracteres" style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; text-transform:uppercase; background:#f5f5f5; font-size:11px;">
+                            <input type="text" id="input-curp" name="curp" required maxlength="18" minlength="18" readonly class="input-monospace" placeholder="CURP de 18 caracteres" style="width:100%; padding:8px; border:1px solid var(--border-color, #ccc); border-radius:4px; text-transform:uppercase; background:var(--bg-disabled, #f5f5f5); color:var(--text-main); font-size:11px; box-sizing:border-box;">
                         </div>
                     </div>
                     
-                    <div id="contenedor-selector-ubicacion-resguardo"></div>
+                    <div id="contenedor-selector-ubicacion-resguardo" style="width:100%; box-sizing:border-box;"></div>
                     
-                    <div style="margin-top:10px; display:flex; gap:10px;">
-                        <button type="submit" id="btn-submit-resguardo" style="background:#00796b; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
+                    <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="submit" id="btn-submit-resguardo" style="background:var(--success, #00796b); color:white; border:none; padding:10px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; flex:1; min-width:140px;">
                             Emitir Acta de Resguardo
                         </button>
-                        <button type="button" id="btn-cancelar-edicion" style="display:none; background:#757575; color:white; border:none; padding:6px 12px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600;">
+                        <button type="button" id="btn-cancelar-edicion" style="display:none; background:var(--text-muted, #757575); color:white; border:none; padding:10px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; flex:1; min-width:140px;">
                             Cancelar Edición
                         </button>
                     </div>
-                    <div id="resguardo-error-feedback" style="color:#c62828; font-size:11px; margin-top:5px;"></div>
+                    <div id="resguardo-error-feedback" style="color:var(--danger, #c62828); font-size:11px; margin-top:5px;"></div>
                 </form>
             </div>
         `;
@@ -92,17 +92,17 @@ export class CreateResguardo {
                         const personas = Array.isArray(resp) ? resp : (resp?.data || []);
 
                         if (personas.length === 0) {
-                            dropdown.innerHTML = '<div style="padding:8px; color:#757575; font-size:11px;">No se encontraron personas registradas.</div>';
+                            dropdown.innerHTML = '<div style="padding:8px; color:var(--text-muted, #757575); font-size:11px;">No se encontraron personas registradas.</div>';
                             dropdown.style.display = 'block';
                             return;
                         }
 
                         dropdown.innerHTML = personas.map(p => `
                             <div class="item-persona-sugerida" data-curp="${p.curp}" data-nombre="${p.nombres} ${p.apellidos}"
-                                style="padding:8px; font-size:11px; border-bottom:1px solid #f0f0f0; cursor:pointer;"
-                                onmouseover="this.style.background='#f5f5f5'" onmouseout="this.style.background='#fff'">
-                                <div style="font-weight:600; color:#212121;">${p.nombres} ${p.apellidos}</div>
-                                <div style="font-family:monospace; color:#0288d1;">CURP: ${p.curp}</div>
+                                style="padding:8px; font-size:11px; border-bottom:1px solid var(--border-color, #f0f0f0); cursor:pointer;"
+                                onmouseover="this.style.background='var(--hover-bg, #f5f5f5)'" onmouseout="this.style.background='var(--bg-card, #fff)'">
+                                <div style="font-weight:600; color:var(--text-main, #212121);">${p.nombres} ${p.apellidos}</div>
+                                <div style="font-family:monospace; color:var(--primary, #0288d1);">CURP: ${p.curp}</div>
                             </div>
                         `).join('');
                         dropdown.style.display = 'block';
@@ -157,16 +157,16 @@ export class CreateResguardo {
         if (!preview) return;
 
         try {
-            preview.innerHTML = '<span style="color:#f57c00;">Consultando datos del activo...</span>';
+            preview.innerHTML = '<span style="color:var(--warning, #f57c00);">Consultando datos del activo...</span>';
             const bien = await bienesService.obtenerBienPorNumeroInventario(numeroInventario);
             if (bien) {
                 const detalles = [bien.marca, bien.modelo, bien.serie ? `S/N: ${bien.serie}` : null].filter(Boolean).join(' | ');
-                preview.innerHTML = `<span style="color:#2e7d32; font-weight:600;">✓ ${bien.descripcion}</span> <span style="color:#666;">(${detalles || 'Sin más detalles'})</span>`;
+                preview.innerHTML = `<span style="color:var(--success, #2e7d32); font-weight:600;">✓ ${bien.descripcion}</span> <span style="color:var(--text-muted, #666);">(${detalles || 'Sin más detalles'})</span>`;
             } else {
-                preview.innerHTML = '<span style="color:#c62828;">Bien no encontrado.</span>';
+                preview.innerHTML = '<span style="color:var(--danger, #c62828);">Bien no encontrado.</span>';
             }
         } catch (error) {
-            preview.innerHTML = '<span style="color:#c62828;">Bien no encontrado o número de inventario no válido.</span>';
+            preview.innerHTML = '<span style="color:var(--danger, #c62828);">Bien no encontrado o número de inventario no válido.</span>';
         }
     }
 

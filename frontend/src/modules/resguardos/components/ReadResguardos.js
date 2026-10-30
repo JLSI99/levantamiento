@@ -110,7 +110,7 @@ export class ReadResguardos {
             this.procesarYRenderizarTabla();
         } catch (error) {
             if (this.estaDesmontado || currentTokenId !== this.tokenConcurrenciaId) return;
-            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:#c62828; font-weight:600;">Error al recuperar asignaciones.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:var(--danger, #c62828); font-weight:600;">Error al recuperar asignaciones.</td></tr>`;
         }
     }
 
@@ -127,7 +127,7 @@ export class ReadResguardos {
         this.asignacionesMemoria.clear();
 
         if (asignaciones.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:#757575; font-weight:500;">No se encontraron registros vigentes.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="${totalCols}" style="text-align:center; padding:15px; color:var(--text-muted, #757575); font-weight:500;">No se encontraron registros vigentes.</td></tr>`;
             return;
         }
 
@@ -154,13 +154,13 @@ export class ReadResguardos {
                         this.filtros.criterioOrden = null;
                         this.filtros.ordenAscendente = true;
                         btnCustodio.textContent = `Ordenar por Custodio ↕`;
-                        btnCustodio.style.background = '#f5f5f5';
-                        btnCustodio.style.color = '#333';
+                        btnCustodio.style.background = 'var(--bg-input, #f5f5f5)';
+                        btnCustodio.style.color = 'var(--text-main, #333)';
                     }
                 } else {
                     this.filtros.criterioOrden = 'custodio';
                     this.filtros.ordenAscendente = true;
-                    btnCustodio.style.background = '#0288d1';
+                    btnCustodio.style.background = 'var(--primary, #0288d1)';
                     btnCustodio.style.color = 'white';
                     btnCustodio.textContent = `Ordenar por Custodio 🔼`;
                 }
