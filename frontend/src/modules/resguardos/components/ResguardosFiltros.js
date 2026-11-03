@@ -2,13 +2,14 @@ export class ResguardosFiltros {
     constructor() {
         this.departamentosSeleccionados = [];
         this.edificiosSeleccionados = [];
-        this.criterioOrden = null; // 'custodio' o null
+        this.criterioOrden = null;
         this.ordenAscendente = true;
     }
 
     aplicar(datosOriginales, textoBusqueda, catalogos) {
-        let asignaciones = [...datosOriginales];
-        const { departamentosCatalogo, edificiosCatalogo } = catalogos;
+        let asignaciones = [...(datosOriginales || [])];
+        const departamentosCatalogo = catalogos?.departamentosCatalogo || [];
+        const edificiosCatalogo = catalogos?.edificiosCatalogo || [];
 
         // 1. Texto libre
         if (textoBusqueda && textoBusqueda.trim() !== '') {
@@ -27,7 +28,7 @@ export class ResguardosFiltros {
             });
         }
 
-        // 2. Departamentos
+        // 2. Filtro por Departamentos
         if (this.departamentosSeleccionados.length > 0) {
             const nombresDepto = this.departamentosSeleccionados.map(id => {
                 const cat = departamentosCatalogo.find(d => String(d.id_departamento || d.id) === String(id));
@@ -41,7 +42,7 @@ export class ResguardosFiltros {
             });
         }
 
-        // 3. Edificios
+        // 3. Filtro por Edificios
         if (this.edificiosSeleccionados.length > 0) {
             const nombresEdif = this.edificiosSeleccionados.map(id => {
                 const cat = edificiosCatalogo.find(e => String(e.id_edificio || e.id) === String(id));

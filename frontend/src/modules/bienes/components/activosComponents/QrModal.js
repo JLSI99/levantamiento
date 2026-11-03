@@ -1,5 +1,6 @@
 export class QrModal {
     constructor() {
+        this._abortController = new AbortController();
         this._createDOM();
         this._injectPrintStyles();
         this._bindEvents();
@@ -9,21 +10,21 @@ export class QrModal {
         if (document.getElementById('modal-qr-container')) return;
 
         const modalHtml = `
-            <div id="modal-qr-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999;">
-                <div style="background:white; padding:20px; border-radius:8px; max-width:420px; width:90%; text-align:center; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-                    <h4 style="margin-top:0; color:#1a237e;">Etiqueta Patrimonial del Bien</h4>
+            <div id="modal-qr-container" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); justify-content:center; align-items:center; z-index:9999; padding:15px; box-sizing:border-box;">
+                <div style="background:var(--bg-card, #fff); padding:20px; border-radius:8px; max-width:420px; width:100%; text-align:center; box-shadow:0 4px 15px rgba(0,0,0,0.3); box-sizing:border-box;">
+                    <h4 style="margin-top:0; color:var(--primary, #1a237e); font-size:15px; font-weight:700;">Etiqueta Patrimonial del Bien</h4>
                     
-                    <div id="print-sticker-area" style="border:2px dashed #000; padding:15px; border-radius:6px; margin:15px 0; background:#fff; text-align:center;">
+                    <div id="print-sticker-area" style="border:2px dashed #000; padding:15px; border-radius:6px; margin:15px 0; background:#fff; text-align:center; box-sizing:border-box;">
                         <div style="font-size:10px; font-weight:bold; text-transform:uppercase; color:#333; margin-bottom:4px;">TecNM - Patrimonio Institucional</div>
                         <div id="qr-code-box" style="display:flex; justify-content:center; margin:10px 0;"></div>
-                        <div id="qr-info-desc" style="font-weight:bold; font-size:12px; margin-bottom:2px;"></div>
+                        <div id="qr-info-desc" style="font-weight:bold; font-size:12px; margin-bottom:2px; color:#212121;"></div>
                         <div id="qr-info-details" style="font-size:10px; color:#555;"></div>
-                        <div id="qr-info-inventario" style="font-family:monospace; font-size:11px; margin-top:6px; font-weight:700;"></div>
+                        <div id="qr-info-inventario" style="font-family:monospace; font-size:11px; margin-top:6px; font-weight:700; color:#000;"></div>
                     </div>
 
-                    <div style="display:flex; gap:10px; justify-content:center;">
-                        <button id="btn-imprimir-qr" style="background:#2e7d32; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600;">🖨️ Imprimir Etiqueta</button>
-                        <button id="btn-cerrar-modal-qr" style="background:#757575; color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer;">Cerrar</button>
+                    <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
+                        <button type="button" id="btn-imprimir-qr" style="background:var(--success, #2e7d32); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-weight:600; font-size:12px; flex:1; min-width:140px;">🖨️ Imprimir Etiqueta</button>
+                        <button type="button" id="btn-cerrar-modal-qr" style="background:var(--text-muted, #757575); color:white; border:none; padding:8px 16px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; flex:1; min-width:100px;">Cerrar</button>
                     </div>
                 </div>
             </div>
@@ -49,8 +50,14 @@ export class QrModal {
     }
 
     _bindEvents() {
-        document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print());
-        document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => this.cerrar());
+        const signal = this._abortController.signal;
+        document.getElementById('btn-imprimir-qr')?.addEventListener('click', () => window.print(), { signal });
+        document.getElementById('btn-cerrar-modal-qr')?.addEventListener('click', () => this.cerrar(), { signal });
+
+        document.getElementById('modal-qr-container')?.addEventListener('click', (e) => {
+            const modal = document.getElementById('modal-qr-container');
+            if (e.target === modal) this.cerrar();
+        }, { signal });
     }
 
     abrir(item) {
@@ -78,5 +85,11 @@ export class QrModal {
     cerrar() {
         const modal = document.getElementById('modal-qr-container');
         if (modal) modal.style.display = 'none';
+    }
+
+    unmount() {
+        this._abortController.abort();
+        document.getElementById('modal-qr-container')?.remove();
+        document.getElementById('style-print-qr')?.remove();
     }
 }

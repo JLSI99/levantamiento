@@ -14,9 +14,7 @@ export class SelectorUbicaciones {
             id_departamento: null
         };
 
-        this.onEdificioChangeBound = null;
-        this.onAulaChangeBound = null;
-        this.onDeptoChangeBound = null;
+        this._abortController = new AbortController();
     }
 
     async inicializar() {
@@ -29,22 +27,22 @@ export class SelectorUbicaciones {
 
     renderBase() {
         this.container.innerHTML = `
-            <div style="display:flex; gap:10px; margin-bottom:10px; width: 100%;">
-                <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Edificio *</label>
-                    <select id="sel-edificio" required style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+            <div style="display:flex; gap:12px; margin-bottom:10px; width:100%; flex-wrap:wrap; box-sizing:border-box;">
+                <div style="flex:1; min-width:185px; box-sizing:border-box;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:var(--text-main, #424242);">Edificio *</label>
+                    <select id="sel-edificio" required style="width:100%; padding:8px; font-size:12px; border:1px solid var(--border-color, #bdbdbd); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main, #333); box-sizing:border-box;">
                         <option value="">Seleccione Edificio...</option>
                     </select>
                 </div>
-                <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Aula / Espacio *</label>
-                    <select id="sel-aula" required disabled style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                <div style="flex:1; min-width:185px; box-sizing:border-box;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:var(--text-main, #424242);">Aula / Espacio *</label>
+                    <select id="sel-aula" required disabled style="width:100%; padding:8px; font-size:12px; border:1px solid var(--border-color, #bdbdbd); border-radius:4px; background:var(--bg-disabled, #f5f5f5); color:var(--text-main, #333); box-sizing:border-box;">
                         <option value="">Seleccione Aula...</option>
                     </select>
                 </div>
-                <div style="flex:1;">
-                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:#424242;">Departamento Adscrito *</label>
-                    <select id="sel-departamento" required style="width:100%; padding:6px; font-size:12px; border:1px solid #bdbdbd; border-radius:4px; background:white;">
+                <div style="flex:1; min-width:185px; box-sizing:border-box;">
+                    <label style="display:block; font-size:11px; margin-bottom:4px; font-weight:600; color:var(--text-main, #424242);">Departamento Adscrito *</label>
+                    <select id="sel-departamento" required style="width:100%; padding:8px; font-size:12px; border:1px solid var(--border-color, #bdbdbd); border-radius:4px; background:var(--bg-input, #fff); color:var(--text-main, #333); box-sizing:border-box;">
                         <option value="">Seleccione Departamento...</option>
                     </select>
                 </div>
@@ -100,6 +98,7 @@ export class SelectorUbicaciones {
 
         if (!idEdificio) {
             selAula.disabled = true;
+            selAula.style.background = 'var(--bg-disabled, #f5f5f5)';
             this.notificarCambio();
             return;
         }
@@ -116,30 +115,35 @@ export class SelectorUbicaciones {
                 selAula.appendChild(opt);
             });
             selAula.disabled = false;
+            selAula.style.background = 'var(--bg-input, #fff)';
         } catch (err) {
             console.error("Fallo estructural en carga perimetral de aulas:", err);
+            selAula.disabled = true;
         }
         this.notificarCambio();
     }
 
     vincularEventos() {
+        const signal = this._abortController.signal;
         const selEdificio = this.container.querySelector('#sel-edificio');
         const selAula = this.container.querySelector('#sel-aula');
         const selDepto = this.container.querySelector('#sel-departamento');
 
-        this.onEdificioChangeBound = (e) => this.manejarCambioEdificio(e.target.value);
-        this.onAulaChangeBound = (e) => {
-            this.estadoSeleccion.id_aula = e.target.value || null;
-            this.notificarCambio();
-        };
-        this.onDeptoChangeBound = (e) => {
-            this.estadoSeleccion.id_departamento = e.target.value || null;
-            this.notificarCambio();
-        };
-
-        if (selEdificio) selEdificio.addEventListener('change', this.onEdificioChangeBound);
-        if (selAula) selAula.addEventListener('change', this.onAulaChangeBound);
-        if (selDepto) selDepto.addEventListener('change', this.onDeptoChangeBound);
+        if (selEdificio) {
+            selEdificio.addEventListener('change', (e) => this.manejarCambioEdificio(e.target.value), { signal });
+        }
+        if (selAula) {
+            selAula.addEventListener('change', (e) => {
+                this.estadoSeleccion.id_aula = e.target.value || null;
+                this.notificarCambio();
+            }, { signal });
+        }
+        if (selDepto) {
+            selDepto.addEventListener('change', (e) => {
+                this.estadoSeleccion.id_departamento = e.target.value || null;
+                this.notificarCambio();
+            }, { signal });
+        }
     }
 
     notificarCambio() {
@@ -149,13 +153,6 @@ export class SelectorUbicaciones {
     }
 
     unmount() {
-        if (!this.container) return;
-        const selEdificio = this.container.querySelector('#sel-edificio');
-        const selAula = this.container.querySelector('#sel-aula');
-        const selDepto = this.container.querySelector('#sel-departamento');
-
-        if (selEdificio && this.onEdificioChangeBound) selEdificio.removeEventListener('change', this.onEdificioChangeBound);
-        if (selAula && this.onAulaChangeBound) selAula.removeEventListener('change', this.onAulaChangeBound);
-        if (selDepto && this.onDeptoChangeBound) selDepto.removeEventListener('change', this.onDeptoChangeBound);
+        this._abortController.abort();
     }
 }
