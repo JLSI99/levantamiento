@@ -55,7 +55,7 @@ export class CreateActivo {
 
                     <div style="display:flex; gap:10px; margin-bottom:15px;">
                         <div style="flex:1;">
-                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Costo (MXN) *</label>
+                            <label style="display:block; font-size:11px; font-weight:600; margin-bottom:4px;">Costo</label>
                             <input type="number" step="0.01" name="costo" required style="width:100%; padding:6px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
                         </div>
                         <div style="flex:1;">
