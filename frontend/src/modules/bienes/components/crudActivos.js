@@ -21,7 +21,6 @@ export class CrudActivos {
 
         const state = authStore.getSnapshot();
 
-        // Evaluación unificada de permisos por capacidades (CapBAC)
         const permisos = {
             crear: checkAccess('bienes:crear', state),
             editar: checkAccess('bienes:editar', state),

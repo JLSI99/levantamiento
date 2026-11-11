@@ -118,13 +118,17 @@ export class CreateActivo {
             this.tiposRaw = Array.isArray(resTipos) ? resTipos : (resTipos?.data || []);
             
             const formattedTipos = this.tiposRaw.map(t => ({ id: t.id_tipo, nombre: t.nombre }));
-            this.tiposDropdown.setItems(formattedTipos);
+            if (this.tiposDropdown) {
+                this.tiposDropdown.setItems(formattedTipos);
+            }
 
             const resTags = await bienesService.listarTagsBien(100, 0, false);
             this.tagsRaw = Array.isArray(resTags) ? resTags : (resTags?.data || []);
             
             const formattedTags = this.tagsRaw.map(t => ({ id: t.id_tag, nombre: t.nombre }));
-            this.tagsDropdown.setItems(formattedTags);
+            if (this.tagsDropdown) {
+                this.tagsDropdown.setItems(formattedTags);
+            }
 
         } catch (error) {
             console.error('Error al cargar catálogos desde CreateActivo:', error);
@@ -132,11 +136,13 @@ export class CreateActivo {
     }
 
     actualizarSelectTipos(tipos) {
+        if (!this.tiposDropdown) return;
         this.tiposRaw = Array.isArray(tipos) ? tipos : (tipos?.data || []);
         this.tiposDropdown.setItems(this.tiposRaw.map(t => ({ id: t.id_tipo, nombre: t.nombre })));
     }
 
     actualizarSelectTags(tags) {
+        if (!this.tagsDropdown) return;
         this.tagsRaw = Array.isArray(tags) ? tags : (tags?.data || []);
         this.tagsDropdown.setItems(this.tagsRaw.map(t => ({ id: t.id_tag, nombre: t.nombre })));
     }
@@ -149,7 +155,7 @@ export class CreateActivo {
             e.preventDefault();
             const formData = new FormData(form);
 
-            const tipoSeleccionado = this.tiposDropdown.selectedValues;
+            const tipoSeleccionado = this.tiposDropdown?.selectedValues;
             if (!tipoSeleccionado) {
                 alert('Debe seleccionar un Tipo de Bien.');
                 return;
@@ -169,7 +175,7 @@ export class CreateActivo {
                 costo: parseFloat(formData.get('costo')),
                 fecha_adquisicion: fechaVal && fechaVal.trim() !== '' ? fechaVal.trim() : null,
                 tipos_ids: [tipoSeleccionado],
-                tags_ids: this.tagsDropdown.selectedValues
+                tags_ids: this.tagsDropdown?.selectedValues || []
             };
 
             try {
@@ -187,8 +193,8 @@ export class CreateActivo {
 
                 alert('Activo indexado exitosamente.');
                 form.reset();
-                this.tiposDropdown.setSelected(null);
-                this.tagsDropdown.setSelected([]);
+                if (this.tiposDropdown) this.tiposDropdown.setSelected(null);
+                if (this.tagsDropdown) this.tagsDropdown.setSelected([]);
                 if (this.onSuccess) this.onSuccess();
             } catch (err) {
                 alert('Error: ' + (err.response?.data?.detail || err.message));

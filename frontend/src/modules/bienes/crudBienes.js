@@ -20,7 +20,7 @@ export class CrudBienes {
 
         const state = authStore.getSnapshot();
 
-        // Evaluación unificada utilizando exclusivamente CapBAC a través de CanRender.js
+        // Evaluación unificada de permisos por capacidades
         const permisos = {
             crear: checkAccess('bienes:crear', state),
             editar: checkAccess('bienes:editar', state),
@@ -38,8 +38,12 @@ export class CrudBienes {
             return;
         }
 
+        // Si solo tiene permiso de lectura (Revisor), no necesita ver/gestionar los catálogos auxiliares
+        const puedeGestionarCatalogos = permisos.crear || permisos.editar || permisos.borrar;
+
         container.innerHTML = `
             <div style="width: 100%;">
+                ${puedeGestionarCatalogos ? `
                 <!-- Control de Pestañas Adaptativo -->
                 <div style="display: flex; flex-wrap: wrap; gap: 10px; border-bottom: 2px solid var(--border-color); margin-bottom: 20px;">
                     <button id="tab-btn-activos" style="padding: 10px 20px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 600; border-radius: 4px 4px 0 0;">
@@ -52,6 +56,7 @@ export class CrudBienes {
                         Catálogo de Etiquetas (Tags)
                     </button>
                 </div>
+                ` : ''}
 
                 <!-- Sección 1: Activos -->
                 <div id="section-activos" class="grid-dos-columnas">
@@ -59,6 +64,7 @@ export class CrudBienes {
                     <div id="wrapper-tabla-activos"></div>
                 </div>
 
+                ${puedeGestionarCatalogos ? `
                 <!-- Sección 2: Tipos de Bien -->
                 <div id="section-tipos" class="grid-dos-columnas" style="display: none;">
                     <div id="wrapper-form-tipos"></div>
@@ -70,11 +76,14 @@ export class CrudBienes {
                     <div id="wrapper-form-tags"></div>
                     <div id="wrapper-tabla-tags"></div>
                 </div>
+                ` : ''}
             </div>
         `;
 
-        this.bindEvents();
-        this.initModules(permisos);
+        if (puedeGestionarCatalogos) {
+            this.bindEvents();
+        }
+        this.initModules(permisos, puedeGestionarCatalogos);
     }
 
     bindEvents() {
@@ -115,36 +124,39 @@ export class CrudBienes {
         if (btnTabTags) btnTabTags.addEventListener('click', () => alternarPestana('tags'), { signal });
     }
 
-    initModules(permisos) {
-        this.crudTiposBien = new CrudTiposBien('wrapper-form-tipos', 'wrapper-tabla-tipos', permisos);
+    initModules(permisos, puedeGestionarCatalogos) {
         this.crudActivos = new CrudActivos('wrapper-form-activos', 'wrapper-tabla-activos', permisos);
-        this.crudTagsBien = new CrudTagsBien('wrapper-form-tags', 'wrapper-tabla-tags', permisos);
-
-        this.crudTiposBien.onTiposLoaded = (tipos) => {
-            if (this.crudActivos?.actualizarSelectTipos) {
-                this.crudActivos.actualizarSelectTipos(tipos);
-            }
-        };
-
-        this.crudTiposBien.onTiposChanged = () => {
-            this.crudTiposBien.cargarDatos();
-            this.crudActivos.cargarDatos();
-        };
-
-        this.crudTagsBien.onTagsLoaded = (tags) => {
-            if (this.crudActivos?.actualizarSelectTags) {
-                this.crudActivos.actualizarSelectTags(tags);
-            }
-        };
-
-        this.crudTagsBien.onTagsChanged = () => {
-            this.crudTagsBien.cargarDatos();
-            this.crudActivos.cargarDatos();
-        };
-
-        this.crudTiposBien.render();
         this.crudActivos.render();
-        this.crudTagsBien.render();
+
+        if (puedeGestionarCatalogos) {
+            this.crudTiposBien = new CrudTiposBien('wrapper-form-tipos', 'wrapper-tabla-tipos', permisos);
+            this.crudTagsBien = new CrudTagsBien('wrapper-form-tags', 'wrapper-tabla-tags', permisos);
+
+            this.crudTiposBien.onTiposLoaded = (tipos) => {
+                if (this.crudActivos?.actualizarSelectTipos) {
+                    this.crudActivos.actualizarSelectTipos(tipos);
+                }
+            };
+
+            this.crudTiposBien.onTiposChanged = () => {
+                this.crudTiposBien.cargarDatos();
+                this.crudActivos.cargarDatos();
+            };
+
+            this.crudTagsBien.onTagsLoaded = (tags) => {
+                if (this.crudActivos?.actualizarSelectTags) {
+                    this.crudActivos.actualizarSelectTags(tags);
+                }
+            };
+
+            this.crudTagsBien.onTagsChanged = () => {
+                this.crudTagsBien.cargarDatos();
+                this.crudActivos.cargarDatos();
+            };
+
+            this.crudTiposBien.render();
+            this.crudTagsBien.render();
+        }
     }
 
     unmount() {
