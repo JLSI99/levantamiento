@@ -26,7 +26,7 @@ PERMISOS_BASE = [
     (6, "roles:leer", "Consultar el catálogo global de roles institucionales"),
     (7, "roles:editar", "Modificar la matriz relacional de asignación de capacidades a roles"),
     (8, "roles:borrar", "Consultar el catálogo global de roles institucionales"),
-    # Dominio de Personas: ms-personasgits
+    # Dominio de Personas: ms-personas
     (9, "personas:crear", "Permite registrar formalmente a una persona en el padrón institucional"),
     (10, "personas:leer", "Consultar y listar el padrón general de personas registradas"),
     (11, "personas:editar", "Actualizar la metadata civil o laboral de una persona"),
@@ -50,15 +50,20 @@ PERMISOS_BASE = [
     (26, "departamentos:crear", "Dar de alta el organigrama y catálogo de departamentos institucionales"),
     (27, "departamentos:leer", "Consultar el organigrama y catálogo de departamentos institucionales"),
     (28, "departamentos:editar", "Modificar estructuras organizacionales o jefaturas de departamento"),
-    (29, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento")
+    (29, "departamentos:borrar", "Dar de baja estructuras organizacionales o jefaturas de departamento"),
+    # Nuevas Capacidades: Solicitudes de Resguardo
+    (30, "solicitudes_resguardo:crear", "Permite registrar una solicitud formal de asignación de resguardo sobre un activo"),
+    (31, "solicitudes_resguardo:leer", "Consultar la bandeja institucional de solicitudes de resguardo pendientes"),
+    (32, "solicitudes_resguardo:mis_solicitudes", "Consultar el historial propio de solicitudes de resguardo emitidas"),
+    (33, "solicitudes_resguardo:aprobar", "Facultad para aprobar o rechazar dictámenes de solicitudes de resguardo")
 ]
 
 MATRIZ_ACCESO = {
-    1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,27,28,29], 
-    2: [10,14,17,18,19,20,23,27], 
-    3: [13,14,15,16],
+    1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33], 
+    2: [10, 14, 17, 18, 19, 20, 23, 27, 30, 31, 32, 33], 
+    3: [13, 14, 15, 16],
     4: [14],    
-    5: [14,21,23,27]             
+    5: [14, 21, 23, 27, 30, 32]             
 }
 
 USUARIOS_SEMILLA = [
@@ -71,60 +76,43 @@ USUARIOS_SEMILLA = [
 
 async def setup():
     print("🛠️  Iniciando Setup Seguro de Base de Datos Transversal...")
-    
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        print("✅ Fase 1: Estructura de tablas, llaves foráneas e índices verificada.")
 
     async_session_factory = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-    
     async with async_session_factory() as session:
         try:
-            print("🎭 Sembrando catálogo institucional de Roles...")
             for id_r, (nom, desc) in ROLES_BASE.items():
                 stmt = select(models.Rol).where(models.Rol.id_rol == id_r)
                 res = await session.execute(stmt)
-                rol_existente = res.scalars().first()
-                
-                if not rol_existente:
+                if not res.scalars().first():
                     session.add(models.Rol(id_rol=id_r, nombre_rol=nom, descripcion=desc))
             await session.flush()
 
-            print("🛣️  Sembrando catálogo maestro de Capacidades por Dominio (Namespaces)...")
             for id_p, nom, desc in PERMISOS_BASE:
                 stmt_p = select(models.PermisoEndpoint).where(models.PermisoEndpoint.id_permiso == id_p)
                 res_p = await session.execute(stmt_p)
-                permiso_existente = res_p.scalars().first()
-                
-                if not permiso_existente:
+                if not res_p.scalars().first():
                     session.add(models.PermisoEndpoint(id_permiso=id_p, nombre=nom, descripcion=desc))
             await session.flush()
 
-            print("🔗 Configurando Matriz de Acceso Multidominio (Roles <-> Capabilities)...")
             for id_rol, permisos_assigned in MATRIZ_ACCESO.items():
                 stmt_rol = select(models.Rol).options(selectinload(models.Rol.permisos)).where(models.Rol.id_rol == id_rol)
                 res_rol = await session.execute(stmt_rol)
                 rol_obj = res_rol.scalars().first()
-                
                 if rol_obj:
                     stmt_perms = select(models.PermisoEndpoint).where(models.PermisoEndpoint.id_permiso.in_(permisos_assigned))
                     res_perms = await session.execute(stmt_perms)
-                    lista_permisos_db = res_perms.scalars().all()
-                    
-                    for p in lista_permisos_db:
+                    for p in res_perms.scalars().all():
                         if p not in rol_obj.permisos:
                             rol_obj.permisos.append(p)
             await session.flush()
 
-            print("👤 Generando Credenciales Criptográficas de la Identidad Raíz...")
             password_hash = await asyncio.to_thread(get_password_hash, "Password123")
-            
             for u in USUARIOS_SEMILLA:
                 stmt_u = select(models.Usuario).options(selectinload(models.Usuario.roles)).where(models.Usuario.username == u["user"])
                 res_u = await session.execute(stmt_u)
-                user_obj = res_u.scalars().first()
-                
-                if not user_obj:
+                if not res_u.scalars().first():
                     nuevo_usuario = models.Usuario(
                         id_usuario=uuid.UUID(u["id"]),
                         curp=u["curp"],
@@ -133,40 +121,22 @@ async def setup():
                         hashed_password=password_hash,
                         is_active=True
                     )
-                    
-                    stmt_rol_u = select(models.Rol).where(models.Rol.id_rol == u["rol"])
-                    res_rol_u = await session.execute(stmt_rol_u)
+                    res_rol_u = await session.execute(select(models.Rol).where(models.Rol.id_rol == u["rol"]))
                     rol_user = res_rol_u.scalars().first()
-                    
                     if rol_user:
                         nuevo_usuario.roles.append(rol_user)
-                    
                     session.add(nuevo_usuario)
-            
-            await session.flush()
 
+            await session.flush()
             tabla_roles = models.Rol.__table__.name
             tabla_permisos = models.PermisoEndpoint.__table__.name
 
-            print(f"🔄 Sincronizando contadores de secuencias detectadas (Tablas: {tabla_roles}, {tabla_permisos})...")
-            
-            await session.execute(
-                text(f"SELECT setval('{tabla_roles}_id_rol_seq', COALESCE((SELECT MAX(id_rol) FROM {tabla_roles}), 1));")
-            )
-            await session.execute(
-                text(f"SELECT setval('{tabla_permisos}_id_permiso_seq', COALESCE((SELECT MAX(id_permiso) FROM {tabla_permisos}), 1));")
-            )
-
+            await session.execute(text(f"SELECT setval('{tabla_roles}_id_rol_seq', COALESCE((SELECT MAX(id_rol) FROM {tabla_roles}), 1));"))
+            await session.execute(text(f"SELECT setval('{tabla_permisos}_id_permiso_seq', COALESCE((SELECT MAX(id_permiso) FROM {tabla_permisos}), 1));"))
             await session.commit()
             print("🚀 El ecosistema distribuido ha sido aprovisionado con Capacidades exitosamente.")
-
-        except IntegrityError as ie:
-            await session.rollback()
-            print(f"❌ Conflicto de Integridad detectado en la siembra: {ie.orig}")
-            raise ie
         except Exception as e:
             await session.rollback()
-            print(f"❌ Error crítico insalvable durante el aprovisionamiento de semillas: {e}")
             raise e
 
 if __name__ == "__main__":

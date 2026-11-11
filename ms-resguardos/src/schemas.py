@@ -1,47 +1,35 @@
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List
 from uuid import UUID
-from datetime import date
+from datetime import date, datetime
 import re
-
-PATRON_CURP_RENAPO = r"^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
+from src.models import EstadoSolicitud
 
 class AsignacionBase(BaseModel):
-    numero_inventario: str = Field(..., description="Número de inventario único del activo físico")
-    curp: str = Field(..., description="CURP de 18 caracteres del resguardatario responsable", min_length=18, max_length=18)
-    id_aula: UUID = Field(..., description="Identificador de la ubicación física exacta")
-    id_edificio: UUID = Field(..., description="Identificador de la estructura edilicia")
-    id_departamento: UUID = Field(..., description="Unidad administrativa responsable")
+    numero_inventario: str = Field(..., min_length=1, max_length=50)
+    curp: str = Field(..., min_length=18, max_length=18)
+    id_aula: UUID
+    id_edificio: UUID
+    id_departamento: UUID
 
-    @field_validator("curp")
+    @field_validator('curp')
     @classmethod
-    def validar_formato_curp(cls, v: str) -> str:
+    def validar_curp_formato(cls, v: str) -> str:
         v = v.upper().strip()
-        if not re.match(PATRON_CURP_RENAPO, v):
-            raise ValueError("El formato del CURP es inválido ante los estándares de RENAPO.")
+        pattern = r"^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z\d]\d$"
+        if not re.match(pattern, v):
+            raise ValueError('El formato de CURP especificado no es válido.')
         return v
 
 class AsignacionCreate(AsignacionBase):
     pass
 
 class AsignacionUpdate(BaseModel):
-    numero_inventario: Optional[str] = None
-    curp: Optional[str] = None
+    numero_inventario: Optional[str] = Field(None, min_length=1, max_length=50)
+    curp: Optional[str] = Field(None, min_length=18, max_length=18)
     id_aula: Optional[UUID] = None
     id_edificio: Optional[UUID] = None
     id_departamento: Optional[UUID] = None
-    fecha_inicio: Optional[date] = None
-    fecha_fin: Optional[date] = None
-
-    @field_validator("curp")
-    @classmethod
-    def validar_formato_curp_opcional(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return v
-        v = v.upper().strip()
-        if not re.match(PATRON_CURP_RENAPO, v):
-            raise ValueError("El formato del CURP es inválido.")
-        return v
 
 class AsignacionOut(AsignacionBase):
     id_asignacion: UUID
@@ -49,11 +37,47 @@ class AsignacionOut(AsignacionBase):
     fecha_fin: Optional[date] = None
     esta_activo: bool
     dias_vigencia: int
-    
-    model_config = ConfigDict(from_attributes=True)
+
+    model_config = {"from_attributes": True}
 
 class AsignacionPaginatedOut(BaseModel):
     total: int
     limit: int
     offset: int
     data: List[AsignacionOut]
+
+
+class SolicitudResguardoCreate(BaseModel):
+    bien_solicitado: str = Field(..., min_length=2, max_length=150)
+    id_aula: UUID
+    id_edificio: UUID
+    id_departamento: UUID
+    justificacion: Optional[str] = Field(None, max_length=255)
+
+class SolicitudResguardoAprobar(BaseModel):
+    numero_inventario: str = Field(..., min_length=1, max_length=50)
+
+class SolicitudResguardoRechazar(BaseModel):
+    comentario_resolucion: str = Field(..., min_length=3, max_length=255)
+
+class SolicitudResguardoOut(BaseModel):
+    id_solicitud: UUID
+    bien_solicitado: str
+    curp_solicitante: str
+    id_aula: UUID
+    id_edificio: UUID
+    id_departamento: UUID
+    justificacion: Optional[str] = None
+    estado: EstadoSolicitud
+    fecha_solicitud: datetime
+    fecha_resolucion: Optional[datetime] = None
+    curp_resolutor: Optional[str] = None
+    comentario_resolucion: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+class SolicitudResguardoPaginatedOut(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[SolicitudResguardoOut]

@@ -5,6 +5,8 @@ import { ReadResguardos } from '/src/modules/resguardos/components/ReadResguardo
 import { UpdateResguardo } from '/src/modules/resguardos/components/UpdateResguardo.js';
 import { DeleteResguardo } from '/src/modules/resguardos/components/DeleteResguardo.js';
 import { SelectorUbicaciones } from '/src/modules/ubicaciones/components/SelectorUbicaciones.js';
+import { SolicitarResguardoModal } from '/src/modules/resguardos/components/SolicitarResguardoModal.js';
+import { ReadSolicitudes } from '/src/modules/resguardos/components/ReadSolicitudes.js';
 
 export class HistorialResguardos {
     constructor(containerId) {
@@ -13,8 +15,10 @@ export class HistorialResguardos {
         
         this.capacidadGlobal = false;
         this.puedeModificar = false;
-        this.ubicacionActual = null;
+        this.puedeSolicitar = false;
+        this.puedeAprobar = false;
         
+        this.ubicacionActual = null;
         this.modoEdicion = false;
         this.idAsignacionEnEdicion = null;
         
@@ -23,6 +27,9 @@ export class HistorialResguardos {
         this.updateModule = new UpdateResguardo();
         this.deleteModule = new DeleteResguardo();
         this.selectorUbicaciones = null;
+
+        this.readMisSolicitudesModule = new ReadSolicitudes(false);
+        this.readBandejaAprobacionModule = new ReadSolicitudes(true);
     }
 
     async render() {
@@ -31,27 +38,41 @@ export class HistorialResguardos {
 
         const state = authStore.getSnapshot();
         if (!state || !state.isAuthenticated || !state.user) {
-            this._renderizarMensaje(container, "Identidad no verificada. Inicie sesión para establecer canal patrimonial seguro.", true);
+            this._renderizarMensaje(container, "Identidad no verificada. Inicie sesión para acceder al módulo de resguardos.", true);
             return;
         }
 
-        // Evaluación unificada utilizando exclusivamente CapBAC a través de CanRender.js
         this.capacidadGlobal = checkAccess('resguardos:leer', state);
         const puedeListarPropios = checkAccess('MisResguardos:leer', state);
-        
         this.puedeModificar = checkAccess(['resguardos:editar', 'resguardos:crear'], state, false);
+        
+        this.puedeSolicitar = checkAccess('solicitudes_resguardo:crear', state);
+        this.puedeAprobar = checkAccess('solicitudes_resguardo:aprobar', state);
 
-        if (!this.capacidadGlobal && !puedeListarPropios) {
-            this._renderizarMensaje(container, "Acceso Denegado: Su perfil no cuenta con capacidades explícitas de lectura en la matriz de resguardos patrimoniales.", true);
+        if (!this.capacidadGlobal && !puedeListarPropios && !this.puedeSolicitar) {
+            this._renderizarMensaje(container, "Acceso Denegado: Su perfil no posee capacidades asignadas para operar en la matriz de resguardos.", true);
             return;
         }
 
         container.innerHTML = this._obtenerPlantillaPrincipal();
+        this._bindTabEvents(container);
+
+        if (this.puedeSolicitar) {
+            const btnSolicitar = container.querySelector('#btn-abrir-modal-solicitud');
+            if (btnSolicitar) {
+                btnSolicitar.addEventListener('click', () => {
+                    const modal = new SolicitarResguardoModal(async () => {
+                        const misSolContainer = container.querySelector('#tab-mis-solicitudes');
+                        if (misSolContainer) await this.readMisSolicitudesModule.cargarTabla(misSolContainer);
+                    });
+                    modal.render();
+                });
+            }
+        }
 
         if (this.capacidadGlobal && this.puedeModificar) {
             const formContainer = container.querySelector('#resguardos-form-container');
             formContainer.innerHTML = this.createModule.obtenerPlantillaFormulario();
-            
             this.createModule.bindEvents(formContainer);
 
             const subContainer = formContainer.querySelector('#contenedor-selector-ubicacion-resguardo');
@@ -61,7 +82,6 @@ export class HistorialResguardos {
                 });
                 await this.selectorUbicaciones.inicializar();
             }
-
             this._vincularEventosFormulario(formContainer);
         }
 
@@ -77,21 +97,84 @@ export class HistorialResguardos {
                 if (exito) await this.readModule.cargarTabla();
             }
         });
+
+
+        const misSolContainer = container.querySelector('#tab-mis-solicitudes');
+        if (misSolContainer) await this.readMisSolicitudesModule.cargarTabla(misSolContainer);
+
+        if (this.puedeAprobar) {
+            const bandejaContainer = container.querySelector('#tab-bandeja-aprobacion');
+            if (bandejaContainer) await this.readBandejaAprobacionModule.cargarTabla(bandejaContainer);
+        }
     }
 
     _obtenerPlantillaPrincipal() {
         const titulo = this.capacidadGlobal ? 'Panel Maestro de Custodia e Inventario Institucional' : 'Mis Resguardos y Asignaciones Vigentes';
-        const subtitulo = this.capacidadGlobal ? 'Consola global de fiscalización, liberación, devolución y timbrado de actas de resguardo.' : 'Listado oficial de activos asignados bajo su responsabilidad legal.';
+        const subtitulo = this.capacidadGlobal ? 'Consola global de fiscalización, liberación, devolución y gestión de solicitudes.' : 'Listado oficial de activos asignados bajo su responsabilidad legal.';
 
         return `
             <div class="module-card">
-                <h3 style="margin-top:0; color:var(--primary); font-size:16px; border-bottom:1px solid var(--border-color); padding-bottom:8px; font-weight:700;">${titulo}</h3>
-                <p style="font-size:12px; color:var(--text-muted); margin:8px 0 15px 0; font-weight: 500;">${subtitulo}</p>
-                
-                <div id="resguardos-form-container" style="width: 100%; margin-bottom: 15px;"></div>
-                <div id="resguardos-table-container" style="width: 100%;"></div>
+                <div style="display:flex; justify-shadow:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                    <div>
+                        <h3 style="margin-top:0; color:var(--primary); font-size:16px; font-weight:700;">${titulo}</h3>
+                        <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0 0;">${subtitulo}</p>
+                    </div>
+                    ${this.puedeSolicitar ? `
+                        <button id="btn-abrir-modal-solicitud" style="background-color:var(--primary, #1976d2); color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                            ➕ Solicitar Resguardo
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Pestañas de Navegación -->
+                <div style="display:flex; gap:10px; border-bottom:2px solid var(--border-color, #eee); margin-bottom:15px;">
+                    <button class="tab-btn active" data-tab="tab-vigentes" style="padding:8px 12px; border:none; background:none; cursor:pointer; font-size:12px; font-weight:700; border-bottom:2px solid var(--primary, #1976d2); color:var(--primary, #1976d2);">
+                        Resguardos Vigentes
+                    </button>
+                    <button class="tab-btn" data-tab="tab-mis-solicitudes" style="padding:8px 12px; border:none; background:none; cursor:pointer; font-size:12px; font-weight:700; color:var(--text-muted, #666);">
+                        Mis Solicitudes
+                    </button>
+                    ${this.puedeAprobar ? `
+                        <button class="tab-btn" data-tab="tab-bandeja-aprobacion" style="padding:8px 12px; border:none; background:none; cursor:pointer; font-size:12px; font-weight:700; color:var(--text-muted, #666);">
+                            Bandeja de Aprobaciones
+                        </button>
+                    ` : ''}
+                </div>
+
+                <!-- Contenedores por Pestaña -->
+                <div id="tab-vigentes" class="tab-content">
+                    <div id="resguardos-form-container" style="width: 100%; margin-bottom: 15px;"></div>
+                    <div id="resguardos-table-container" style="width: 100%;"></div>
+                </div>
+
+                <div id="tab-mis-solicitudes" class="tab-content" style="display:none; width:100%;"></div>
+
+                ${this.puedeAprobar ? `
+                    <div id="tab-bandeja-aprobacion" class="tab-content" style="display:none; width:100%;"></div>
+                ` : ''}
             </div>
         `;
+    }
+
+    _bindTabEvents(container) {
+        const tabs = container.querySelectorAll('.tab-btn');
+        const tabContents = container.querySelectorAll('.tab-content');
+
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.style.borderBottom = 'none';
+                    t.style.color = 'var(--text-muted, #666)';
+                });
+                tabContents.forEach(c => c.style.display = 'none');
+
+                tab.style.borderBottom = '2px solid var(--primary, #1976d2)';
+                tab.style.color = 'var(--primary, #1976d2)';
+
+                const selectedTab = container.querySelector(`#${tab.getAttribute('data-tab')}`);
+                if (selectedTab) selectedTab.style.display = 'block';
+            });
+        });
     }
 
     _vincularEventosFormulario(formContainer) { 

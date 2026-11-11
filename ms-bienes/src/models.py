@@ -7,56 +7,33 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from src.database import Base
 
 bien_tipo_bien = Table(
-    "bien_tipo_bien",
-    Base.metadata,
+    "bien_tipo_bien", Base.metadata,
     Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), primary_key=True),
     Column("id_tipo", UUID(as_uuid=True), ForeignKey("tipos_bien.id_tipo", ondelete="CASCADE"), primary_key=True),
 )
 
 bien_tag_bien = Table(
-    "bien_tag_bien",
-    Base.metadata,
+    "bien_tag_bien", Base.metadata,
     Column("id_bien", UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), primary_key=True),
     Column("id_tag", UUID(as_uuid=True), ForeignKey("tags_bien.id_tag", ondelete="CASCADE"), primary_key=True),
 )
-
 
 class Bien(Base):
     __tablename__ = "bienes"
 
     id_bien = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     numero_inventario = Column(String(50), unique=True, nullable=False, index=True)
-    
     serie = Column(String(50), unique=True, nullable=True, index=True) 
     modelo = Column(String(100), nullable=True)
     marca = Column(String(100), nullable=True)
     descripcion = Column(String(255), nullable=False)
-    
     costo = Column(Numeric(12, 2), nullable=False)
     fecha_adquisicion = Column(Date, nullable=True)
     esta_activo = Column(Boolean, default=True, nullable=False) 
 
-    tipos = relationship(
-        "TipoBien",
-        secondary=bien_tipo_bien,
-        back_populates="bienes",
-        lazy="selectin",
-    )
-
-    tags = relationship(
-        "TagBien",
-        secondary=bien_tag_bien,
-        back_populates="bienes",
-        lazy="selectin",
-    )
-
-    imagenes = relationship(
-        "ImagenBien",
-        back_populates="bien",
-        cascade="all, delete-orphan",
-        lazy="selectin",
-        order_by="ImagenBien.orden"
-    )
+    tipos = relationship("TipoBien", secondary=bien_tipo_bien, back_populates="bienes", lazy="selectin")
+    tags = relationship("TagBien", secondary=bien_tag_bien, back_populates="bienes", lazy="selectin")
+    imagenes = relationship("ImagenBien", back_populates="bien", cascade="all, delete-orphan", lazy="selectin", order_by="ImagenBien.orden")
 
     @hybrid_property
     def meses_uso(self) -> int:
@@ -65,7 +42,6 @@ class Bien(Base):
         hoy = datetime.date.today()
         dias = (hoy - self.fecha_adquisicion).days
         return max(0, dias // 30)
-
 
 class ImagenBien(Base):
     __tablename__ = "imagenes_bienes"
@@ -81,7 +57,6 @@ class ImagenBien(Base):
 
     bien = relationship("Bien", back_populates="imagenes")
 
-
 class TipoBien(Base):
     __tablename__ = "tipos_bien"
 
@@ -90,13 +65,7 @@ class TipoBien(Base):
     tasa_depreciacion_anual = Column(Numeric(5, 2), default=0.00, nullable=False)
     esta_activo = Column(Boolean, default=True, nullable=False)
 
-    bienes = relationship(
-        "Bien",
-        secondary=bien_tipo_bien,
-        back_populates="tipos",
-        lazy="selectin",
-    )
-
+    bienes = relationship("Bien", secondary=bien_tipo_bien, back_populates="tipos", lazy="selectin")
 
 class TagBien(Base):
     __tablename__ = "tags_bien"
@@ -105,9 +74,4 @@ class TagBien(Base):
     nombre = Column(String(100), unique=True, nullable=False, index=True)
     esta_activo = Column(Boolean, default=True, nullable=False)
 
-    bienes = relationship(
-        "Bien",
-        secondary=bien_tag_bien,
-        back_populates="tags",
-        lazy="selectin",
-    )
+    bienes = relationship("Bien", secondary=bien_tag_bien, back_populates="tags", lazy="selectin")
