@@ -98,7 +98,6 @@ export class HistorialResguardos {
             }
         });
 
-
         const misSolContainer = container.querySelector('#tab-mis-solicitudes');
         if (misSolContainer) await this.readMisSolicitudesModule.cargarTabla(misSolContainer);
 
@@ -114,13 +113,13 @@ export class HistorialResguardos {
 
         return `
             <div class="module-card">
-                <div style="display:flex; justify-shadow:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-bottom:10px;">
                     <div>
                         <h3 style="margin-top:0; color:var(--primary); font-size:16px; font-weight:700;">${titulo}</h3>
                         <p style="font-size:12px; color:var(--text-muted); margin:4px 0 0 0;">${subtitulo}</p>
                     </div>
                     ${this.puedeSolicitar ? `
-                        <button id="btn-abrir-modal-solicitud" style="background-color:var(--primary, #1976d2); color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                        <button id="btn-abrir-modal-solicitud" style="background-color:var(--primary, #1976d2); color:white; border:none; padding:8px 14px; border-radius:4px; cursor:pointer; font-size:12px; font-weight:600; display:flex; align-items:center; gap:6px; margin-left:auto;">
                             ➕ Solicitar Resguardo
                         </button>
                     ` : ''}
