@@ -186,3 +186,42 @@ class BienUpdateBFF(BaseModel):
             v = v.strip()
             return v if v else None
         return None
+
+
+# --- CHECKLIST / INSPECCIONES FÍSICAS BFF ---
+class BienResumenInspeccionOutBFF(BaseModel):
+    id_bien: UUID
+    numero_inventario: str
+    descripcion: str
+    marca: Optional[str] = None
+    modelo: Optional[str] = None
+    serie: Optional[str] = None
+    esta_activo: bool
+    imagenes: List[ImagenBienOutBFF] = Field(default_factory=list)
+
+class PersonaAuditorOutBFF(BaseModel):
+    curp: str
+    nombres: str
+    apellidos: str
+
+class InspeccionBienCreateBFF(BaseModel):
+    numero_inventario: str = Field(..., min_length=1, max_length=50)
+    esta_presente: bool
+    estado_fisico: str = Field(default="BUENO")
+    observaciones: Optional[str] = Field(None, max_length=255)
+
+class InspeccionBienOutBFF(BaseModel):
+    id_inspeccion: UUID
+    id_bien: UUID
+    esta_presente: bool
+    estado_fisico: str
+    observaciones: Optional[str] = None
+    fecha_inspeccion: datetime
+    auditor: PersonaAuditorOutBFF
+    bien: BienResumenInspeccionOutBFF
+
+class InspeccionBienPaginatedOutBFF(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[InspeccionBienOutBFF]

@@ -1,9 +1,10 @@
 import uuid
 import datetime
-from sqlalchemy import Column, String, Date, Boolean, Numeric, Table, ForeignKey, Integer, DateTime, func
+import enum
+from sqlalchemy import Column, String, Date, Boolean, Numeric, Table, ForeignKey, Integer, DateTime, Enum as SQLEnum, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.hybrid import hybrid_property 
+from sqlalchemy.ext.hybrid import hybrid_property
 from src.database import Base
 
 bien_tipo_bien = Table(
@@ -18,22 +19,29 @@ bien_tag_bien = Table(
     Column("id_tag", UUID(as_uuid=True), ForeignKey("tags_bien.id_tag", ondelete="CASCADE"), primary_key=True),
 )
 
+class EstadoFisicoEnum(str, enum.Enum):
+    BUENO = "BUENO"
+    NORMAL = "NORMAL"
+    MALO = "MALO"
+    NO_APLICA = "N/A"
+
 class Bien(Base):
     __tablename__ = "bienes"
 
     id_bien = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     numero_inventario = Column(String(50), unique=True, nullable=False, index=True)
-    serie = Column(String(50), unique=True, nullable=True, index=True) 
+    serie = Column(String(50), unique=True, nullable=True, index=True)
     modelo = Column(String(100), nullable=True)
     marca = Column(String(100), nullable=True)
     descripcion = Column(String(255), nullable=False)
     costo = Column(Numeric(12, 2), nullable=False)
     fecha_adquisicion = Column(Date, nullable=True)
-    esta_activo = Column(Boolean, default=True, nullable=False) 
+    esta_activo = Column(Boolean, default=True, nullable=False)
 
     tipos = relationship("TipoBien", secondary=bien_tipo_bien, back_populates="bienes", lazy="selectin")
     tags = relationship("TagBien", secondary=bien_tag_bien, back_populates="bienes", lazy="selectin")
     imagenes = relationship("ImagenBien", back_populates="bien", cascade="all, delete-orphan", lazy="selectin", order_by="ImagenBien.orden")
+    inspecciones = relationship("InspeccionBien", back_populates="bien", cascade="all, delete-orphan", lazy="selectin", order_by="InspeccionBien.fecha_inspeccion.desc()")
 
     @hybrid_property
     def meses_uso(self) -> int:
@@ -75,3 +83,16 @@ class TagBien(Base):
     esta_activo = Column(Boolean, default=True, nullable=False)
 
     bienes = relationship("Bien", secondary=bien_tag_bien, back_populates="tags", lazy="selectin")
+
+class InspeccionBien(Base):
+    __tablename__ = "inspecciones_bienes"
+
+    id_inspeccion = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id_bien = Column(UUID(as_uuid=True), ForeignKey("bienes.id_bien", ondelete="CASCADE"), nullable=False, index=True)
+    esta_presente = Column(Boolean, nullable=False, default=True)
+    estado_fisico = Column(SQLEnum(EstadoFisicoEnum), nullable=False, default=EstadoFisicoEnum.BUENO)
+    observaciones = Column(String(255), nullable=True)
+    curp_auditor = Column(String(18), nullable=False, index=True)
+    fecha_inspeccion = Column(DateTime(timezone=True), server_default=func.now(), nullable=False, index=True)
+
+    bien = relationship("Bien", back_populates="inspecciones", lazy="selectin")

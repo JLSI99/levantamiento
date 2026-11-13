@@ -1,7 +1,6 @@
 import bffClient from '/src/core/api/client.js';
 
 export const bienesService = {
-    // TIPOS DE BIEN
     async listarTiposBien(limit = 10, offset = 0, incluirInactivos = false) {
         try {
             const response = await bffClient.get('/bienes/tipos-bien', {
@@ -54,7 +53,6 @@ export const bienesService = {
         }
     },
 
-    // TAGS / ETIQUETAS DE BIEN
     async listarTagsBien(limit = 10, offset = 0, incluirInactivos = false) {
         try {
             const response = await bffClient.get('/bienes/tags-bien', {
@@ -107,7 +105,6 @@ export const bienesService = {
         }
     },
 
-    // BIENES (ACTIVOS FIJOS)
     async listarBienes(limit = 100, offset = 0, incluirInactivos = false) {
         try {
             const response = await bffClient.get('/bienes/', {
@@ -132,7 +129,7 @@ export const bienesService = {
 
     async obtenerBienPorNumeroInventario(numeroInventario) {
         try {
-            const response = await bffClient.get(`/bienes/por-inventario/${numeroInventario}`);
+            const response = await bffClient.get(`/bienes/por-inventario/${encodeURIComponent(numeroInventario)}`);
             return response.data;
         } catch (error) {
             console.error(`Error al consultar detalle del bien por número de inventario [${numeroInventario}]:`, error);
@@ -178,11 +175,10 @@ export const bienesService = {
         }
     },
 
-    // GESTIÓN FOTOGRÁFICA (MULTIMEDIA)
     async subirImagenBien(idBien, fileOrFiles) {
         try {
             const formData = new FormData();
-            
+
             if (Array.isArray(fileOrFiles)) {
                 fileOrFiles.forEach((file) => {
                     formData.append('files', file);
@@ -209,6 +205,51 @@ export const bienesService = {
             return true;
         } catch (error) {
             console.error(`Error al eliminar la imagen [ID: ${idImagen}] del bien [ID: ${idBien}]:`, error);
+            throw error;
+        }
+    },
+
+    // ==========================================
+    // CHECKLIST / INSPECCIONES FÍSICAS
+    // ==========================================
+
+    async registrarInspeccion(inspeccionData) {
+        try {
+            const response = await bffClient.post('/bienes/inspecciones', inspeccionData);
+            return response.data;
+        } catch (error) {
+            console.error('Error al registrar inspección física del bien:', error);
+            throw error;
+        }
+    },
+
+    async listarInspecciones({
+        limit = 20,
+        offset = 0,
+        numero_inventario = null,
+        esta_presente = null,
+        estado_fisico = null
+    } = {}) {
+        try {
+            const params = { limit, offset };
+            if (numero_inventario) params.numero_inventario = numero_inventario;
+            if (esta_presente !== null && esta_presente !== '') params.esta_presente = esta_presente;
+            if (estado_fisico) params.estado_fisico = estado_fisico;
+
+            const response = await bffClient.get('/bienes/inspecciones', { params });
+            return response.data;
+        } catch (error) {
+            console.error('Error al consultar historial de inspecciones físicas:', error);
+            throw error;
+        }
+    },
+
+    async eliminarInspeccion(idInspeccion) {
+        try {
+            await bffClient.delete(`/bienes/inspecciones/${idInspeccion}`);
+            return true;
+        } catch (error) {
+            console.error(`Error al eliminar inspección [ID: ${idInspeccion}]:`, error);
             throw error;
         }
     }

@@ -3,6 +3,7 @@ from typing import Optional, List
 from uuid import UUID
 from datetime import date, datetime
 from decimal import Decimal
+from src.models import EstadoFisicoEnum
 
 # --- TIPOS DE BIEN ---
 class TipoBienBase(BaseModel):
@@ -149,7 +150,7 @@ class BienUpdate(BaseModel):
     descripcion: Optional[str] = Field(None, min_length=3, max_length=255)
     costo: Optional[Decimal] = Field(None, gt=Decimal("0.00"))
     fecha_adquisicion: Optional[date] = None
-    tipos_ids: Optional[List[UUID]] = None 
+    tipos_ids: Optional[List[UUID]] = None
     tags_ids: Optional[List[UUID]] = None
 
     @field_validator('numero_inventario', 'descripcion')
@@ -172,11 +173,11 @@ class BienUpdate(BaseModel):
 class BienOut(BienBase):
     id_bien: UUID
     esta_activo: bool
-    meses_uso: int 
+    meses_uso: int
     tipos: List[TipoBienOut] = []
     tags: List[TagBienOut] = []
     imagenes: List[ImagenBienOut] = []
-    
+
     model_config = {
         "from_attributes": True
     }
@@ -186,3 +187,61 @@ class BienPaginatedOut(BaseModel):
     limit: int
     offset: int
     data: List[BienOut]
+
+
+# --- CHECKLIST / INSPECCIONES FÍSICAS ---
+class BienResumenInspeccionOut(BaseModel):
+    id_bien: UUID
+    numero_inventario: str
+    descripcion: str
+    marca: Optional[str] = None
+    modelo: Optional[str] = None
+    serie: Optional[str] = None
+    esta_activo: bool
+    imagenes: List[ImagenBienOut] = []
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class InspeccionBienCreate(BaseModel):
+    numero_inventario: str = Field(..., min_length=1, max_length=50)
+    esta_presente: bool
+    estado_fisico: EstadoFisicoEnum = Field(default=EstadoFisicoEnum.BUENO)
+    observaciones: Optional[str] = Field(None, max_length=255)
+
+    @field_validator('numero_inventario')
+    @classmethod
+    def limpiar_inventario(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError('El número de inventario no puede estar vacío.')
+        return v
+
+    @field_validator('observaciones')
+    @classmethod
+    def limpiar_observaciones(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None:
+            v = v.strip()
+            return v if v else None
+        return None
+
+class InspeccionBienOut(BaseModel):
+    id_inspeccion: UUID
+    id_bien: UUID
+    esta_presente: bool
+    estado_fisico: EstadoFisicoEnum
+    observaciones: Optional[str] = None
+    curp_auditor: str
+    fecha_inspeccion: datetime
+    bien: BienResumenInspeccionOut
+
+    model_config = {
+        "from_attributes": True
+    }
+
+class InspeccionBienPaginatedOut(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    data: List[InspeccionBienOut]
